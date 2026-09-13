@@ -10,7 +10,28 @@ An arena-grade competitive prompt engineering tournament platform designed for h
 | :--- | :--- | :--- | :--- |
 | **Round 01** | **[🍪 Dalgona Prompt: The Perfect Cut](./round-1)** | ✅ **Production Ready** | Precision context extraction, spatial needle cutting, prompt engineering & firmware AI simulation. |
 | **Round 02** | *(Next Stage)* | ⏳ In Development | Built and pushed by respective team. |
-| **Round 03** | *(Next Stage)* | ⏳ In Development | Built and pushed by respective team. |
+| **Round 03** | **[🩸 The House That Remembers (2.0)](./round%203)** | ✅ **Production Ready** | 3D First-Person Horror Mansion, Call of Duty Tactical HUD, 1-Click Forensic Deductions & 6-Layer Deception Matrix. |
+
+---
+
+## 🚀 Running Round 3 (The House That Remembers)
+
+Navigate to the `round 3` directory:
+
+```bash
+cd "round 3"
+npm install
+npm run dev
+```
+
+The application will launch at `http://localhost:3000`.
+
+### Production Build & Smoke Test
+```bash
+cd "round 3"
+npm run build
+node scripts/smoke_test.mjs
+```
 
 ---
 
