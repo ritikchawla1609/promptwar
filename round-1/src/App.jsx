@@ -103,11 +103,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-slate-100 flex flex-col font-sans selection:bg-pink-600 selection:text-white relative overflow-x-hidden">
-      {/* Ambient Grid Background */}
+      {/* Ambient Cartoon Atmosphere Glows (No Graph Grids) */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-cyber-grid opacity-25" />
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-600/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-600/15 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[150px]" />
       </div>
 
       {/* TOP HEADER */}
