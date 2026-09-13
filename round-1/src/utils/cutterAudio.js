@@ -264,6 +264,119 @@ class CutterAudio {
     });
   }
 
+  // Cinematic Trailer Braam / Bass Impact
+  playCinematicBoom() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      // Low saw oscillator for gritty brass texture
+      const saw = this.ctx.createOscillator();
+      saw.type = 'sawtooth';
+      saw.frequency.setValueAtTime(65, now);
+      saw.frequency.exponentialRampToValueAtTime(32, now + 1.2);
+
+      // Low sine for deep floor-shaking sub
+      const sub = this.ctx.createOscillator();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(110, now);
+      sub.frequency.exponentialRampToValueAtTime(28, now + 1.4);
+
+      // Resonant Lowpass filter sweep
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 4.5;
+      filter.frequency.setValueAtTime(450, now);
+      filter.frequency.linearRampToValueAtTime(180, now + 0.3);
+      filter.frequency.exponentialRampToValueAtTime(40, now + 1.3);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.45, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+      saw.connect(filter);
+      sub.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      saw.start(now);
+      sub.start(now);
+      saw.stop(now + 1.45);
+      sub.stop(now + 1.45);
+    } catch (e) {
+      console.warn("Audio boom error", e);
+    }
+  }
+
+  // Laser cutting ignition sweep
+  playLaserSweep() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(240, now + 0.35);
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, now);
+      filter.Q.value = 3.0;
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } catch (e) {}
+  }
+
+  // Sci-fi glitch static burst
+  playGlitchStatic() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      const bufferSize = this.ctx.sampleRate * 0.08;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.02));
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(1200, now);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + 0.09);
+    } catch (e) {}
+  }
+
   // Ambient Drone
   startAmbientDrone() {
     if (this.isDronePlaying || !window.AudioContext) return;
