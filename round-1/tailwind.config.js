@@ -24,17 +24,26 @@ export default {
           400: '#a8a499',
           500: '#757268',
         },
-        acid: {
-          lime: '#d4ff00',
-          dark: '#9ec400',
-          muted: '#80990a',
-          glow: 'rgba(212, 255, 0, 0.2)',
+        // Official PROMPT WAR Logo Dual-Core Palette
+        cyan: {
+          DEFAULT: '#00f0ff',
+          glow: 'rgba(0, 240, 255, 0.35)',
+          dark: '#0099cc',
+          light: '#70f7ff',
         },
         crimson: {
-          DEFAULT: '#8b1e1e',
-          bright: '#e03131',
-          dark: '#521010',
-          glow: 'rgba(224, 49, 49, 0.2)',
+          DEFAULT: '#ff2a5f',
+          glow: 'rgba(255, 42, 95, 0.35)',
+          bright: '#ff0055',
+          dark: '#881337',
+          light: '#ff668a',
+        },
+        // Alias acid.lime to the Logo Electric Cyan for total unified branding
+        acid: {
+          lime: '#00f0ff',
+          dark: '#00b4d8',
+          muted: '#0077b6',
+          glow: 'rgba(0, 240, 255, 0.25)',
         },
       },
       fontFamily: {

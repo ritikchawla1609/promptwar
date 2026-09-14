@@ -34,17 +34,29 @@ export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }
       {/* Top Metadata Header */}
       <div className="flex items-center justify-between font-mono text-[11px] text-bone-400 uppercase tracking-widest border-b border-white/[0.06] pb-4">
         <div className="flex items-center gap-2.5">
-          <span className="w-1.5 h-1.5 bg-acid-lime" />
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-cyan shadow-[0_0_8px_#00f0ff] rounded-full" />
+            <span className="w-1.5 h-1.5 bg-crimson shadow-[0_0_8px_#ff2a5f] rounded-full" />
+          </div>
           <span>TECH TATVA CLUB // CHANDIGARH UNIVERSITY</span>
         </div>
-        <span className="text-acid-lime font-bold">ROUND 01</span>
+        <div className="flex items-center gap-2">
+          <span className="text-cyan font-bold">ROUND 01</span>
+          <span className="text-bone-600">//</span>
+          <span className="text-crimson font-bold">PROMPT PARASITE</span>
+        </div>
       </div>
 
       {/* Center: Hero Grid with 3D Interactive Logo + Editorial Typography */}
-      <div className="my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <div className="relative my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        {/* Subtle Dual-Core Ambient Atmosphere */}
+        <div className="absolute top-1/2 -left-20 -translate-y-1/2 w-96 h-96 bg-cyan/10 blur-[120px] pointer-events-none rounded-full" />
+        <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-96 h-96 bg-crimson/10 blur-[120px] pointer-events-none rounded-full" />
+
         {/* Left Col: Typographic Reveal & Narrative */}
-        <div className="lg:col-span-6 flex flex-col items-start text-left">
-          <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.35em] text-bone-400 mb-3 block">
+        <div className="lg:col-span-6 flex flex-col items-start text-left relative z-10">
+          <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.35em] text-cyan font-bold mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-cyan animate-ping" />
             ROUND 01 PROTOCOL
           </span>
 
@@ -60,12 +72,12 @@ export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }
 
             {/* Word 2: PARASITE */}
             <div
-              className={`text-6xl sm:text-7xl md:text-8xl text-acid-lime flex items-center gap-4 transition-all duration-1000 ease-out ${
+              className={`text-6xl sm:text-7xl md:text-8xl text-cyan flex items-center gap-4 transition-all duration-1000 ease-out drop-shadow-[0_0_25px_rgba(0,240,255,0.4)] ${
                 step >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'
               }`}
             >
               <span>PARASITE</span>
-              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-acid-lime shrink-0 hidden sm:inline-block" />
+              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-crimson shrink-0 hidden sm:inline-block shadow-[0_0_15px_rgba(255,42,95,0.8)]" />
             </div>
           </div>
 
@@ -75,11 +87,11 @@ export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }
               step >= 3 ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <span className="text-white font-bold">SEE.</span>
-            <span className="text-bone-500">—</span>
-            <span className="text-white font-bold">STEAL.</span>
-            <span className="text-bone-500">—</span>
-            <span className="text-acid-lime font-bold">EVOLVE.</span>
+            <span className="text-cyan font-bold">SEE.</span>
+            <span className="text-bone-600">—</span>
+            <span className="text-crimson font-bold drop-shadow-[0_0_8px_rgba(255,42,95,0.5)]">STEAL.</span>
+            <span className="text-bone-600">—</span>
+            <span className="text-cyan font-bold drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]">EVOLVE.</span>
           </div>
 
           {/* Editorial Narrative Copy */}

@@ -90,8 +90,9 @@ export default function NetworkCanvas({ density = 45, interactive = true }) {
             ctx.lineWidth = 0.75;
             ctx.stroke();
 
-            // Chance to spawn an information transfer packet
-            if (packetCooldown <= 0 && packets.length < 8 && Math.random() < 0.008) {
+            // Chance to spawn an information transfer packet (Dual-core logo colors: cyan & crimson)
+            if (packetCooldown <= 0 && packets.length < 10 && Math.random() < 0.009) {
+              const isCyan = Math.random() > 0.45;
               packets.push({
                 x1: n.x,
                 y1: n.y,
@@ -99,8 +100,9 @@ export default function NetworkCanvas({ density = 45, interactive = true }) {
                 y2: n2.y,
                 progress: 0,
                 speed: 0.015 + Math.random() * 0.01,
+                color: isCyan ? '#00f0ff' : '#ff2a5f',
               });
-              packetCooldown = 15;
+              packetCooldown = 12;
             }
           }
         }
@@ -108,7 +110,7 @@ export default function NetworkCanvas({ density = 45, interactive = true }) {
 
       if (packetCooldown > 0) packetCooldown--;
 
-      // 3. Render Information Transfer Packets (Acid Lime Data)
+      // 3. Render Information Transfer Packets (Dual Cyan & Crimson pulses)
       for (let p = packets.length - 1; p >= 0; p--) {
         const pkt = packets[p];
         pkt.progress += pkt.speed;
@@ -117,10 +119,10 @@ export default function NetworkCanvas({ density = 45, interactive = true }) {
         const currentY = pkt.y1 + (pkt.y2 - pkt.y1) * pkt.progress;
 
         ctx.beginPath();
-        ctx.arc(currentX, currentY, 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = '#d4ff00';
-        ctx.shadowColor = '#d4ff00';
-        ctx.shadowBlur = 6;
+        ctx.arc(currentX, currentY, 2, 0, Math.PI * 2);
+        ctx.fillStyle = pkt.color;
+        ctx.shadowColor = pkt.color;
+        ctx.shadowBlur = 8;
         ctx.fill();
         ctx.shadowBlur = 0; // reset
 

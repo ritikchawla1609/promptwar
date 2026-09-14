@@ -35,14 +35,14 @@ export default function Screen7Complete({
             {/* 3D Logo & Triad Headline */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
               <div>
-                <span className="font-mono text-xs uppercase tracking-[0.3em] text-acid-lime font-bold block mb-2">
+                <span className="font-mono text-xs uppercase tracking-[0.3em] text-cyan font-bold block mb-2">
                   MISSION WRAP-UP
                 </span>
 
-                <div className="font-display font-black text-3xl sm:text-5xl text-bone-50 uppercase tracking-tightest leading-tight">
-                  <div>YOU CREATED.</div>
-                  <div>YOU INFECTED.</div>
-                  <div className="text-acid-lime">YOU EVOLVED.</div>
+                <div className="font-display font-black text-3xl sm:text-5xl uppercase tracking-tightest leading-tight">
+                  <div className="text-bone-100">YOU CREATED.</div>
+                  <div className="text-crimson drop-shadow-[0_0_15px_rgba(255,42,95,0.4)]">YOU INFECTED.</div>
+                  <div className="text-cyan drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]">YOU EVOLVED.</div>
                 </div>
               </div>
 
@@ -53,27 +53,39 @@ export default function Screen7Complete({
 
             {/* Checklist */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 font-mono">
-              {milestones.map((m, idx) => (
-                <div
-                  key={idx}
-                  className="p-5 border border-white/[0.1] bg-charcoal-900/60 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] text-bone-500 uppercase tracking-widest">
-                        STEP 0{idx + 1}
-                      </span>
-                      <span className="text-acid-lime font-bold text-xs">{m.status}</span>
+              {milestones.map((m, idx) => {
+                const isCrimson = idx === 1;
+                const isCyan = idx === 2;
+                return (
+                  <div
+                    key={idx}
+                    className={`p-5 border bg-charcoal-900/60 flex flex-col justify-between ${
+                      isCyan
+                        ? 'border-cyan/40 shadow-[0_0_20px_rgba(0,240,255,0.06)]'
+                        : isCrimson
+                        ? 'border-crimson/40 shadow-[0_0_20px_rgba(255,42,95,0.06)]'
+                        : 'border-white/[0.1]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] text-bone-500 uppercase tracking-widest">
+                          STEP 0{idx + 1}
+                        </span>
+                        <span className={`font-bold text-xs ${isCyan ? 'text-cyan' : isCrimson ? 'text-crimson' : 'text-bone-200'}`}>
+                          {m.status}
+                        </span>
+                      </div>
+                      <h4 className="font-display font-bold text-base text-bone-100 mb-1">
+                        {m.label}
+                      </h4>
+                      <p className="font-sans text-xs text-bone-400 leading-normal">
+                        {m.detail}
+                      </p>
                     </div>
-                    <h4 className="font-display font-bold text-base text-bone-100 mb-1">
-                      {m.label}
-                    </h4>
-                    <p className="font-sans text-xs text-bone-400 leading-normal">
-                      {m.detail}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Status & Evaluation Notice */}

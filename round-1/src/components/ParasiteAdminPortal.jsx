@@ -632,7 +632,7 @@ export default function ParasiteAdminPortal({
                           max="25"
                           value={scores.promptQuality}
                           onChange={(e) => setScores({ ...scores, promptQuality: Number(e.target.value) })}
-                          className="w-full accent-[#d4ff00]"
+                          className="w-full accent-[#00f0ff]"
                         />
                       </div>
 
@@ -648,7 +648,7 @@ export default function ParasiteAdminPortal({
                           max="25"
                           value={scores.problemUnderstanding}
                           onChange={(e) => setScores({ ...scores, problemUnderstanding: Number(e.target.value) })}
-                          className="w-full accent-[#d4ff00]"
+                          className="w-full accent-[#00f0ff]"
                         />
                       </div>
 
@@ -664,7 +664,7 @@ export default function ParasiteAdminPortal({
                           max="30"
                           value={scores.outputQuality}
                           onChange={(e) => setScores({ ...scores, outputQuality: Number(e.target.value) })}
-                          className="w-full accent-[#d4ff00]"
+                          className="w-full accent-[#00f0ff]"
                         />
                       </div>
 
@@ -680,7 +680,7 @@ export default function ParasiteAdminPortal({
                           max="20"
                           value={scores.improvement}
                           onChange={(e) => setScores({ ...scores, improvement: Number(e.target.value) })}
-                          className="w-full accent-[#d4ff00]"
+                          className="w-full accent-[#00f0ff]"
                         />
                       </div>
                     </div>

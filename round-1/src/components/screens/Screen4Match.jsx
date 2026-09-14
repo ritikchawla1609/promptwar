@@ -89,14 +89,15 @@ export default function Screen4Match({
 
             {/* Premium Typographic Triad Grid (YOU vs UNKNOWN 01 vs UNKNOWN 02) */}
             <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 text-left font-mono">
-              {/* Pillar 1: YOU */}
-              <div className="p-6 border border-acid-lime/50 bg-charcoal-900/90 flex flex-col justify-between shadow-[0_0_30px_rgba(212,255,0,0.1)]">
+              {/* Pillar 1: YOU (Electric Cyan - Left Brain Polarity) */}
+              <div className="p-6 border border-cyan/60 bg-charcoal-900/90 flex flex-col justify-between shadow-[0_0_30px_rgba(0,240,255,0.15)] relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-cyan shadow-[0_0_10px_#00f0ff]" />
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
-                    <span className="text-[10px] text-acid-lime font-bold uppercase tracking-widest">
+                    <span className="text-[10px] text-cyan font-bold uppercase tracking-widest">
                       YOUR FIRST FORM
                     </span>
-                    <span className="px-2 py-0.5 bg-acid-lime text-charcoal-950 text-[10px] font-black uppercase">
+                    <span className="px-2 py-0.5 bg-cyan text-charcoal-950 text-[10px] font-black uppercase">
                       YOU
                     </span>
                   </div>
@@ -108,56 +109,61 @@ export default function Screen4Match({
                   </p>
                 </div>
 
-                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-bone-500 uppercase">
-                  STATUS: SYNCHRONIZED
+                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-cyan uppercase font-bold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-pulse" />
+                  <span>STATUS: SYNCHRONIZED</span>
                 </div>
               </div>
 
-              {/* Pillar 2: UNKNOWN 01 */}
-              <div className="p-6 border border-white/[0.12] bg-charcoal-900/60 flex flex-col justify-between">
+              {/* Pillar 2: UNKNOWN 01 (Cyber Crimson - Right Brain Polarity) */}
+              <div className="p-6 border border-crimson/40 bg-charcoal-900/80 flex flex-col justify-between shadow-[0_0_25px_rgba(255,42,95,0.1)] relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-crimson shadow-[0_0_10px_#ff2a5f]" />
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
-                    <span className="text-[10px] text-bone-400 uppercase tracking-widest">
+                    <span className="text-[10px] text-crimson font-bold uppercase tracking-widest">
                       HOST TARGET 01
                     </span>
-                    <span className="text-[10px] text-bone-500 uppercase">
-                      ANONYMOUS
+                    <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
+                      OPPONENT
                     </span>
                   </div>
-                  <h3 className="font-display font-black text-2xl text-bone-200 mb-2">
+                  <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.3)]">
                     {op1.anonymousId}
                   </h3>
                   <p className="text-xs text-bone-400 font-sans leading-relaxed">
-                    External AI solution captured from contender in your tier.
+                    External AI solution captured from competitor in your cluster.
                   </p>
                 </div>
 
-                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-bone-500 uppercase">
-                  PAYLOAD: EXTRACTED
+                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-crimson uppercase font-bold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-crimson rounded-full animate-ping" />
+                  <span>PAYLOAD: EXTRACTED</span>
                 </div>
               </div>
 
-              {/* Pillar 3: UNKNOWN 02 */}
-              <div className="p-6 border border-white/[0.12] bg-charcoal-900/60 flex flex-col justify-between">
+              {/* Pillar 3: UNKNOWN 02 (Cyber Crimson - Right Brain Polarity) */}
+              <div className="p-6 border border-crimson/40 bg-charcoal-900/80 flex flex-col justify-between shadow-[0_0_25px_rgba(255,42,95,0.1)] relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-crimson shadow-[0_0_10px_#ff2a5f]" />
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
-                    <span className="text-[10px] text-bone-400 uppercase tracking-widest">
+                    <span className="text-[10px] text-crimson font-bold uppercase tracking-widest">
                       HOST TARGET 02
                     </span>
-                    <span className="text-[10px] text-bone-500 uppercase">
-                      ANONYMOUS
+                    <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
+                      OPPONENT
                     </span>
                   </div>
-                  <h3 className="font-display font-black text-2xl text-bone-200 mb-2">
+                  <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.3)]">
                     {op2.anonymousId}
                   </h3>
                   <p className="text-xs text-bone-400 font-sans leading-relaxed">
-                    External AI solution captured from second contender.
+                    External AI solution captured from second competitor.
                   </p>
                 </div>
 
-                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-bone-500 uppercase">
-                  PAYLOAD: EXTRACTED
+                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-crimson uppercase font-bold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-crimson rounded-full animate-ping" />
+                  <span>PAYLOAD: EXTRACTED</span>
                 </div>
               </div>
             </div>

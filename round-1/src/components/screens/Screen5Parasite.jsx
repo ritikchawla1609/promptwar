@@ -154,106 +154,112 @@ export default function Screen5Parasite({
 
       {/* 3-COLUMN EDITORIAL OUTPUT COMPARISON MATRIX */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 items-stretch my-2">
-        {/* COLUMN 01: YOUR FIRST FORM */}
+        {/* COLUMN 01: YOUR FIRST FORM (Electric Cyan - Left Brain Polarity) */}
         {(!focusedCol || focusedCol === 'YOU') && (
           <div
-            className={`flex flex-col border border-acid-lime/30 bg-charcoal-950/80 transition-all ${
+            className={`flex flex-col border border-cyan/50 bg-charcoal-950/90 shadow-[0_0_25px_rgba(0,240,255,0.08)] transition-all ${
               focusedCol === 'YOU' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 bg-acid-lime text-charcoal-950 text-[10px] font-black uppercase">
+                <span className="px-1.5 py-0.5 bg-cyan text-charcoal-950 text-[10px] font-black uppercase">
                   YOU
                 </span>
-                <span className="font-bold text-bone-100 uppercase tracking-wider">
+                <span className="font-bold text-cyan uppercase tracking-wider">
                   YOUR FIRST FORM
                 </span>
               </div>
               <button
                 onClick={() => setFocusedCol(focusedCol === 'YOU' ? null : 'YOU')}
-                className="text-bone-500 hover:text-bone-200"
+                className="text-bone-500 hover:text-cyan transition-colors"
                 title="Expand Column"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-acid-lime selection:text-charcoal-950">
+            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-cyan selection:text-charcoal-950">
               {session.firstOutput || (
                 <span className="text-bone-600 italic">No output text recorded for First Form.</span>
               )}
             </div>
 
-            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-bone-500 flex justify-between">
+            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-cyan/70 flex justify-between">
               <span>BASELINE DRAFT</span>
               <span>{session.firstOutput ? session.firstOutput.length : 0} chars</span>
             </div>
           </div>
         )}
 
-        {/* COLUMN 02: UNKNOWN 01 */}
+        {/* COLUMN 02: UNKNOWN 01 (Cyber Crimson - Right Brain Polarity) */}
         {(!focusedCol || focusedCol === 'OP1') && (
           <div
-            className={`flex flex-col border border-white/[0.1] bg-charcoal-950/80 transition-all hover:border-white/[0.2] ${
+            className={`flex flex-col border border-crimson/40 bg-charcoal-950/90 shadow-[0_0_20px_rgba(255,42,95,0.06)] transition-all hover:border-crimson/60 ${
               focusedCol === 'OP1' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-bone-500 rounded-full" />
-                <span className="font-bold text-bone-200 uppercase tracking-wider">
+                <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
+                <span className="font-bold text-crimson uppercase tracking-wider">
                   {op1.anonymousId || 'UNKNOWN 01'}
+                </span>
+                <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
+                  HOST STREAM A
                 </span>
               </div>
               <button
                 onClick={() => setFocusedCol(focusedCol === 'OP1' ? null : 'OP1')}
-                className="text-bone-500 hover:text-bone-200"
+                className="text-bone-500 hover:text-crimson transition-colors"
                 title="Expand Column"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-acid-lime selection:text-charcoal-950">
+            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
               {op1.output}
             </div>
 
-            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-bone-500 flex justify-between">
+            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-crimson/70 flex justify-between">
               <span>OPPONENT STREAM A</span>
               <span>SELECT TEXT TO STUDY</span>
             </div>
           </div>
         )}
 
-        {/* COLUMN 03: UNKNOWN 02 */}
+        {/* COLUMN 03: UNKNOWN 02 (Cyber Crimson - Right Brain Polarity) */}
         {(!focusedCol || focusedCol === 'OP2') && (
           <div
-            className={`flex flex-col border border-white/[0.1] bg-charcoal-950/80 transition-all hover:border-white/[0.2] ${
+            className={`flex flex-col border border-crimson/40 bg-charcoal-950/90 shadow-[0_0_20px_rgba(255,42,95,0.06)] transition-all hover:border-crimson/60 ${
               focusedCol === 'OP2' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-bone-500 rounded-full" />
-                <span className="font-bold text-bone-200 uppercase tracking-wider">
+                <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
+                <span className="font-bold text-crimson uppercase tracking-wider">
                   {op2.anonymousId || 'UNKNOWN 02'}
+                </span>
+                <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
+                  HOST STREAM B
                 </span>
               </div>
               <button
                 onClick={() => setFocusedCol(focusedCol === 'OP2' ? null : 'OP2')}
-                className="text-bone-500 hover:text-bone-200"
+                className="text-bone-500 hover:text-crimson transition-colors"
                 title="Expand Column"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-acid-lime selection:text-charcoal-950">
+            <div className="p-4 flex-1 overflow-y-auto max-h-[420px] font-mono text-xs sm:text-[13px] text-bone-300 leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
               {op2.output}
             </div>
 
-            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-bone-500 flex justify-between">
+            <div className="p-2 border-t border-white/[0.06] bg-charcoal-900/40 text-[10px] font-mono text-crimson/70 flex justify-between">
               <span>OPPONENT STREAM B</span>
               <span>SELECT TEXT TO STUDY</span>
             </div>
