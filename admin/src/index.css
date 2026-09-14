@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-admin-bg: #0a0f18;
+  --color-admin-panel: #111827;
+  --color-admin-blue: #3b82f6;
+  --color-admin-red: #ef4444;
+  --color-admin-orange: #f97316;
+  --color-admin-uv: #a855f7;
+  --color-admin-green: #10b981;
+}
+
+body {
+  background-color: var(--color-admin-bg);
+  color: #f8fafc;
+}
