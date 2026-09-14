@@ -367,7 +367,7 @@ export default function Screen7ResultAndScore({
                   </div>
                   <div className="text-[10px] text-zinc-500 pl-5">
                     {scores.promptBreakdown?.isRawDataDump ? (
-                      <span className="text-red-400 font-bold">⚠️ Unprompted raw dump (Capped at 3 pts)</span>
+                      <span className="text-amber-400 font-bold">⚠️ Unprompted raw dump (Capped at 10 pts)</span>
                     ) : (
                       'Action directives, role, synthesis, format'
                     )}
@@ -653,44 +653,32 @@ export default function Screen7ResultAndScore({
                       </div>
                       <div className="space-y-1.5 text-xs text-zinc-300">
                         <div className="flex justify-between">
-                          <span>Action Directive Verb:</span>
-                          <span className={scores.promptBreakdown?.directive > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                          <span>Clue Requirements Covered:</span>
+                          <span className={(scores.promptBreakdown?.requirements || 0) > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                            +{scores.promptBreakdown?.requirements || 0}/20 pts
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Action Directive &amp; Role:</span>
+                          <span className={(scores.promptBreakdown?.directive || 0) > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
                             +{scores.promptBreakdown?.directive || 0}/8 pts
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Role &amp; Persona:</span>
-                          <span className={scores.promptBreakdown?.role > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
-                            +{scores.promptBreakdown?.role || 0}/7 pts
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Original Synthesis:</span>
-                          <span className={scores.promptBreakdown?.synthesis > 0 ? 'text-pink-400 font-bold' : 'text-zinc-500'}>
-                            +{scores.promptBreakdown?.synthesis || 0}/8 pts
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Budget &amp; Constraints:</span>
-                          <span className={scores.promptBreakdown?.constraints > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
-                            +{scores.promptBreakdown?.constraints || 0}/6 pts
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Deliverable Format:</span>
-                          <span className={scores.promptBreakdown?.format > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
-                            +{scores.promptBreakdown?.format || 0}/6 pts
+                          <span>Original Synthesis &amp; Depth:</span>
+                          <span className={(scores.promptBreakdown?.synthesis || 0) > 0 ? 'text-pink-400 font-bold' : 'text-zinc-500'}>
+                            +{scores.promptBreakdown?.synthesis || 0}/7 pts
                           </span>
                         </div>
                         {scores.promptBreakdown?.isRawDataDump && (
-                          <div className="mt-2 p-1.5 rounded bg-red-950/60 border border-red-500/50 text-[10px] text-red-300 font-bold">
-                            ⚠️ UNPROMPTED DUMP: Capped at 3/35 pts
+                          <div className="mt-2 p-1.5 rounded bg-amber-950/60 border border-amber-500/50 text-[10px] text-amber-300 font-bold">
+                            ⚠️ UNPROMPTED RAW DUMP: Capped at 10/35 pts
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-white/[0.08] text-[10px] text-zinc-400 leading-normal">
-                      Audits command verbs, role framing, original synthesis, constraints, and format.
+                      Audits clue requirements, action directives, and original synthesis depth.
                     </div>
                   </div>
 
@@ -718,10 +706,10 @@ export default function Screen7ResultAndScore({
                             -{(scores.aiExecutionBreakdown?.missingContextDamage || 0)} pts
                           </span>
                         </div>
-                        {(scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0) > 0 && (
+                        {((scores.aiExecutionBreakdown?.dumpPenalty || scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0) > 0) && (
                           <div className="flex justify-between text-red-400 font-bold">
                             <span>Unprompted Dump Penalty:</span>
-                            <span>-{(scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0)} pts</span>
+                            <span>-{(scores.aiExecutionBreakdown?.dumpPenalty || scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0)} pts</span>
                           </div>
                         )}
                       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { cutterAudio } from '../../utils/cutterAudio';
 import { MISSION_DATA } from '../../data/dalgonaChallengeData';
 import { Clock, Send, Sparkles, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { INSTRUCTION_VERBS, getFragmentKeywords } from '../../utils/promptScorer';
 
 export default function Screen5PromptForge({
   scenario = MISSION_DATA,
@@ -42,68 +43,107 @@ export default function Screen5PromptForge({
     return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
   };
 
+  const trimmedPrompt = promptText.trim();
   const lowerPrompt = promptText.toLowerCase();
+  const words = trimmedPrompt ? trimmedPrompt.split(/\s+/).filter(Boolean) : [];
+  const wordCount = words.length;
 
-  // Directive verbs check
-  const DIRECTIVE_VERBS = [
-    'create', 'generate', 'develop', 'design', 'write', 'structure', 'build',
-    'formulate', 'plan', 'draft', 'outline', 'provide', 'synthesize', 'execute'
-  ];
-  const hasDirectiveVerb = DIRECTIVE_VERBS.some((v) => lowerPrompt.includes(v));
+  // Track covered clue requirements dynamically via keyword matching
+  const coveredClueIds = new Set();
+  survivingFragments.forEach((frag) => {
+    const kws = getFragmentKeywords(frag);
+    if (kws.some((kw) => lowerPrompt.includes(kw))) {
+      coveredClueIds.add(frag.id);
+    }
+  });
+
+  const coveredCount = coveredClueIds.size;
+  const totalClues = Math.max(1, survivingFragments.length);
+  const coverageRatio = coveredCount / totalClues;
+
+  // 1. Clue Requirements Score (Max 20 pts)
+  let requirementsScore = 0;
+  if (coverageRatio >= 0.75 || coveredCount >= 6) {
+    requirementsScore = 20;
+  } else if (coverageRatio >= 0.5 || coveredCount >= 4) {
+    requirementsScore = 16;
+  } else if (coverageRatio >= 0.25 || coveredCount >= 2) {
+    requirementsScore = 12;
+  } else if (coveredCount >= 1) {
+    requirementsScore = 8;
+  } else if (wordCount >= 10) {
+    requirementsScore = 5;
+  }
+
+  // 2. Directive / Role Intent Score (Max 8 pts)
+  const hasDirectiveVerb = INSTRUCTION_VERBS.some((v) => lowerPrompt.includes(v));
+  const directiveScore = hasDirectiveVerb ? 8 : (wordCount >= 8 ? 5 : (wordCount > 0 ? 2 : 0));
+
+  // 3. Original Synthesis & Depth Score (Max 7 pts)
+  let synthesisScore = 0;
+  if (wordCount >= 25) {
+    synthesisScore = 7;
+  } else if (wordCount >= 15) {
+    synthesisScore = 5;
+  } else if (wordCount >= 8) {
+    synthesisScore = 3;
+  } else if (wordCount > 0) {
+    synthesisScore = 2;
+  }
 
   // Count user's original words outside the clue fragments
   let strippedPrompt = lowerPrompt;
   survivingFragments.forEach((frag) => {
-    frag.text.toLowerCase().split(/\s+/).forEach((fw) => {
+    const fragWords = frag.text.toLowerCase().split(/\s+/);
+    fragWords.forEach((fw) => {
       if (fw.length > 2) strippedPrompt = strippedPrompt.replaceAll(fw, '');
     });
   });
   const userOriginalWords = strippedPrompt.split(/\s+/).filter((w) => w.length > 2).length;
-  const isRawDataDump = userOriginalWords < 8 && survivingFragments.length > 0 && promptText.trim().length > 0;
+
+  // Clue Dump condition: only when multiple clues were clicked, but contestant wrote <= 2 original words and zero instructions
+  const isRawDataDump = userOriginalWords <= 2 && survivingFragments.length >= 2 && trimmedPrompt.length > 20 && !hasDirectiveVerb;
+
+  // Real-time live score projection (0 to 35 PTS) matching promptScorer.js
+  let estRigor = requirementsScore + directiveScore + synthesisScore;
+  if (isRawDataDump) {
+    estRigor = Math.min(10, estRigor);
+  }
+  if (!trimmedPrompt) {
+    estRigor = 0;
+  }
+  estRigor = Math.max(0, Math.min(35, estRigor));
 
   // Dynamic Prompt Quality Indicators
   const structuralChecks = [
     {
       id: 'directive',
-      label: 'Action Directive (e.g. Create / Plan / Generate)',
+      label: 'Action Directive / Role Intent (e.g. Act as / Create / Plan / Guide)',
       present: hasDirectiveVerb,
     },
     {
-      id: 'role',
-      label: 'Role Framing (e.g. Act as Strategist / Lead)',
-      present: lowerPrompt.includes('act as') || lowerPrompt.includes('role') || lowerPrompt.includes('as a') || lowerPrompt.includes('strategist') || lowerPrompt.includes('lead') || lowerPrompt.includes('coach'),
+      id: 'requirements',
+      label: `Clue Requirements Covered (${coveredCount}/${survivingFragments.length || 0} clues incorporated)`,
+      present: coveredCount > 0 && coveredCount >= Math.min(2, survivingFragments.length),
     },
     {
       id: 'synthesis',
-      label: 'Original Synthesis (Not just dumped clues)',
-      present: !isRawDataDump && userOriginalWords >= 10,
+      label: 'Original Synthesis (Personalized context beyond raw clues)',
+      present: userOriginalWords >= 6,
     },
     {
       id: 'constraints',
-      label: 'Specific Constraints (₹10k Budget / Timeline)',
-      present: lowerPrompt.includes('10,000') || lowerPrompt.includes('10000') || lowerPrompt.includes('2m') || lowerPrompt.includes('budget') || lowerPrompt.includes('7-day'),
+      label: 'Specific Constraints & Metrics (Numbers, Timeline, Scope)',
+      present: /\d+/.test(trimmedPrompt) || lowerPrompt.includes('budget') || lowerPrompt.includes('limit') || lowerPrompt.includes('deadline') || lowerPrompt.includes('target') || lowerPrompt.includes('day') || lowerPrompt.includes('hour'),
     },
     {
       id: 'format',
-      label: 'Deliverable Output Format (Timeline / Table / Bullets)',
-      present: lowerPrompt.includes('day-by-day') || lowerPrompt.includes('table') || lowerPrompt.includes('timeline') || lowerPrompt.includes('bullets') || lowerPrompt.includes('format'),
+      label: 'Deliverable Output Structure (e.g. Plan / Table / Steps / Strategy)',
+      present: lowerPrompt.includes('format') || lowerPrompt.includes('plan') || lowerPrompt.includes('table') || lowerPrompt.includes('steps') || lowerPrompt.includes('timeline') || lowerPrompt.includes('strategy') || lowerPrompt.includes('bullet') || lowerPrompt.includes('breakdown') || lowerPrompt.includes('deliverable'),
     },
   ];
 
-  // Dynamic Real-Time Live Score Projection (0 to 35 PTS)
-  let estRigor = 0;
-  if (hasDirectiveVerb) estRigor += 8;
-  if (structuralChecks[1].present) estRigor += 7;
-  if (structuralChecks[2].present) estRigor += 8;
-  else if (userOriginalWords >= 5) estRigor += 3;
-  if (structuralChecks[3].present) estRigor += 6;
-  if (structuralChecks[4].present) estRigor += 6;
-
-  if (isRawDataDump) {
-    estRigor = Math.min(3, estRigor);
-  } else if (!hasDirectiveVerb && promptText.trim().length > 0) {
-    estRigor = Math.min(5, estRigor);
-  }
+  const completedChecks = structuralChecks.filter((c) => c.present).length;
 
   // Insert fragment directly into prompt
   const handleInsertFragment = (fragmentText) => {
@@ -161,9 +201,6 @@ export default function Screen5PromptForge({
       }, 900);
     }, 600);
   };
-
-  const wordCount = promptText.trim() ? promptText.trim().split(/\s+/).length : 0;
-  const completedChecks = structuralChecks.filter((c) => c.present).length;
 
   return (
     <div className="relative min-h-[calc(100vh-64px)] flex flex-col justify-between px-3 sm:px-6 py-4 max-w-7xl mx-auto overflow-hidden">
@@ -271,7 +308,7 @@ export default function Screen5PromptForge({
             ) : (
               <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto pr-1">
                 {survivingFragments.map((frag) => {
-                  const isUsed = lowerPrompt.includes(frag.text.toLowerCase().substring(0, 12));
+                  const isUsed = coveredClueIds.has(frag.id);
 
                   return (
                     <button
@@ -368,13 +405,13 @@ export default function Screen5PromptForge({
             </div>
 
             <div className="relative flex-1 min-h-[360px] p-5 flex flex-col">
-              {/* High-Impact Raw Dump Alert if user just clicked clues without writing instructions */}
+              {/* Constructive Guidance Tip if user only pasted raw clues without instructions */}
               {isRawDataDump && (
-                <div className="mb-3.5 p-3 rounded-2xl border border-red-500/60 bg-red-950/50 text-red-200 text-xs font-mono flex items-start gap-2.5 shadow-[0_0_20px_rgba(239,68,68,0.25)] animate-pulse">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="mb-3.5 p-3 rounded-2xl border border-amber-500/50 bg-amber-950/40 text-amber-200 text-xs font-mono flex items-start gap-2.5 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div className="leading-relaxed">
-                    <strong className="text-red-400 uppercase tracking-wider block">⚠️ UNPROMPTED CLUE DUMP DETECTED</strong>
-                    <span>You have only pasted raw clue fragments! An AI model cannot execute without instructions. You must write an actionable directive (e.g. <em>"Act as a growth strategist and create a 7-day marketing plan..."</em>) or your submission will fail the evaluation audit!</span>
+                    <strong className="text-amber-400 uppercase tracking-wider block">PROMPT GUIDANCE: ADD ACTION DIRECTIVE</strong>
+                    <span>You have inserted clue fragments without instructions. Add an action directive (e.g. <em>"Act as a strategist and create a detailed plan..."</em>) to unlock full execution points!</span>
                   </div>
                 </div>
               )}
