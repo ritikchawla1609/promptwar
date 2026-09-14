@@ -30,6 +30,19 @@ export default function Screen3Create({
   const isReady = hasPrompt && hasOutput;
   const isLocked = session.status === 'FIRST_LOCKED' || session.status === 'MATCHED' || session.firstSubmittedAt;
 
+  // Auto-lock when phase timer hits 0
+  useEffect(() => {
+    if (timer === 0 && !isLocked && !isSubmitting) {
+      if (promptInput.trim() || outputInput.trim()) {
+        parasiteAudio.playLock();
+        onLockFirstForm({
+          firstPrompt: promptInput.trim(),
+          firstOutput: outputInput.trim(),
+        });
+      }
+    }
+  }, [timer, isLocked, isSubmitting, promptInput, outputInput]);
+
   const handleLock = () => {
     if (!isReady) return;
     parasiteAudio.playLock();
@@ -75,11 +88,22 @@ export default function Screen3Create({
             FIRST FORM LOCKED.
           </h2>
 
-          <p className="font-mono text-xs sm:text-sm text-bone-300 max-w-md leading-relaxed mb-8">
+          <p className="font-mono text-xs sm:text-sm text-bone-300 max-w-md leading-relaxed mb-6">
             YOUR FIRST FORM HAS ENTERED THE ARENA CLUSTER.
             <br />
             OPPONENT OUTPUTS ARE CURRENTLY BEING INDEXED.
           </p>
+
+          {/* Synchronized Phase Timer Badge */}
+          <div className="mb-8 px-5 py-2.5 bg-charcoal-900 border border-cyan/40 rounded-xl inline-flex items-center gap-3 shadow-[0_0_20px_rgba(0,240,255,0.15)]">
+            <Clock className="w-4 h-4 text-cyan animate-pulse" />
+            <span className="text-cyan font-bold font-mono text-sm tracking-wider">
+              NEXT PHASE IN: {formatTimer(timer)}
+            </span>
+            <span className="text-bone-400 text-xs font-mono">
+              // SYNCHRONIZED COHORT SHIFT
+            </span>
+          </div>
 
           {/* Network Forming Widget */}
           <div className="w-full max-w-md p-6 border border-white/[0.12] bg-charcoal-900/70 text-left font-mono">

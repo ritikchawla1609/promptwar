@@ -244,6 +244,37 @@ export async function updateArenaStateAPI(updates) {
   } catch (e) {}
 }
 
+// Fetch Server-Authoritative Phase Clock (remaining seconds, active phase, submissions count)
+export async function fetchPhaseClockAPI() {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/phase-clock`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {}
+  return {
+    success: false,
+    activePhase: 'LOBBY',
+    remainingSeconds: 0,
+    totalSeconds: 0,
+    minTeamsRequired: 3,
+    registeredTeamCount: 0,
+    submittedCount: 0,
+  };
+}
+
+// Fetch Server-Assigned Peer Matchups for a Team
+export async function fetchMatchAssignmentsAPI(teamCode) {
+  if (!teamCode) return { success: false, opponents: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/matches/${teamCode.toUpperCase()}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {}
+  return { success: false, opponents: [] };
+}
+
 // Delete Team from Tournament
 export async function deleteTeamAPI(teamCodeOrId) {
   try {

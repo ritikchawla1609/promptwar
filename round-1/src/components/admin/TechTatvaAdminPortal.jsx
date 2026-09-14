@@ -44,6 +44,7 @@ import {
   setRound2QualificationAPI,
   registerTeamAPI,
   fetchAllArenaSubmissions,
+  fetchPhaseClockAPI,
 } from '../../utils/parasiteEngine';
 import { DEFAULT_CHALLENGE } from '../../data/parasiteChallenge';
 import { parasiteAudio } from '../../utils/parasiteAudio';
@@ -72,7 +73,15 @@ export default function TechTatvaAdminPortal({
     isRoundStarted: false,
     activePhase: 'LOBBY',
     startedAt: null,
-    timers: { create: 600, parasite: 300, evolve: 600 },
+    timers: { create: 600, parasite: 600, evolve: 600 },
+  });
+  const [phaseClock, setPhaseClock] = useState({
+    remainingSeconds: 0,
+    totalSeconds: 0,
+    activePhase: 'LOBBY',
+    isRoundStarted: false,
+    submittedCount: 0,
+    minTeamsRequired: 3,
   });
   const [isUpdatingArena, setIsUpdatingArena] = useState(false);
 
@@ -122,15 +131,17 @@ export default function TechTatvaAdminPortal({
   const loadConsoleData = async () => {
     setLoadingData(true);
     try {
-      const [curArena, curTeams, curSubs] = await Promise.all([
+      const [curArena, curTeams, curSubs, curClock] = await Promise.all([
         fetchArenaStateAPI(),
         fetchAllTeamsAPI(),
         fetchAllArenaSubmissions(),
+        fetchPhaseClockAPI(),
       ]);
 
       if (curArena) setArenaState(curArena);
       if (curTeams) setTeams(curTeams);
       if (curSubs) setSubmissions(curSubs);
+      if (curClock && curClock.success) setPhaseClock(curClock);
     } catch (e) {
       console.error('Failed to load console data:', e);
     } finally {
@@ -141,8 +152,21 @@ export default function TechTatvaAdminPortal({
   useEffect(() => {
     if (isAuthenticated) {
       loadConsoleData();
-      const interval = setInterval(loadConsoleData, 6000);
+      const interval = setInterval(loadConsoleData, 3000);
       return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
+
+  // Smooth local tick for countdown
+  useEffect(() => {
+    if (isAuthenticated) {
+      const tick = setInterval(() => {
+        setPhaseClock((prev) => ({
+          ...prev,
+          remainingSeconds: Math.max(0, prev.remainingSeconds - 1),
+        }));
+      }, 1000);
+      return () => clearInterval(tick);
     }
   }, [isAuthenticated]);
 
@@ -169,15 +193,29 @@ export default function TechTatvaAdminPortal({
   // ARENA CONTROLLER ACTIONS
   // -------------------------------------------------------------
   const handleToggleRoundStart = async (shouldStart) => {
+    if (shouldStart && teams.length < 3) {
+      alert(`⚠️ CANNOT START ROUND 01 ARENA\n\nQuorum Requirement: At least 3 squads must be registered before the round can start!\n\nCurrently registered: ${teams.length} / 3 squads.\nPlease use the "+ WALK-IN TEAM" button to register contenders.`);
+      return;
+    }
+
     setIsUpdatingArena(true);
     try {
       const updates = {
         isRoundStarted: shouldStart,
-        activePhase: shouldStart ? 'PHASE_1_CREATE' : 'LOBBY',
-        startedAt: shouldStart ? new Date().toISOString() : null,
       };
-      const updated = await updateArenaStateAPI(updates);
-      setArenaState(updated);
+      const res = await fetch('http://127.0.0.1:5001/api/arena/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        alert(`❌ Arena Start Blocked: ${data.error || 'Server error'}`);
+        return;
+      }
+      setArenaState(data.state);
+      const clock = await fetchPhaseClockAPI();
+      if (clock && clock.success) setPhaseClock(clock);
       parasiteAudio.playSubDrop();
     } catch (e) {
       alert('Failed to update arena state on server.');
@@ -189,10 +227,32 @@ export default function TechTatvaAdminPortal({
   const handleBroadcastPhase = async (phaseName) => {
     setIsUpdatingArena(true);
     try {
-      const updated = await updateArenaStateAPI({ activePhase: phaseName });
-      setArenaState(updated);
+      const res = await fetch('http://127.0.0.1:5001/api/arena/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activePhase: phaseName }),
+      });
+      const data = await res.json();
+      if (data.state) setArenaState(data.state);
+      const clock = await fetchPhaseClockAPI();
+      if (clock && clock.success) setPhaseClock(clock);
+      parasiteAudio.playLock();
     } finally {
       setIsUpdatingArena(false);
+    }
+  };
+
+  const handleForceAdvancePhase = async () => {
+    const sequence = ['LOBBY', 'BRIEFING', 'CREATE', 'MATCH', 'PARASITE', 'EVOLVE', 'COMPLETE'];
+    const current = arenaState.activePhase || 'LOBBY';
+    const idx = sequence.indexOf(current);
+    if (idx < 0 || idx >= sequence.length - 1) {
+      alert('Round is already at final stage (COMPLETE).');
+      return;
+    }
+    const nextPhase = sequence[idx + 1];
+    if (window.confirm(`FORCE ADVANCE COHORT TO: ${nextPhase}?\n\nThis will skip the remaining timer and immediately advance all participant screens across the arena.`)) {
+      handleBroadcastPhase(nextPhase);
     }
   };
 
@@ -747,35 +807,126 @@ export default function TechTatvaAdminPortal({
               </div>
             </div>
 
+            {/* Quorum Alert if fewer than 3 teams registered */}
+            {teams.length < 3 && (
+              <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 flex items-center justify-between gap-4 font-mono text-xs">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-amber-300 uppercase">
+                      QUORUM LOCK: MINIMUM 3 REGISTERED SQUADS REQUIRED
+                    </span>
+                    <p className="text-bone-400 text-[11px] mt-0.5">
+                      Round 01 requires at least 3 teams for balanced peer mutation matchmaking. Currently registered: <strong>{teams.length} / 3</strong>.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsWalkInOpen(true)}
+                  className="px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-charcoal-950 font-bold uppercase text-[11px] shrink-0"
+                >
+                  + Add Walk-In Team
+                </button>
+              </div>
+            )}
+
+            {/* Live Server-Synchronized Phase Clock Widget */}
+            {arenaState.isRoundStarted && (
+              <div className="p-6 rounded-xl border border-cyan/40 bg-[#0c0d12]/90 space-y-4 shadow-[0_0_35px_rgba(0,240,255,0.08)]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan/15 border border-cyan/40 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-cyan animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-cyan uppercase tracking-wider">
+                          LIVE ARENA PHASE CLOCK
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold rounded uppercase">
+                          SYNCHRONIZED (ALL CLIENTS)
+                        </span>
+                      </div>
+                      <div className="text-xs text-bone-400 font-mono mt-0.5">
+                        Active Stage: <span className="text-white font-bold">{phaseClock.activePhase || arenaState.activePhase}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Countdown Display & Force Advance */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right font-mono">
+                      <div className="text-2xl sm:text-3xl font-black text-cyan tracking-wider drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                        {String(Math.floor(phaseClock.remainingSeconds / 60)).padStart(2, '0')}:
+                        {String(phaseClock.remainingSeconds % 60).padStart(2, '0')}
+                      </div>
+                      <div className="text-[10px] text-bone-400 uppercase">TIME REMAINING IN PHASE</div>
+                    </div>
+
+                    <button
+                      onClick={handleForceAdvancePhase}
+                      disabled={isUpdatingArena}
+                      className="px-4 py-2.5 rounded-lg bg-cyan hover:bg-white text-charcoal-950 font-mono text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center gap-2"
+                      title="Skip timer and immediately advance all participants to the next phase"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                      <span>FORCE ADVANCE PHASE</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {phaseClock.totalSeconds > 0 && (
+                  <div>
+                    <div className="w-full bg-charcoal-800 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-cyan h-full transition-all duration-1000"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, Math.round(((phaseClock.totalSeconds - phaseClock.remainingSeconds) / phaseClock.totalSeconds) * 100)))}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-bone-500 font-mono mt-1">
+                      <span>Phase Duration: {Math.floor(phaseClock.totalSeconds / 60)}m</span>
+                      <span>
+                        Submissions Captured: {phaseClock.submittedCount || 0} / {teams.length} Squads
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Broadcast Phase Overrides */}
             <div className="p-6 rounded-xl border border-white/[0.08] bg-[#0c0d12]/80 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
-                    PHASE BROADCASTER
+                    PHASE BROADCASTER & MANUAL OVERRIDE
                   </h3>
                   <p className="text-xs text-bone-400">
-                    Host can broadcast stage progression alerts to all connected screens.
+                    Host can broadcast stage progression alerts or force-switch stages on all connected client machines.
                   </p>
                 </div>
                 <span className="font-mono text-xs text-cyan">PORT: 5001 SYNCED</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
                 {[
-                  { id: 'LOBBY', label: '00 // HOLDING LOBBY' },
-                  { id: 'HOW_IT_WORKS', label: '01 // BRIEFING' },
-                  { id: 'PHASE_1_CREATE', label: '02 // FIRST FORM (10M)' },
-                  { id: 'PHASE_2_PARASITE', label: '03 // PARASITE (05M)' },
-                  { id: 'PHASE_3_EVOLVE', label: '04 // EVOLVE (10M)' },
-                  { id: 'ARENA_CONCLUDED', label: '05 // JUDGING & FINISH' },
+                  { id: 'LOBBY', label: '00 // LOBBY' },
+                  { id: 'BRIEFING', label: '01 // BRIEFING (1M)' },
+                  { id: 'CREATE', label: '02 // FIRST FORM (10M)' },
+                  { id: 'MATCH', label: '03 // MATCHING (30S)' },
+                  { id: 'PARASITE', label: '04 // PARASITE (10M)' },
+                  { id: 'EVOLVE', label: '05 // EVOLVE (10M)' },
+                  { id: 'COMPLETE', label: '06 // COMPLETE' },
                 ].map((phase) => (
                   <button
                     key={phase.id}
                     onClick={() => handleBroadcastPhase(phase.id)}
                     className={`p-3 rounded border font-mono text-xs text-left transition-all ${
-                      arenaState.activePhase === phase.id
-                        ? 'border-cyan bg-cyan/15 text-cyan font-bold'
+                      (arenaState.activePhase === phase.id || phaseClock.activePhase === phase.id)
+                        ? 'border-cyan bg-cyan/15 text-cyan font-bold shadow-[0_0_15px_rgba(0,240,255,0.2)]'
                         : 'border-white/[0.08] bg-charcoal-900/40 text-bone-400 hover:border-white/20 hover:text-white'
                     }`}
                   >

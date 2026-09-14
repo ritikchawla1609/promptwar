@@ -19,6 +19,7 @@ export default function Screen4Match({
   matchedOpponents = [],
   registeredTeamsCount = 1,
   lockedSubmissionsCount = 1,
+  timer = 30,
   onProceedToParasite,
   onOpponentsMatched,
 }) {
@@ -278,17 +279,22 @@ export default function Screen4Match({
               )}
             </div>
 
-            {/* Call to Enter Parasite Mode */}
-            <div className="mt-10 flex flex-col items-center gap-3">
+            {/* Synchronized Call to Enter Parasite Mode */}
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="px-5 py-2 rounded-xl bg-cyan/10 border border-cyan/40 text-cyan font-mono text-xs font-bold tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+                <Clock className="w-4 h-4 animate-spin" style={{ animationDuration: '6s' }} />
+                <span>ALL SQUADS ADVANCING IN: {String(Math.floor(timer / 60)).padStart(2, '0')}:{String(timer % 60).padStart(2, '0')}</span>
+              </div>
+
               <button
                 onClick={onProceedToParasite}
                 className="editorial-btn group text-xs sm:text-sm px-10 py-4 shadow-[0_0_30px_rgba(0,240,255,0.3)] hover:scale-105 transition-all flex items-center gap-3"
               >
-                <span>ENTER PARASITE MODE</span>
+                <span>ENTER PARASITE MODE NOW</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
               <span className="font-mono text-[10px] text-bone-400 uppercase tracking-widest">
-                STAGE 03 DURATION: 05:00 MINUTES // INSPECT & MUTATE
+                STAGE 03 DURATION: 10:00 MINUTES // INSPECT & MUTATE WITH PEER SOLUTIONS
               </span>
             </div>
           </div>

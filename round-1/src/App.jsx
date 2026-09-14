@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NetworkCanvas from './components/NetworkCanvas';
 import ParasiteHeader from './components/ParasiteHeader';
 import Screen0Entry from './components/screens/Screen0Entry';
@@ -21,6 +21,8 @@ import {
   fetchAllArenaSubmissions,
   fetchArenaStateAPI,
   fetchAllRegisteredTeams,
+  fetchPhaseClockAPI,
+  fetchMatchAssignmentsAPI,
 } from './utils/parasiteEngine';
 import { parasiteAudio } from './utils/parasiteAudio';
 
@@ -32,26 +34,35 @@ export default function App() {
   const [registerModalTab, setRegisterModalTab] = useState('REGISTER');
   const [isMuted, setIsMuted] = useState(false);
 
-  // Global Arena Tournament State (Controlled by Admin Panel)
+  // Global Arena Tournament State (Controlled by Admin Panel & Server Clock)
   const [arenaState, setArenaState] = useState({
     isRoundStarted: false,
     activePhase: 'LOBBY',
     startedAt: null,
-    timers: { create: 600, parasite: 300, evolve: 600 },
+    timers: { create: 600, parasite: 600, evolve: 600 },
+  });
+
+  // Server-Authoritative Phase Clock
+  const [phaseClock, setPhaseClock] = useState({
+    remainingSeconds: 0,
+    totalSeconds: 0,
+    activePhase: 'LOBBY',
+    isRoundStarted: false,
+    submittedCount: 0,
   });
 
   // Active Stage Navigation:
   // 'ENTRY' | 'HOLDING_LOBBY' | 'HOW_IT_WORKS' | 'CHALLENGE' | 'CREATE' | 'MATCH' | 'PARASITE' | 'EVOLVE' | 'COMPLETE'
   const [currentStage, setCurrentStage] = useState('ENTRY');
 
-  // Timers (in seconds)
-  const [createTimer, setCreateTimer] = useState(600); // 10:00
-  const [parasiteTimer, setParasiteTimer] = useState(300); // 05:00
-  const [evolveTimer, setEvolveTimer] = useState(600); // 10:00
-
   // Submissions & Registered Teams State (Real from server)
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
+
+  // Ref tracking previous server phase for transition handling (autosave, audio, matching)
+  const prevServerPhaseRef = useRef('LOBBY');
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   // Check URL route for hidden Admin Console: #/admin or ?admin=true
   const checkIsAdminRoute = () => {
@@ -80,38 +91,139 @@ export default function App() {
     };
   }, []);
 
-  // Continuous real-time polling of arena state, teams, and submissions (every 2.2s)
+  // Update session helper
+  const handleUpdateSession = (updates) => {
+    setSession((prev) => {
+      const next = { ...prev, ...updates };
+      saveLocalSession(next);
+      return next;
+    });
+  };
+
+  // Continuous real-time polling of phase clock, arena state, teams, and submissions (every 1.5s)
   useEffect(() => {
     let isMounted = true;
+
     const pollArena = async () => {
       try {
-        const [state, subs, tms] = await Promise.all([
+        const [clock, state, subs, tms] = await Promise.all([
+          fetchPhaseClockAPI(),
           fetchArenaStateAPI(),
           fetchAllArenaSubmissions(),
           fetchAllRegisteredTeams(),
         ]);
+
         if (!isMounted) return;
+
+        if (clock && clock.success) {
+          setPhaseClock(clock);
+        }
         if (state) setArenaState(state);
         if (subs) setAllSubmissions(subs);
         if (tms) setAllTeams(tms);
 
-        // Real-time peer matchmaking trigger when waiting in MATCH stage
-        if (currentStage === 'MATCH' && (!session.matchedOpponents || session.matchedOpponents.length === 0)) {
-          const peers = generateAnonymousMatches(subs || [], session.participantId, session.teamCode);
-          if (peers.length > 0) {
-            handleUpdateSession({ matchedOpponents: peers });
-            parasiteAudio.playSubDrop();
+        const activePhase = clock?.activePhase || state?.activePhase || 'LOBBY';
+        const isRoundStarted = clock ? clock.isRoundStarted : state?.isRoundStarted;
+        const currentSession = sessionRef.current;
+
+        // If team is logged in, synchronize screen based on server activePhase
+        if (currentSession.teamCode) {
+          // Detect phase transition from server
+          if (activePhase !== prevServerPhaseRef.current) {
+            const prevPhase = prevServerPhaseRef.current;
+            console.log(`[Phase Sync] Transition detected: ${prevPhase} -> ${activePhase}`);
+            prevServerPhaseRef.current = activePhase;
+
+            // 1. If transitioning AWAY from CREATE, auto-lock first form if not already locked
+            if (prevPhase === 'CREATE') {
+              if (currentSession.status !== 'FIRST_LOCKED' && !currentSession.firstSubmittedAt) {
+                console.log('[Auto-Save] CREATE timer expired — auto-locking first form');
+                const autoSubmitData = {
+                  firstPrompt: currentSession.firstPrompt || '',
+                  firstOutput: currentSession.firstOutput || '',
+                };
+                handleLockFirstForm(autoSubmitData);
+              }
+            }
+
+            // 2. If entering MATCH or PARASITE, fetch server-assigned opponents
+            if (activePhase === 'MATCH' || activePhase === 'PARASITE') {
+              try {
+                const matchData = await fetchMatchAssignmentsAPI(currentSession.teamCode);
+                if (matchData && matchData.opponents && matchData.opponents.length > 0) {
+                  handleUpdateSession({ matchedOpponents: matchData.opponents });
+                  parasiteAudio.playSubDrop();
+                } else {
+                  // Fallback to local pool if server has not assigned yet
+                  const fallbackMatches = generateAnonymousMatches(subs || [], currentSession.participantId, currentSession.teamCode);
+                  if (fallbackMatches.length > 0) {
+                    handleUpdateSession({ matchedOpponents: fallbackMatches });
+                    parasiteAudio.playSubDrop();
+                  }
+                }
+              } catch (err) {
+                console.warn('[Matchmaking Sync Error]:', err);
+              }
+            }
+
+            // 3. If transitioning AWAY from EVOLVE, auto-lock final form if not locked
+            if (prevPhase === 'EVOLVE') {
+              if (currentSession.status !== 'FINAL_LOCKED' && !currentSession.finalSubmittedAt) {
+                console.log('[Auto-Save] EVOLVE timer expired — auto-locking final form');
+                const autoFinalData = {
+                  finalPrompt: currentSession.finalPrompt || '',
+                  finalOutput: currentSession.finalOutput || '',
+                };
+                handleLockFinalForm(autoFinalData);
+              }
+            }
+          }
+
+          // Stage mapping based on server activePhase
+          if (!isRoundStarted || activePhase === 'LOBBY') {
+            setCurrentStage('HOLDING_LOBBY');
+          } else if (activePhase === 'BRIEFING') {
+            // Only force to HOW_IT_WORKS if currently in lobby
+            setCurrentStage((prev) => (prev === 'HOLDING_LOBBY' || prev === 'ENTRY' ? 'HOW_IT_WORKS' : prev));
+          } else if (activePhase === 'CREATE') {
+            setCurrentStage('CREATE');
+          } else if (activePhase === 'MATCH') {
+            setCurrentStage('MATCH');
+          } else if (activePhase === 'PARASITE') {
+            setCurrentStage('PARASITE');
+          } else if (activePhase === 'EVOLVE') {
+            setCurrentStage('EVOLVE');
+          } else if (activePhase === 'COMPLETE') {
+            setCurrentStage('COMPLETE');
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Polling error:', e);
+      }
     };
+
     pollArena();
-    const interval = setInterval(pollArena, 2200);
+    const interval = setInterval(pollArena, 1500);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [currentStage, session.participantId, session.teamCode, session.matchedOpponents]);
+  }, []);
+
+  // Smooth local countdown tick between server clock polls
+  useEffect(() => {
+    const timerTick = setInterval(() => {
+      setPhaseClock((prev) => {
+        if (prev.remainingSeconds > 0) {
+          return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerTick);
+  }, []);
 
   // Gating effect: If host resets/pauses arena, kick active participants back to holding lobby
   useEffect(() => {
@@ -121,23 +233,6 @@ export default function App() {
       }
     }
   }, [arenaState.isRoundStarted, session.teamCode, currentStage]);
-
-  // Sync initial submissions & teams for peer matchmaking
-  useEffect(() => {
-    Promise.all([fetchAllArenaSubmissions(), fetchAllRegisteredTeams()]).then(([subs, tms]) => {
-      if (subs && subs.length > 0) setAllSubmissions(subs);
-      if (tms && tms.length > 0) setAllTeams(tms);
-    });
-  }, []);
-
-  // Update session helper
-  const handleUpdateSession = (updates) => {
-    setSession((prev) => {
-      const next = { ...prev, ...updates };
-      saveLocalSession(next);
-      return next;
-    });
-  };
 
   const handleOpenRegister = (tab = 'REGISTER') => {
     setRegisterModalTab(tab);
@@ -164,9 +259,19 @@ export default function App() {
     };
     handleUpdateSession(updated);
 
-    // If host hasn't started round 1, advance to Holding Lobby; if already started, go to HOW_IT_WORKS
-    if (!arenaState.isRoundStarted) {
+    // If host hasn't started round 1, advance to Holding Lobby; if already started, go to active phase stage
+    if (!arenaState.isRoundStarted || arenaState.activePhase === 'LOBBY') {
       setCurrentStage('HOLDING_LOBBY');
+    } else if (arenaState.activePhase === 'CREATE') {
+      setCurrentStage('CREATE');
+    } else if (arenaState.activePhase === 'MATCH') {
+      setCurrentStage('MATCH');
+    } else if (arenaState.activePhase === 'PARASITE') {
+      setCurrentStage('PARASITE');
+    } else if (arenaState.activePhase === 'EVOLVE') {
+      setCurrentStage('EVOLVE');
+    } else if (arenaState.activePhase === 'COMPLETE') {
+      setCurrentStage('COMPLETE');
     } else {
       setCurrentStage('HOW_IT_WORKS');
     }
@@ -191,37 +296,17 @@ export default function App() {
       return;
     }
     // Gating check: Round started or waiting lobby?
-    if (!arenaState.isRoundStarted) {
+    if (!arenaState.isRoundStarted || arenaState.activePhase === 'LOBBY') {
       setCurrentStage('HOLDING_LOBBY');
     } else {
       setCurrentStage('HOW_IT_WORKS');
     }
   };
 
-  // Timer Tick Effects
-  useEffect(() => {
-    let interval = null;
-    if (currentStage === 'CREATE') {
-      interval = setInterval(() => {
-        setCreateTimer((t) => (t > 0 ? t - 1 : 0));
-      }, 1000);
-    } else if (currentStage === 'PARASITE') {
-      interval = setInterval(() => {
-        setParasiteTimer((t) => (t > 0 ? t - 1 : 0));
-      }, 1000);
-    } else if (currentStage === 'EVOLVE') {
-      interval = setInterval(() => {
-        setEvolveTimer((t) => (t > 0 ? t - 1 : 0));
-      }, 1000);
-    }
-
-    return () => clearInterval(interval);
-  }, [currentStage]);
-
-  // STAGE TRANSITION HANDLERS
+  // STAGE TRANSITION HANDLERS (Synchronized Phase Progression)
   const handleLockFirstForm = async (formData) => {
     const updated = {
-      ...session,
+      ...sessionRef.current,
       firstPrompt: formData.firstPrompt,
       firstOutput: formData.firstOutput,
       firstSubmittedAt: new Date().toISOString(),
@@ -230,31 +315,34 @@ export default function App() {
     handleUpdateSession(updated);
     await syncSubmissionToBackend(updated);
 
-    // Fetch latest submissions from backend
+    // Refresh arena submissions
     const freshSubs = await fetchAllArenaSubmissions();
     if (freshSubs) setAllSubmissions(freshSubs);
 
-    const matches = generateAnonymousMatches(freshSubs || allSubmissions, session.participantId, session.teamCode);
-    handleUpdateSession({ matchedOpponents: matches });
+    // Check if server already has match assignments ready
+    const matchesRes = await fetchMatchAssignmentsAPI(sessionRef.current.teamCode);
+    if (matchesRes && matchesRes.opponents && matchesRes.opponents.length > 0) {
+      handleUpdateSession({ matchedOpponents: matchesRes.opponents });
+    }
 
-    // Instantly enter MATCH stage (Screen4Match will hold in live radar if 0 peers, or display peer outputs if ready!)
-    setCurrentStage('MATCH');
+    // NOTE: In synchronized phase mode, we do NOT jump to MATCH immediately.
+    // The participant stays on Screen3Create's encrypted waiting room until the server timer ends
+    // or the admin advances all teams together!
   };
 
-  const handleLockFinalForm = (formData) => {
+  const handleLockFinalForm = async (formData) => {
     const updated = {
-      ...session,
+      ...sessionRef.current,
       finalPrompt: formData.finalPrompt,
       finalOutput: formData.finalOutput,
       finalSubmittedAt: new Date().toISOString(),
       status: 'FINAL_LOCKED',
     };
     handleUpdateSession(updated);
-    syncSubmissionToBackend(updated);
+    await syncSubmissionToBackend(updated);
 
-    setTimeout(() => {
-      setCurrentStage('COMPLETE');
-    }, 2400);
+    // Participant remains in Screen6Evolve's "PERMANENTLY SEALED" view
+    // until server advances to COMPLETE for everyone
   };
 
   // Global Audio Mute Toggle
@@ -281,11 +369,10 @@ export default function App() {
     );
   }
 
-  // Active Timer for Header
-  let activeHeaderTimer = null;
-  if (currentStage === 'CREATE') activeHeaderTimer = createTimer;
-  else if (currentStage === 'PARASITE') activeHeaderTimer = parasiteTimer;
-  else if (currentStage === 'EVOLVE') activeHeaderTimer = evolveTimer;
+  // Active Timer from Server Clock for Header and Screens
+  const currentRemaining = phaseClock.remainingSeconds;
+  const isTimedPhase = ['CREATE', 'MATCH', 'PARASITE', 'EVOLVE'].includes(arenaState.activePhase);
+  const activeHeaderTimer = isTimedPhase ? currentRemaining : null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-bone-100 font-sans relative overflow-x-hidden">
@@ -338,7 +425,7 @@ export default function App() {
         {currentStage === 'CREATE' && (
           <Screen3Create
             challenge={challenge}
-            timer={createTimer}
+            timer={currentRemaining}
             session={session}
             onUpdateSession={handleUpdateSession}
             onLockFirstForm={handleLockFirstForm}
@@ -353,13 +440,21 @@ export default function App() {
             matchedOpponents={session.matchedOpponents || []}
             registeredTeamsCount={Math.max(1, allTeams.length)}
             lockedSubmissionsCount={allSubmissions.filter((s) => Boolean(s.firstOutput && s.firstOutput.trim())).length}
+            timer={currentRemaining}
             onProceedToParasite={() => setCurrentStage('PARASITE')}
-            onOpponentsMatched={(freshSubs) => {
+            onOpponentsMatched={async (freshSubs) => {
               setAllSubmissions(freshSubs);
-              const matches = generateAnonymousMatches(freshSubs, session.participantId, session.teamCode);
-              if (matches.length > 0) {
-                handleUpdateSession({ matchedOpponents: matches });
+              // Check server assignments first
+              const matchRes = await fetchMatchAssignmentsAPI(session.teamCode);
+              if (matchRes && matchRes.opponents && matchRes.opponents.length > 0) {
+                handleUpdateSession({ matchedOpponents: matchRes.opponents });
                 parasiteAudio.playSubDrop();
+              } else {
+                const matches = generateAnonymousMatches(freshSubs, session.participantId, session.teamCode);
+                if (matches.length > 0) {
+                  handleUpdateSession({ matchedOpponents: matches });
+                  parasiteAudio.playSubDrop();
+                }
               }
             }}
           />
@@ -369,7 +464,7 @@ export default function App() {
           <Screen5Parasite
             session={session}
             matchedOpponents={session.matchedOpponents || []}
-            timer={parasiteTimer}
+            timer={currentRemaining}
             onUpdateSession={handleUpdateSession}
             onProceedToEvolve={() => setCurrentStage('EVOLVE')}
           />
@@ -379,7 +474,7 @@ export default function App() {
           <Screen6Evolve
             challenge={challenge}
             session={session}
-            timer={evolveTimer}
+            timer={currentRemaining}
             onUpdateSession={handleUpdateSession}
             onLockFinalForm={handleLockFinalForm}
           />

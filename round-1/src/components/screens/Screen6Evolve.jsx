@@ -37,6 +37,20 @@ export default function Screen6Evolve({
     }
   }, [timer]);
 
+  // Auto-lock when evolution timer hits 0
+  useEffect(() => {
+    if (timer === 0 && !evolutionComplete && !isCompressing) {
+      if (finalPrompt.trim() || finalOutput.trim()) {
+        parasiteAudio.playLock();
+        setEvolutionComplete(true);
+        onLockFinalForm({
+          finalPrompt: finalPrompt.trim(),
+          finalOutput: finalOutput.trim(),
+        });
+      }
+    }
+  }, [timer, evolutionComplete, isCompressing, finalPrompt, finalOutput]);
+
   const hasPrompt = finalPrompt.trim().length > 0;
   const hasOutput = finalOutput.trim().length > 0;
   const isReady = hasPrompt && hasOutput;
@@ -98,9 +112,20 @@ export default function Screen6Evolve({
             EVOLUTION COMPLETE.
           </h2>
 
-          <p className="font-mono text-xs sm:text-sm text-bone-300 max-w-md leading-relaxed mb-8">
+          <p className="font-mono text-xs sm:text-sm text-bone-300 max-w-md leading-relaxed mb-6">
             YOUR FINAL FORM HAS BEEN COMPRESSED AND DELIVERED TO THE JUDGING MATRIX.
           </p>
+
+          {/* Synchronized Cohort Timer Badge */}
+          <div className="mb-8 px-5 py-2.5 bg-charcoal-900 border border-acid-lime/40 rounded-xl inline-flex items-center gap-3 shadow-[0_0_20px_rgba(212,255,0,0.15)]">
+            <Clock className="w-4 h-4 text-acid-lime animate-pulse" />
+            <span className="text-acid-lime font-bold font-mono text-sm tracking-wider">
+              ARENA CONCLUDES IN: {formatTimer(timer)}
+            </span>
+            <span className="text-bone-400 text-xs font-mono">
+              // ALL SQUADS TRANSITION TOGETHER
+            </span>
+          </div>
         </div>
 
         <div className="pt-4 border-t border-white/[0.06] font-mono text-[10px] text-bone-500 uppercase tracking-widest flex items-center justify-between">

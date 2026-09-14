@@ -5,7 +5,7 @@ import { Clock, Eye, Maximize2, Minimize2, Edit3, ArrowRight, AlertTriangle, Spa
 export default function Screen5Parasite({
   session,
   matchedOpponents = [],
-  timer = 300,
+  timer = 600,
   onUpdateSession,
   onProceedToEvolve,
 }) {
