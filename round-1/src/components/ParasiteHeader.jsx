@@ -34,10 +34,16 @@ export default function ParasiteHeader({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* Left: Brand & Round Identity */}
         <div className="flex items-center gap-3">
-          <span className="w-2 h-2 bg-acid-lime animate-pulse" />
+          <div className="h-9 w-auto flex items-center justify-center">
+            <img
+              src="/prompt-war-logo.png"
+              alt="Prompt War"
+              className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] hover:scale-105 transition-transform cursor-pointer"
+            />
+          </div>
           <div className="flex flex-col">
             <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-bone-400">
-              ROUND 01 / PROMPT WAR
+              ROUND 01 / TECH TATVA
             </span>
             <span className="font-display font-black text-sm tracking-tight text-bone-100">
               PROMPT PARASITE

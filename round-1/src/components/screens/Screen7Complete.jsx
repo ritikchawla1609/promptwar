@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { parasiteAudio } from '../../utils/parasiteAudio';
 import { CheckCircle2, Clock, Trophy, Shield, ArrowRight, Activity, Terminal } from 'lucide-react';
+import PromptWar3DLogo from '../PromptWar3DLogo';
 
 export default function Screen7Complete({
   session,
@@ -31,16 +32,22 @@ export default function Screen7Complete({
       <div className="my-auto py-8">
         {viewTab === 'SUMMARY' ? (
           <div>
-            {/* Massive Triad Headline */}
-            <div className="mb-10">
-              <span className="font-mono text-xs uppercase tracking-[0.3em] text-acid-lime font-bold block mb-3">
-                MISSION WRAP-UP
-              </span>
+            {/* 3D Logo & Triad Headline */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
+              <div>
+                <span className="font-mono text-xs uppercase tracking-[0.3em] text-acid-lime font-bold block mb-2">
+                  MISSION WRAP-UP
+                </span>
 
-              <div className="font-display font-black text-4xl sm:text-6xl text-bone-50 uppercase tracking-tightest leading-tight">
-                <div>YOU CREATED.</div>
-                <div>YOU INFECTED.</div>
-                <div className="text-acid-lime">YOU EVOLVED.</div>
+                <div className="font-display font-black text-3xl sm:text-5xl text-bone-50 uppercase tracking-tightest leading-tight">
+                  <div>YOU CREATED.</div>
+                  <div>YOU INFECTED.</div>
+                  <div className="text-acid-lime">YOU EVOLVED.</div>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-auto flex justify-center">
+                <PromptWar3DLogo variant="compact" />
               </div>
             </div>
 
