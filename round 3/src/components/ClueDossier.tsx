@@ -424,6 +424,58 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
               {selectedItem.content}
             </div>
 
+            {/* Forensic Significance */}
+            {selectedItem.significance && (
+              <div className="p-3 bg-red-950/30 border border-red-900/60 rounded mb-4 text-xs space-y-1 font-mono">
+                <div className="flex items-center gap-1.5 font-bold text-red-400 uppercase text-[10px]">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>FORENSIC SIGNIFICANCE & CAUSAL LINK:</span>
+                </div>
+                <p className="text-red-200/90 leading-relaxed">{selectedItem.significance}</p>
+              </div>
+            )}
+
+            {/* Connected Evidence Dependencies */}
+            {selectedItem.connectedClueIds && selectedItem.connectedClueIds.length > 0 && (
+              <div className="p-3 bg-black/60 border border-gray-800 rounded mb-4 text-xs space-y-1.5 font-mono">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
+                  INTERCONNECTED EVIDENCE THREADS:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedItem.connectedClueIds.map((cid) => {
+                    const targetClue = evidenceList.find(e => e.id === cid);
+                    return (
+                      <button
+                        key={cid}
+                        onClick={() => {
+                          if (targetClue) {
+                            setSelectedItem(targetClue);
+                            sound.playTick(false);
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded bg-black/90 border border-cyan-900 hover:border-cyan-500 text-[10px] text-cyan-300 hover:text-white transition cursor-pointer flex items-center gap-1"
+                      >
+                        <span>#{cid.toUpperCase()}</span>
+                        {targetClue && <span className="opacity-75 truncate max-w-[130px]">{targetClue.title.split(':')[1] || ''}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Contradicts Suspect Alibi Warning */}
+            {selectedItem.contradictsSuspect && (
+              <div className="p-3 bg-amber-950/30 border-l-4 border-amber-600 rounded mb-4 text-xs font-mono">
+                <span className="text-amber-400 font-bold uppercase text-[10px] block mb-0.5">
+                  ⚠️ CONTRADICTS SUSPECT ALIBI:
+                </span>
+                <span className="text-amber-200">
+                  This clue directly invalidates the sworn timeline statement of suspect: <strong>{selectedItem.contradictsSuspect.toUpperCase()}</strong>.
+                </span>
+              </div>
+            )}
+
             {/* Interactive Audio Tape Player for Evidence 04 */}
             {selectedItem.id === 'ev-4' && (
               <div className="p-4 rounded border border-amber-900/60 bg-amber-950/20 mb-4 space-y-3">

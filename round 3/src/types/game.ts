@@ -1,16 +1,26 @@
 export type SuspectId = 'aarav' | 'riya' | 'kabir' | 'meera' | 'dev';
 
+export type MotiveLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME' | 'CRITICAL';
+export type AlibiStatus = 'VERIFIED' | 'QUESTIONABLE' | 'FABRICATED' | 'COLLAPSED';
+
 export interface Suspect {
   id: SuspectId;
   name: string;
   role: string;
   avatarIcon: string;
+  relationshipWithVictim: string;
+  motiveLevel: MotiveLevel;
+  motiveDescription: string;
+  alibiStatus: AlibiStatus;
+  alibiDescription: string;
   statement: string;
   cctvTimestamp: string;
   cctvAction: string;
   clockSource: string; // The physical clock that recorded this
   twoTruths: [string, string];
   realCrime: string; // The crime they are actually guilty of (NOT murder)
+  contradictionNotes?: string;
+  connectedEvidenceIds: string[];
   lockQuestion: string;
   lockAnswer: string;
   lockHint: string;
@@ -28,6 +38,19 @@ export interface EvidenceItem {
   content: string;
   hiddenDetails?: string; // Revealed upon interaction or slow playback
   tags: string[];
+  // Interconnected Clue Dependency Graph Fields
+  connectedClueIds?: string[];
+  contradictsSuspect?: SuspectId;
+  leadsToClue?: string;
+  significance?: string;
+}
+
+export interface CrimeSceneObjectives {
+  clockInspected: boolean;
+  tapeFound: boolean;
+  bloodExamined: boolean;
+  doorInspected: boolean;
+  luminolRevealed: boolean;
 }
 
 export interface FinalBossSubmission {

@@ -15,6 +15,9 @@ import { GlitchClimax } from './components/GlitchClimax';
 import { HostControlModal } from './components/HostControlModal';
 import { NarrativeBridgeModal } from './components/NarrativeBridgeModal';
 import { EvidenceBoard } from './components/EvidenceBoard';
+import { Phase0Briefing } from './components/Phase0Briefing';
+import { Phase1CrimeScene } from './components/Phase1CrimeScene';
+import { CrimeSceneObjectives } from './types/game';
 import { 
   ShieldAlert, 
   ArrowRight, 
@@ -39,6 +42,14 @@ import { BloodSplatterOverlay } from './components/BloodSplatterOverlay';
 export const App: React.FC = () => {
   // Master Game State
   const [currentRound, setCurrentRound] = useState<number>(0);
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(false);
+  const [crimeSceneObjectives, setCrimeSceneObjectives] = useState<CrimeSceneObjectives>({
+    clockInspected: false,
+    tapeFound: false,
+    bloodExamined: false,
+    doorInspected: false,
+    luminolRevealed: false
+  });
   const [timeRemaining, setTimeRemaining] = useState<number>(55 * 60); // 55 mins
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [audioMuted, setAudioMuted] = useState<boolean>(false);
@@ -46,7 +57,7 @@ export const App: React.FC = () => {
   const [isClimaxTriggered, setIsClimaxTriggered] = useState<boolean>(false);
 
   // 3D Mansion vs Terminal vs Detective Wall Mode
-  const [viewMode, setViewMode] = useState<'3d' | 'terminal' | 'board'>('3d');
+  const [viewMode, setViewMode] = useState<'3d' | 'terminal' | 'board'>('terminal');
   const [terminalLayout, setTerminalLayout] = useState<'split' | 'puzzle' | 'intel'>('split');
   const [intenseTrauma, setIntenseTrauma] = useState<boolean>(false);
 
@@ -271,10 +282,18 @@ export const App: React.FC = () => {
   };
 
   const handleResetGame = () => {
+    setHasSeenIntro(false);
     setCurrentRound(0);
     setTimeRemaining(55 * 60);
     setIsTimerRunning(false);
     setIsClimaxTriggered(false);
+    setCrimeSceneObjectives({
+      clockInspected: false,
+      tapeFound: false,
+      bloodExamined: false,
+      doorInspected: false,
+      luminolRevealed: false
+    });
     setAudioRevealedSecret(false);
     setAudioSpeed(1.0);
     setSuspectLocks({ aarav: false, riya: false, kabir: false, meera: false, dev: false });
@@ -296,12 +315,20 @@ export const App: React.FC = () => {
       discovery: '',
       nextObjective: ''
     });
-    setViewMode('3d');
+    setViewMode('terminal');
   };
 
   const handleAutoSolveAll = () => {
     sound.playObjectiveComplete();
     sound.playRadioChirp();
+    setHasSeenIntro(true);
+    setCrimeSceneObjectives({
+      clockInspected: true,
+      tapeFound: true,
+      bloodExamined: true,
+      doorInspected: true,
+      luminolRevealed: true
+    });
     setSuspectLocks({ aarav: true, riya: true, kabir: true, meera: true, dev: true });
     setAudioRevealedSecret(true);
     setHiddenVideoUnlocked(true);
@@ -343,12 +370,13 @@ export const App: React.FC = () => {
     return <GlitchClimax onResetGame={handleResetGame} />;
   }
 
-  // If Round 0 (Intro) is active
-  if (currentRound === 0) {
+  // If Horror Intro has not been seen yet, play it first!
+  if (!hasSeenIntro) {
     return (
       <HorrorIntro
         onComplete={() => {
-          setCurrentRound(1);
+          setHasSeenIntro(true);
+          setCurrentRound(0);
           setIsTimerRunning(true);
         }}
         audioMuted={audioMuted}
@@ -381,17 +409,17 @@ export const App: React.FC = () => {
       {/* Visceral Blood Splatters & Trauma Flashes */}
       <BloodSplatterOverlay activeDrips={true} intenseTrauma={intenseTrauma} />
 
-      {/* Top Header & 55-min Countdown */}
+      {/* Universal Navigation Bar & 55-min Countdown */}
       <HeaderTimer
-        currentRound={currentRound}
+        currentPhase={currentRound}
         timeRemainingSeconds={timeRemaining}
         isTimerRunning={isTimerRunning}
         onToggleTimer={handleToggleTimer}
         audioMuted={audioMuted}
         onToggleMute={handleToggleMute}
         onOpenHostModal={() => setIsHostModalOpen(true)}
-        onSelectRound={(r) => {
-          setCurrentRound(r);
+        onSelectPhase={(phase) => {
+          setCurrentRound(phase);
           sound.playTick(false);
         }}
       />
@@ -445,7 +473,7 @@ export const App: React.FC = () => {
           </div>
 
           {/* Terminal Layout Switcher when in Terminal Mode */}
-          {viewMode === 'terminal' && (
+          {viewMode === 'terminal' && currentRound >= 2 && (
             <div className="flex items-center gap-1 bg-black/60 p-1 rounded border border-gray-800">
               <span className="text-[10px] text-gray-500 px-1.5 hidden lg:inline font-bold">FRAME LAYOUT:</span>
               <button
@@ -594,6 +622,10 @@ export const App: React.FC = () => {
               hiddenVideoUnlocked={hiddenVideoUnlocked}
               printerLogUnlocked={printerLogUnlocked}
               finalEvaluated={finalEvaluated}
+              onNavigateToPhase={(phase) => {
+                setCurrentRound(phase);
+                sound.playTick(false);
+              }}
             />
 
             <div className="p-4 bg-[#0d0d14] rounded border border-gray-900 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -614,8 +646,43 @@ export const App: React.FC = () => {
         {/* View 3: Forensic Terminal & Master Puzzle Engine */}
         {viewMode === 'terminal' && (
           <>
-            {/* Split Command Deck Layout */}
-            {terminalLayout === 'split' && (
+            {/* Phase 0: Initial Case Briefing */}
+            {currentRound === 0 && (
+              <Phase0Briefing
+                onStartInvestigation={() => {
+                  setCurrentRound(1);
+                  sound.playHorrorStinger();
+                }}
+              />
+            )}
+
+            {/* Phase 1: First-Person Crime Scene Recon & 5 Structured Objectives */}
+            {currentRound === 1 && (
+              <Phase1CrimeScene
+                objectives={crimeSceneObjectives}
+                onUpdateObjective={(key, val) => {
+                  setCrimeSceneObjectives((prev) => ({ ...prev, [key]: val }));
+                }}
+                onAutoDiscoverAll={() => {
+                  setCrimeSceneObjectives({
+                    clockInspected: true,
+                    tapeFound: true,
+                    bloodExamined: true,
+                    doorInspected: true,
+                    luminolRevealed: true
+                  });
+                  sound.playObjectiveComplete();
+                }}
+                onProceedToPhase2={() => {
+                  setCurrentRound(2);
+                  sound.playHorrorStinger();
+                }}
+                onTriggerTrauma={triggerTrauma}
+              />
+            )}
+
+            {/* Phases 2-6: Split Command Deck Layout */}
+            {currentRound >= 2 && terminalLayout === 'split' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 {/* Left Column: Active Round Mission Deck (7 cols) */}
                 <div className="lg:col-span-7 space-y-4">
@@ -631,19 +698,18 @@ export const App: React.FC = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-2 h-2 rounded-full bg-red-500 hud-pulse-red" />
                           <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest">
-                            ACTIVE OBJECTIVE • ROUND 0{currentRound}
+                            ACTIVE OBJECTIVE • PHASE 0{currentRound}
                           </span>
                           <span className="text-[9px] px-1.5 py-0.2 bg-red-950 text-red-300 border border-red-900 rounded font-mono">
                             TACTICAL OPS
                           </span>
                         </div>
                         <h2 className="text-base sm:text-lg font-bold text-gray-100">
-                          {currentRound === 1 && 'The First Lie — Audit 11:47 Clue & Audio Reel'}
-                          {currentRound === 2 && 'Five Suspects — Break Alibis & Secondary Crimes'}
-                          {currentRound === 3 && 'The Impossible Timeline — 12:03 CCTV vs 12:05 Audio'}
-                          {currentRound === 4 && "Dead Man's Message — Separate Attack, Death & Discovery"}
-                          {currentRound === 5 && 'The False Murderer — Challenge 97.8% AI Indictment'}
-                          {currentRound === 6 && 'The House Remembers — Final Boss Reconstruction'}
+                          {currentRound === 2 && 'Phase 2: Suspects — Interrogate Dossiers & Break Secondary Alibis'}
+                          {currentRound === 3 && 'Phase 3: The Impossible Timeline — 12:03 CCTV vs 12:05 Audio & AI Trap'}
+                          {currentRound === 4 && "Phase 4: Forensics — Dead Man's Message & Attack vs Death Chronology"}
+                          {currentRound === 5 && 'Phase 5: Case Board — Challenge False Murderer & Trace Red Threads'}
+                          {currentRound === 6 && 'Phase 6: Final Indictment — Master Reconstruction & Algorithmic Verdict'}
                         </h2>
                       </div>
 
@@ -655,109 +721,12 @@ export const App: React.FC = () => {
                           }}
                           className="px-3 py-1.5 bg-red-950 hover:bg-red-900 border border-red-800 text-red-200 text-xs font-bold rounded flex items-center gap-1 shrink-0 transition cursor-pointer"
                         >
-                          <span>PROCEED R{currentRound + 1}</span>
+                          <span>PROCEED PHASE 0{currentRound + 1}</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
                   </div>
-
-                  {/* Round 1 Investigation Deck */}
-                  {currentRound === 1 && (
-                    <div className="tactical-frame tactical-corners rounded-lg p-5 font-mono text-gray-200">
-                      <span className="corner-tl text-red-500" />
-                      <span className="corner-tr text-red-500" />
-                      <span className="corner-bl text-red-500" />
-                      <span className="corner-br text-red-500" />
-
-                      <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-4">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-red-500" />
-                          <h3 className="text-sm font-bold text-gray-100 uppercase tracking-wider">
-                            ROUND 01 AUDIT // CLOCK ESCAPEMENT & TAPE REEL
-                          </h3>
-                        </div>
-                        <span className="text-[10px] px-2 py-0.5 bg-red-950/60 border border-red-900/60 text-red-300 rounded font-bold">
-                          INITIAL BREACH
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-                        The prosecution claims Professor Sen died at 11:47 PM because the East Hallway clock was frozen at that time. Audit the physical evidence and the audio reel to shatter this fabricated timeline.
-                      </p>
-
-                      <div className="space-y-3 mb-5">
-                        <div className="text-[11px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                          <span>1-CLICK TACTICAL DEDUCTIONS:</span>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            sound.playTick(true);
-                            sound.playGlitchStatic(0.2);
-                          }}
-                          className="w-full text-left p-3 rounded bg-black/60 border border-gray-800 hover:border-red-500 text-xs transition cursor-pointer group"
-                        >
-                          <div className="flex items-center justify-between text-red-400 font-bold mb-1">
-                            <span className="flex items-center gap-1.5">
-                              <Key className="w-3.5 h-3.5 text-red-500" />
-                              <span>DEDUCTION 1: AUDIT CLOCK ESCAPEMENT (#EV-02)</span>
-                            </span>
-                            <span className="text-[10px] text-gray-500 group-hover:text-red-400">DISCOVERED ✓</span>
-                          </div>
-                          <p className="text-gray-400 text-[11px]">
-                            A graphite sliver was jammed between the teeth of the escapement wheel. The clock was intentionally stopped hours prior!
-                          </p>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            handleAudioRevealedSecret();
-                            sound.playTick(true);
-                          }}
-                          className={`w-full text-left p-3 rounded border text-xs transition cursor-pointer group ${
-                            audioRevealedSecret 
-                              ? 'bg-amber-950/30 border-amber-600 text-amber-200' 
-                              : 'bg-black/60 border-amber-900/60 hover:border-amber-500 text-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-amber-400 font-bold mb-1">
-                            <span className="flex items-center gap-1.5">
-                              <Volume2 className="w-3.5 h-3.5 text-amber-500" />
-                              <span>DEDUCTION 2: 0.5x SUB-BASS SPECTRAL REVEAL (#EV-04)</span>
-                            </span>
-                            <span className="text-[10px] text-amber-400">
-                              {audioRevealedSecret ? 'REVEALED ✓' : 'RUN 0.5x SLOWDOWN AUDIT →'}
-                            </span>
-                          </div>
-                          <p className="text-gray-400 text-[11px]">
-                            "Someone started BEFORE the house stopped." — Reverse frequency decode proves the attack occurred BEFORE the 12:13 blackout!
-                          </p>
-                        </button>
-                      </div>
-
-                      <div className="pt-3 border-t border-gray-800 flex items-center justify-between">
-                        <span className="text-[11px] text-gray-500">
-                          {audioRevealedSecret ? 'Both anomalies confirmed.' : 'Trigger deductions above or proceed to Round 2:'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            if (!audioRevealedSecret) {
-                              handleAudioRevealedSecret();
-                            } else {
-                              setCurrentRound(2);
-                              sound.playTick(true);
-                            }
-                          }}
-                          className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-bold text-xs rounded transition flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.5)]"
-                        >
-                          <span>PROCEED TO ROUND 2: FIVE SUSPECTS</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {currentRound === 2 && (
                     <Round2Locks
@@ -787,12 +756,35 @@ export const App: React.FC = () => {
                   )}
 
                   {currentRound === 5 && (
-                    <Round5FalseMurderer
-                      round5Choice={round5Choice}
-                      onAccuseMeera={() => setRound5Choice('accused_meera')}
-                      onChallengeAi={handleChallengeAi}
-                      printerLogUnlocked={printerLogUnlocked}
-                    />
+                    <div className="space-y-6">
+                      <Round5FalseMurderer
+                        round5Choice={round5Choice}
+                        onAccuseMeera={() => setRound5Choice('accused_meera')}
+                        onChallengeAi={handleChallengeAi}
+                        printerLogUnlocked={printerLogUnlocked}
+                      />
+                      <div className="pt-4 border-t border-gray-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Pin className="w-4 h-4 text-amber-400 fill-amber-400" />
+                          <h3 className="text-sm font-bold text-gray-100 uppercase tracking-wider">
+                            CENTRAL CASE BOARD & EVIDENCE THREADS
+                          </h3>
+                        </div>
+                        <EvidenceBoard
+                          currentRound={currentRound}
+                          suspectLocks={suspectLocks}
+                          audioRevealedSecret={audioRevealedSecret}
+                          reasoningInspected={reasoningInspected}
+                          hiddenVideoUnlocked={hiddenVideoUnlocked}
+                          printerLogUnlocked={printerLogUnlocked}
+                          finalEvaluated={finalEvaluated}
+                          onNavigateToPhase={(phase) => {
+                            setCurrentRound(phase);
+                            sound.playTick(false);
+                          }}
+                        />
+                      </div>
+                    </div>
                   )}
 
                   {currentRound === 6 && (
@@ -829,8 +821,8 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Focused Puzzle Only Layout */}
-            {terminalLayout === 'puzzle' && (
+            {/* Phases 2-6: Focused Puzzle Only Layout */}
+            {currentRound >= 2 && terminalLayout === 'puzzle' && (
               <div className="space-y-4">
                 {/* Round Banner / Objective Frame */}
                 <div className="tactical-frame tactical-corners rounded-lg p-4 font-mono text-gray-200 shadow-md">
@@ -844,19 +836,18 @@ export const App: React.FC = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-red-500 hud-pulse-red" />
                         <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest">
-                          ACTIVE OBJECTIVE • ROUND 0{currentRound}
+                          ACTIVE OBJECTIVE • PHASE 0{currentRound}
                         </span>
                         <span className="text-[9px] px-1.5 py-0.2 bg-red-950 text-red-300 border border-red-900 rounded font-mono">
                           FOCUSED MODE
                         </span>
                       </div>
                       <h2 className="text-base sm:text-lg font-bold text-gray-100">
-                        {currentRound === 1 && 'The First Lie — Audit the 11:47 Clue & Distorted Audio Reel'}
-                        {currentRound === 2 && 'Five Suspects — Break the Alibis & Identify Non-Murder Crimes'}
-                        {currentRound === 3 && 'The Impossible Timeline — Reconcile 12:03 CCTV with 12:05 Audio'}
-                        {currentRound === 4 && "The Dead Man's Message — Separate Attack, Death, and Discovery"}
-                        {currentRound === 5 && 'The False Murderer — Challenge the 97.8% AI Indictment'}
-                        {currentRound === 6 && 'The House Remembers — Final Boss Prompt & Reconstruction'}
+                        {currentRound === 2 && 'Phase 2: Suspects — Interrogate Dossiers & Break Secondary Alibis'}
+                        {currentRound === 3 && 'Phase 3: The Impossible Timeline — 12:03 CCTV vs 12:05 Audio & AI Trap'}
+                        {currentRound === 4 && "Phase 4: Forensics — Dead Man's Message & Attack vs Death Chronology"}
+                        {currentRound === 5 && 'Phase 5: Case Board — Challenge False Murderer & Central Board'}
+                        {currentRound === 6 && 'Phase 6: Final Indictment — Master Reconstruction & Verdict'}
                       </h2>
                     </div>
 
@@ -868,54 +859,12 @@ export const App: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-red-950 hover:bg-red-900 border border-red-800 text-red-200 text-xs font-bold rounded flex items-center gap-1.5 shrink-0 transition cursor-pointer"
                       >
-                        <span>PROCEED TO ROUND {currentRound + 1}</span>
+                        <span>PROCEED TO PHASE 0{currentRound + 1}</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </div>
-
-                {currentRound === 1 && (
-                  <div className="tactical-frame tactical-corners rounded-lg p-5 font-mono text-gray-200">
-                    <span className="corner-tl text-red-500" />
-                    <span className="corner-tr text-red-500" />
-                    <span className="corner-bl text-red-500" />
-                    <span className="corner-br text-red-500" />
-                    <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-red-500" />
-                        <h3 className="text-sm font-bold text-gray-100 uppercase tracking-wider">
-                          ROUND 01 AUDIT // CLOCK ESCAPEMENT & TAPE REEL
-                        </h3>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-                      The prosecution claims Professor Sen died at 11:47 PM. Audit the physical evidence and the audio reel to dismantle this fabricated timeline.
-                    </p>
-                    <div className="space-y-3 mb-5">
-                      <button
-                        onClick={() => {
-                          sound.playTick(true);
-                          sound.playGlitchStatic(0.2);
-                        }}
-                        className="w-full text-left p-3 rounded bg-black/60 border border-gray-800 hover:border-red-500 text-xs transition cursor-pointer"
-                      >
-                        <div className="text-red-400 font-bold mb-1">DEDUCTION 1: AUDIT CLOCK ESCAPEMENT (#EV-02)</div>
-                        <p className="text-gray-400 text-[11px]">A graphite sliver stopped the clock prior to the murder.</p>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleAudioRevealedSecret();
-                          sound.playTick(true);
-                        }}
-                        className="w-full text-left p-3 rounded bg-black/60 border border-amber-900 hover:border-amber-500 text-xs transition cursor-pointer"
-                      >
-                        <div className="text-amber-400 font-bold mb-1">DEDUCTION 2: 0.5x SUB-BASS SPECTRAL REVEAL (#EV-04)</div>
-                        <p className="text-gray-400 text-[11px]">"Someone started BEFORE the house stopped." Attack occurred before 12:13 blackout!</p>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {currentRound === 2 && (
                   <Round2Locks
@@ -945,12 +894,29 @@ export const App: React.FC = () => {
                 )}
 
                 {currentRound === 5 && (
-                  <Round5FalseMurderer
-                    round5Choice={round5Choice}
-                    onAccuseMeera={() => setRound5Choice('accused_meera')}
-                    onChallengeAi={handleChallengeAi}
-                    printerLogUnlocked={printerLogUnlocked}
-                  />
+                  <div className="space-y-6">
+                    <Round5FalseMurderer
+                      round5Choice={round5Choice}
+                      onAccuseMeera={() => setRound5Choice('accused_meera')}
+                      onChallengeAi={handleChallengeAi}
+                      printerLogUnlocked={printerLogUnlocked}
+                    />
+                    <div className="pt-4 border-t border-gray-800">
+                      <EvidenceBoard
+                        currentRound={currentRound}
+                        suspectLocks={suspectLocks}
+                        audioRevealedSecret={audioRevealedSecret}
+                        reasoningInspected={reasoningInspected}
+                        hiddenVideoUnlocked={hiddenVideoUnlocked}
+                        printerLogUnlocked={printerLogUnlocked}
+                        finalEvaluated={finalEvaluated}
+                        onNavigateToPhase={(phase) => {
+                          setCurrentRound(phase);
+                          sound.playTick(false);
+                        }}
+                      />
+                    </div>
+                  </div>
                 )}
 
                 {currentRound === 6 && (
@@ -987,8 +953,8 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Full Intel Vault Layout */}
-            {terminalLayout === 'intel' && (
+            {/* Phases 2-6: Full Intel Vault Layout */}
+            {currentRound >= 2 && terminalLayout === 'intel' && (
               <div className="space-y-4">
                 <ClueDossier
                   evidenceList={accessibleEvidence}

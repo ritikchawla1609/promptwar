@@ -297,6 +297,57 @@ assert(clueDossierTsx.includes('activeCategory') && clueDossierTsx.includes('sea
 assert(clueDossierTsx.includes('#EV-'), 'ClueDossier presents tactical evidence ID badges');
 
 // ----------------------------------------------------------------------------
+// TEST 18: PHASE NAVIGATION & CLUE DEPENDENCY GRAPH
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 18: PHASE NAVIGATION & CLUE DEPENDENCY GRAPH ---');
+const headerTimerTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'HeaderTimer.tsx'), 'utf-8');
+assert(headerTimerTsx.includes('PHASES = ['), 'HeaderTimer defines PHASES array');
+['BRIEFING', 'CRIME SCENE', 'SUSPECTS', 'TIMELINE', 'FORENSICS', 'CASE BOARD', 'ACCUSATION'].forEach(shortTitle => {
+  assert(headerTimerTsx.includes(`shortTitle: '${shortTitle}'`), `HeaderTimer has tab for "${shortTitle}"`);
+});
+assert(headerTimerTsx.includes('progressPercent'), 'HeaderTimer calculates and displays live progress percentage');
+assert(headerTimerTsx.includes('CASE #17-B'), 'HeaderTimer displays prominent Case File metadata');
+
+const phase0Tsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'Phase0Briefing.tsx'), 'utf-8');
+assert(phase0Tsx.includes('VICTIM: PROFESSOR VIKRAM SEN'), 'Phase 0 contains victim identity');
+assert(phase0Tsx.includes('BLACKWOOD ESTATE (EST. 1894)'), 'Phase 0 contains location telemetry');
+assert(phase0Tsx.includes('INITIATE FIRST-PERSON CRIME SCENE RECON'), 'Phase 0 has clear directive to launch Phase 1');
+
+const phase1Tsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'Phase1CrimeScene.tsx'), 'utf-8');
+assert(phase1Tsx.includes('CRIME SCENE INVESTIGATION OBJECTIVES'), 'Phase 1 has 5 structured objectives section');
+['clockInspected', 'tapeFound', 'bloodExamined', 'doorInspected', 'luminolRevealed'].forEach(objKey => {
+  assert(phase1Tsx.includes(objKey), `Phase 1 tracks objective "${objKey}"`);
+});
+assert(phase1Tsx.includes('onAutoDiscoverAll'), 'Phase 1 provides 1-click Auto Discover for testing');
+assert(phase1Tsx.includes('onProceedToPhase2'), 'Phase 1 provides seamless bridge to Phase 2 Suspects');
+
+// Clue & Suspect Dependency Graph verification
+const suspectsDataTs = fs.readFileSync(path.join(projectRoot, 'src', 'data', 'suspects.ts'), 'utf-8');
+assert(suspectsDataTs.includes('relationshipWithVictim'), 'Suspects have relationship with victim defined');
+assert(suspectsDataTs.includes('motiveLevel: \'EXTREME\'') && suspectsDataTs.includes('motiveLevel: \'CRITICAL\''), 'Suspects have granular motive levels defined');
+assert(suspectsDataTs.includes('alibiStatus: \'FABRICATED\'') && suspectsDataTs.includes('alibiStatus: \'COLLAPSED\''), 'Suspects have verified alibi statuses');
+assert(suspectsDataTs.includes('connectedEvidenceIds:'), 'Suspects link directly to connected evidence IDs');
+assert(suspectsDataTs.includes('contradictionNotes:'), 'Suspects detail forensic contradiction notes');
+
+const evidenceDataTs = fs.readFileSync(path.join(projectRoot, 'src', 'data', 'evidence.ts'), 'utf-8');
+assert(evidenceDataTs.includes('connectedClueIds:'), 'Evidence items have interconnected clue dependency graph');
+assert(evidenceDataTs.includes('contradictsSuspect:'), 'Evidence items explicitly contradict suspect alibis');
+assert(evidenceDataTs.includes('significance:'), 'Evidence items have forensic significance notes');
+
+const evidenceBoardTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'EvidenceBoard.tsx'), 'utf-8');
+assert(evidenceBoardTsx.includes('RELATIONSHIP INSPECTOR'), 'EvidenceBoard provides relationship inspector panel');
+assert(evidenceBoardTsx.includes('CONNECTED EVIDENCE THREADS'), 'EvidenceBoard visualizes connected evidence threads');
+assert(evidenceBoardTsx.includes('SUSPECT ALIBI CONTRADICTIONS'), 'EvidenceBoard highlights suspect contradictions');
+
+assert(clueDossierTsx.includes('FORENSIC SIGNIFICANCE'), 'ClueDossier displays forensic significance');
+assert(clueDossierTsx.includes('CONTRADICTS SUSPECT ALIBI'), 'ClueDossier highlights suspect contradictions');
+
+assert(currentAppTsx.includes('<Phase0Briefing'), 'App.tsx renders Phase0Briefing for Phase 0');
+assert(currentAppTsx.includes('<Phase1CrimeScene'), 'App.tsx renders Phase1CrimeScene for Phase 1');
+assert(currentAppTsx.includes('currentPhase={currentRound}'), 'App.tsx passes currentPhase to HeaderTimer');
+assert(currentAppTsx.includes('onSelectPhase='), 'App.tsx passes onSelectPhase handler to HeaderTimer');
+
+// ----------------------------------------------------------------------------
 // SUMMARY REPORT
 // ----------------------------------------------------------------------------
 console.log('\n================================================================');
