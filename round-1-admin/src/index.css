@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0a0a0c;
+  color: #f4f1ea;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  selection-background-color: #00f0ff;
+  selection-color: #070709;
+}
+
+::selection {
+  background: #00f0ff;
+  color: #070709;
+}
+
+/* Minimal Editorial Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1c1c24;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+/* Editorial Minimal Surfaces */
+.editorial-panel {
+  background-color: rgba(14, 14, 18, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(244, 241, 234, 0.08);
+}
+
+.editorial-panel-focus {
+  background-color: rgba(14, 14, 18, 0.9);
+  border: 1px solid #00f0ff;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+}
+
+.editorial-panel-crimson {
+  background-color: rgba(14, 14, 18, 0.9);
+  border: 1px solid #ff2a5f;
+  box-shadow: 0 0 25px rgba(255, 42, 95, 0.15);
+}
+
+.editorial-panel-danger {
+  border: 1px solid rgba(255, 42, 95, 0.5);
+  box-shadow: 0 0 20px rgba(255, 42, 95, 0.15);
+}
+
+/* Minimal Buttons */
+.editorial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background-color: #f4f1ea;
+  color: #070709;
+  font-family: '"JetBrains Mono"', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #f4f1ea;
+  cursor: pointer;
+}
+
+.editorial-btn:hover {
+  background-color: #00f0ff;
+  border-color: #00f0ff;
+  color: #070709;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.editorial-btn-cyan {
+  background-color: #00f0ff;
+  border: 1px solid #00f0ff;
+  color: #070709;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+}
+
+.editorial-btn-cyan:hover {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  color: #070709;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+}
+
+.editorial-btn-crimson {
+  background-color: #ff2a5f;
+  border-color: #ff2a5f;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(255, 42, 95, 0.3);
+}
+
+.editorial-btn-crimson:hover {
+  background-color: #ff0055;
+  border-color: #ff0055;
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(255, 42, 95, 0.5);
+}
+
+.editorial-btn-secondary {
+  background-color: transparent;
+  color: #f4f1ea;
+  border: 1px solid rgba(244, 241, 234, 0.2);
+}
+
+.editorial-btn-secondary:hover {
+  background-color: rgba(244, 241, 234, 0.06);
+  border-color: #f4f1ea;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.editorial-btn-danger {
+  background-color: #881337;
+  border-color: #881337;
+  color: #f4f1ea;
+}
+
+.editorial-btn-danger:hover {
+  background-color: #ff2a5f;
+  border-color: #ff2a5f;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(255, 42, 95, 0.35);
+}
+
+/* Subtle Data Grid lines */
+.bg-grid-subtle {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(244, 241, 234, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(244, 241, 234, 0.02) 1px, transparent 1px);
+}
+
+/* Dual Brand Gradients from Logo */
+.border-logo-gradient {
+  border-image: linear-gradient(to right, #00f0ff, #ff2a5f) 1;
+}
+
+.text-gradient-logo {
+  background: linear-gradient(135deg, #00f0ff 0%, #ffffff 50%, #ff2a5f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* High-contrast Typography */
+.text-bone {
+  color: #f4f1ea;
+}
+
+.text-cyan-brand {
+  color: #00f0ff;
+}
+
+.text-crimson-brand {
+  color: #ff2a5f;
+}
+
+.text-acid {
+  color: #00f0ff;
+}

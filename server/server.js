@@ -952,18 +952,22 @@ app.post('/api/submissions', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 [Backend] Prompt War Tournament API Server listening on http://127.0.0.1:${PORT}`);
-  console.log(`📡 [Backend] Endpoints:`);
-  console.log(`   - POST /api/teams/register`);
-  console.log(`   - POST /api/teams/login`);
-  console.log(`   - GET  /api/teams`);
-  console.log(`   - PATCH /api/teams/:codeOrId`);
-  console.log(`   - POST /api/teams/:codeOrId/qualify-r2`);
-  console.log(`   - GET  /api/submissions`);
-  console.log(`   - POST /api/submissions`);
-  console.log(`   - GET  /api/arena/state`);
-  console.log(`   - POST /api/arena/state`);
-  console.log(`   - GET  /api/arena/phase-clock`);
-  console.log(`   - GET  /api/arena/matches/:teamCode\n`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 [Backend] Prompt War Tournament API Server listening on http://127.0.0.1:${PORT}`);
+    console.log(`📡 [Backend] Endpoints:`);
+    console.log(`   - POST /api/teams/register`);
+    console.log(`   - POST /api/teams/login`);
+    console.log(`   - GET  /api/teams`);
+    console.log(`   - PATCH /api/teams/:codeOrId`);
+    console.log(`   - POST /api/teams/:codeOrId/qualify-r2`);
+    console.log(`   - GET  /api/submissions`);
+    console.log(`   - POST /api/submissions`);
+    console.log(`   - GET  /api/arena/state`);
+    console.log(`   - POST /api/arena/state`);
+    console.log(`   - GET  /api/arena/phase-clock`);
+    console.log(`   - GET  /api/arena/matches/:teamCode\n`);
+  });
+}
+
+export default app;
