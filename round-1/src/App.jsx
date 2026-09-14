@@ -20,6 +20,7 @@ import {
   syncSubmissionToBackend,
   fetchAllArenaSubmissions,
   fetchArenaStateAPI,
+  fetchAllRegisteredTeams,
 } from './utils/parasiteEngine';
 import { parasiteAudio } from './utils/parasiteAudio';
 
@@ -48,8 +49,9 @@ export default function App() {
   const [parasiteTimer, setParasiteTimer] = useState(300); // 05:00
   const [evolveTimer, setEvolveTimer] = useState(600); // 10:00
 
-  // All Submissions list (for matchmaking)
+  // Submissions & Registered Teams State (Real from server)
   const [allSubmissions, setAllSubmissions] = useState([]);
+  const [allTeams, setAllTeams] = useState([]);
 
   // Check URL route for hidden Admin Console: #/admin or ?admin=true
   const checkIsAdminRoute = () => {
@@ -78,24 +80,38 @@ export default function App() {
     };
   }, []);
 
-  // Poll arena state from backend every 3 seconds
+  // Continuous real-time polling of arena state, teams, and submissions (every 2.2s)
   useEffect(() => {
     let isMounted = true;
     const pollArena = async () => {
       try {
-        const state = await fetchArenaStateAPI();
-        if (isMounted && state) {
-          setArenaState(state);
+        const [state, subs, tms] = await Promise.all([
+          fetchArenaStateAPI(),
+          fetchAllArenaSubmissions(),
+          fetchAllRegisteredTeams(),
+        ]);
+        if (!isMounted) return;
+        if (state) setArenaState(state);
+        if (subs) setAllSubmissions(subs);
+        if (tms) setAllTeams(tms);
+
+        // Real-time peer matchmaking trigger when waiting in MATCH stage
+        if (currentStage === 'MATCH' && (!session.matchedOpponents || session.matchedOpponents.length === 0)) {
+          const peers = generateAnonymousMatches(subs || [], session.participantId, session.teamCode);
+          if (peers.length > 0) {
+            handleUpdateSession({ matchedOpponents: peers });
+            parasiteAudio.playSubDrop();
+          }
         }
       } catch (e) {}
     };
     pollArena();
-    const interval = setInterval(pollArena, 3000);
+    const interval = setInterval(pollArena, 2200);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [currentStage, session.participantId, session.teamCode, session.matchedOpponents]);
 
   // Gating effect: If host resets/pauses arena, kick active participants back to holding lobby
   useEffect(() => {
@@ -106,14 +122,11 @@ export default function App() {
     }
   }, [arenaState.isRoundStarted, session.teamCode, currentStage]);
 
-  // Sync initial submissions for peer matchmaking
+  // Sync initial submissions & teams for peer matchmaking
   useEffect(() => {
-    fetchAllArenaSubmissions().then((subs) => {
-      if (subs && subs.length > 0) {
-        setAllSubmissions(subs);
-      } else {
-        setAllSubmissions([session]);
-      }
+    Promise.all([fetchAllArenaSubmissions(), fetchAllRegisteredTeams()]).then(([subs, tms]) => {
+      if (subs && subs.length > 0) setAllSubmissions(subs);
+      if (tms && tms.length > 0) setAllTeams(tms);
     });
   }, []);
 
@@ -206,7 +219,7 @@ export default function App() {
   }, [currentStage]);
 
   // STAGE TRANSITION HANDLERS
-  const handleLockFirstForm = (formData) => {
+  const handleLockFirstForm = async (formData) => {
     const updated = {
       ...session,
       firstPrompt: formData.firstPrompt,
@@ -215,13 +228,17 @@ export default function App() {
       status: 'FIRST_LOCKED',
     };
     handleUpdateSession(updated);
-    syncSubmissionToBackend(updated);
+    await syncSubmissionToBackend(updated);
 
-    setTimeout(() => {
-      const matches = generateAnonymousMatches(allSubmissions, session.participantId);
-      handleUpdateSession({ matchedOpponents: matches, status: 'MATCHED' });
-      setCurrentStage('MATCH');
-    }, 2800);
+    // Fetch latest submissions from backend
+    const freshSubs = await fetchAllArenaSubmissions();
+    if (freshSubs) setAllSubmissions(freshSubs);
+
+    const matches = generateAnonymousMatches(freshSubs || allSubmissions, session.participantId, session.teamCode);
+    handleUpdateSession({ matchedOpponents: matches });
+
+    // Instantly enter MATCH stage (Screen4Match will hold in live radar if 0 peers, or display peer outputs if ready!)
+    setCurrentStage('MATCH');
   };
 
   const handleLockFinalForm = (formData) => {
@@ -325,22 +342,33 @@ export default function App() {
             session={session}
             onUpdateSession={handleUpdateSession}
             onLockFirstForm={handleLockFirstForm}
-            allSubmissionsCount={Math.max(47, allSubmissions.length)}
+            registeredTeamsCount={Math.max(1, allTeams.length)}
+            lockedSubmissionsCount={allSubmissions.filter((s) => Boolean(s.firstOutput && s.firstOutput.trim())).length}
           />
         )}
 
         {currentStage === 'MATCH' && (
           <Screen4Match
             session={session}
-            matchedOpponents={session.matchedOpponents}
+            matchedOpponents={session.matchedOpponents || []}
+            registeredTeamsCount={Math.max(1, allTeams.length)}
+            lockedSubmissionsCount={allSubmissions.filter((s) => Boolean(s.firstOutput && s.firstOutput.trim())).length}
             onProceedToParasite={() => setCurrentStage('PARASITE')}
+            onOpponentsMatched={(freshSubs) => {
+              setAllSubmissions(freshSubs);
+              const matches = generateAnonymousMatches(freshSubs, session.participantId, session.teamCode);
+              if (matches.length > 0) {
+                handleUpdateSession({ matchedOpponents: matches });
+                parasiteAudio.playSubDrop();
+              }
+            }}
           />
         )}
 
         {currentStage === 'PARASITE' && (
           <Screen5Parasite
             session={session}
-            matchedOpponents={session.matchedOpponents}
+            matchedOpponents={session.matchedOpponents || []}
             timer={parasiteTimer}
             onUpdateSession={handleUpdateSession}
             onProceedToEvolve={() => setCurrentStage('EVOLVE')}
@@ -360,7 +388,13 @@ export default function App() {
         {currentStage === 'COMPLETE' && (
           <Screen7Complete
             session={session}
-            leaderboard={allSubmissions.filter((s) => s.score != null)}
+            leaderboard={allTeams.filter((t) => t.round1?.score != null).map((t, i) => ({
+              rank: `0${i + 1}`,
+              team: t.teamName,
+              teamCode: t.teamCode,
+              score: t.round1.score,
+              isYou: t.teamCode === session.teamCode,
+            }))}
           />
         )}
       </main>

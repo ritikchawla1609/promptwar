@@ -131,54 +131,57 @@ export default function Screen7Complete({
             </div>
 
             {/* Ranking Table */}
-            <div className="space-y-2">
-              {(leaderboard && leaderboard.length > 0 ? leaderboard : [
-                { rank: '01', team: 'NEXUS_PRIME', score: 94.5, evolution: '+28.0' },
-                { rank: '02', team: session.teamName || 'SYNAPSE_412', score: 91.0, evolution: '+22.5', isYou: true },
-                { rank: '03', team: 'CYBER_VIPER', score: 88.5, evolution: '+19.0' },
-                { rank: '04', team: 'PARASITE_X', score: 85.0, evolution: '+15.5' },
-                { rank: '05', team: 'GHOST_RUNNER', score: 82.0, evolution: '+12.0' },
-              ]).map((entry, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center justify-between p-4 border transition-all ${
-                    entry.isYou || entry.team === session.teamName
-                      ? 'border-acid-lime bg-acid-lime/10 text-bone-50 shadow-[0_0_20px_rgba(212,255,0,0.1)]'
-                      : 'border-white/[0.06] bg-charcoal-900/50 text-bone-300 hover:border-white/[0.15]'
-                  }`}
-                >
-                  <div className="flex items-center gap-6">
-                    <span className="font-display font-black text-xl sm:text-2xl text-bone-400 w-8">
-                      {entry.rank || `0${idx + 1}`}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm sm:text-base text-bone-100">
-                          {entry.team || entry.teamName}
-                        </span>
-                        {(entry.isYou || entry.team === session.teamName) && (
-                          <span className="text-[9px] bg-acid-lime text-charcoal-950 px-1.5 py-0.2 font-black uppercase tracking-wider">
-                            YOU
+              {leaderboard && leaderboard.length > 0 ? (
+                leaderboard.map((entry, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-between p-4 border transition-all ${
+                      entry.isYou || entry.team === session.teamName || entry.teamCode === session.teamCode
+                        ? 'border-cyan bg-cyan/10 text-bone-50 shadow-[0_0_20px_rgba(0,240,255,0.15)]'
+                        : 'border-white/[0.06] bg-charcoal-900/50 text-bone-300 hover:border-white/[0.15]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-6">
+                      <span className="font-display font-black text-xl sm:text-2xl text-bone-400 w-8">
+                        {entry.rank || `0${idx + 1}`}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm sm:text-base text-bone-100">
+                            {entry.team || entry.teamName}
                           </span>
-                        )}
+                          {(entry.isYou || entry.team === session.teamName || entry.teamCode === session.teamCode) && (
+                            <span className="text-[9px] bg-cyan text-charcoal-950 px-1.5 py-0.2 font-black uppercase tracking-wider rounded">
+                              YOU
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-bone-500 uppercase tracking-widest block mt-0.5">
+                          PASS: {entry.teamCode || 'PW-ARENA'}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-bone-500 uppercase tracking-widest block mt-0.5">
-                        EVOLUTION DELTA: {entry.evolution || '+18.5'} PTS
+                    </div>
+
+                    <div className="text-right">
+                      <div className="font-display font-black text-xl sm:text-2xl text-cyan">
+                        {entry.score != null ? entry.score.toFixed(1) : 'Pending'}
+                      </div>
+                      <span className="text-[10px] text-bone-500 uppercase tracking-widest">
+                        OUT OF 100
                       </span>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <div className="font-display font-black text-xl sm:text-2xl text-acid-lime">
-                      {entry.score != null ? entry.score.toFixed(1) : '90.0'}
-                    </div>
-                    <span className="text-[10px] text-bone-500 uppercase tracking-widest">
-                      OUT OF 100
-                    </span>
+                ))
+              ) : (
+                <div className="p-8 border border-white/[0.08] bg-charcoal-900/40 text-center font-mono space-y-2 rounded-lg">
+                  <div className="text-cyan text-sm font-bold uppercase">
+                    JUDGE EVALUATION IN PROGRESS
                   </div>
+                  <p className="text-xs text-bone-400">
+                    Your final form has been transmitted. Official judges from Tech Tatva Club are currently scoring submissions on the 4-tier rubric.
+                  </p>
                 </div>
-              ))}
-            </div>
+              )}
           </div>
         )}
       </div>

@@ -8,8 +8,8 @@ export default function Screen3Create({
   session,
   onUpdateSession,
   onLockFirstForm,
-  allSubmissionsCount = 47,
-  totalParticipantsGoal = 60,
+  registeredTeamsCount = 1,
+  lockedSubmissionsCount = 1,
 }) {
   const [promptInput, setPromptInput] = useState(session.firstPrompt || '');
   const [outputInput, setOutputInput] = useState(session.firstOutput || '');
@@ -85,25 +85,25 @@ export default function Screen3Create({
           <div className="w-full max-w-md p-6 border border-white/[0.12] bg-charcoal-900/70 text-left font-mono">
             <div className="flex items-center justify-between text-xs mb-3">
               <span className="text-bone-400 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 bg-acid-lime animate-ping" />
-                THE NETWORK IS FORMING...
+                <span className="w-2 h-2 bg-cyan animate-ping" />
+                <span>ARENA SUBMISSIONS TRANSMITTED</span>
               </span>
-              <span className="text-acid-lime font-bold">
-                {allSubmissionsCount} / {totalParticipantsGoal}
+              <span className="text-cyan font-bold font-mono">
+                {lockedSubmissionsCount} / {Math.max(1, registeredTeamsCount)} READY
               </span>
             </div>
 
             {/* Progress line */}
             <div className="w-full bg-charcoal-800 h-1.5 overflow-hidden mb-4">
               <div
-                className="bg-acid-lime h-full transition-all duration-500"
+                className="bg-cyan h-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, Math.round((allSubmissionsCount / totalParticipantsGoal) * 100))}%`,
+                  width: `${Math.min(100, Math.round((lockedSubmissionsCount / Math.max(1, registeredTeamsCount)) * 100))}%`,
                 }}
               />
             </div>
 
-            <p className="text-[11px] text-bone-500 leading-normal">
+            <p className="text-[11px] text-bone-400 leading-normal">
               Contenders are independently finalizing their baseline runs. Anonymous matching will engage automatically once the cohort aligns.
             </p>
           </div>

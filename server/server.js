@@ -514,6 +514,30 @@ app.get('/api/submissions', async (req, res) => {
       const submissions = await Submission.find(filter).sort({ totalScore: -1, createdAt: -1 });
       return res.json({ success: true, count: submissions.length, submissions });
     } else {
+      // In-memory: Also ensure any team with firstOutput in inMemoryTeams is mirrored in submissions
+      inMemoryTeams.forEach((t) => {
+        if (t.round1?.firstOutput) {
+          const exists = inMemorySubmissions.some(
+            (s) => s.teamCode === t.teamCode || s.teamName === t.teamName
+          );
+          if (!exists) {
+            inMemorySubmissions.push({
+              submissionId: `sub_${t.teamCode}`,
+              teamCode: t.teamCode,
+              teamName: t.teamName,
+              leaderName: t.leaderName,
+              college: t.college,
+              round: 'round-1',
+              firstPrompt: t.round1.firstPrompt || '',
+              firstOutput: t.round1.firstOutput || '',
+              finalPrompt: t.round1.finalPrompt || '',
+              finalOutput: t.round1.finalOutput || '',
+              status: t.round1.status || 'FIRST_LOCKED',
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+      });
       return res.json({ success: true, count: inMemorySubmissions.length, submissions: inMemorySubmissions });
     }
   } catch (err) {
@@ -535,15 +559,22 @@ app.post('/api/submissions', async (req, res) => {
         { new: true, upsert: true }
       );
 
-      // Also sync to Team document if teamName matches
-      if (data.teamName) {
+      // Also sync to Team document if teamName or teamCode matches
+      if (data.teamName || data.teamCode) {
+        const teamFilter = data.teamCode
+          ? { teamCode: data.teamCode.toUpperCase() }
+          : { teamName: new RegExp(`^${data.teamName}$`, 'i') };
+
         await Team.findOneAndUpdate(
-          { teamName: data.teamName },
+          teamFilter,
           {
             $set: {
-              'round1.status': data.status || 'IN_PROGRESS',
+              'round1.status': data.status || 'FIRST_LOCKED',
+              'round1.firstPrompt': data.firstPrompt || '',
               'round1.firstOutput': data.firstOutput || '',
+              'round1.finalPrompt': data.finalPrompt || '',
               'round1.finalOutput': data.finalOutput || '',
+              'round1.mutationNotes': data.mutationNotes || '',
               'round1.score': data.score ?? data.totalScore ?? 0,
             },
           }
@@ -561,6 +592,22 @@ app.post('/api/submissions', async (req, res) => {
         inMemorySubmissions[idx] = subObj;
       } else {
         inMemorySubmissions.push(subObj);
+      }
+
+      // Also update inMemoryTeams!
+      const memTeam = inMemoryTeams.find(
+        (t) =>
+          (data.teamCode && t.teamCode.toUpperCase() === data.teamCode.toUpperCase()) ||
+          (data.teamName && t.teamName.toLowerCase() === data.teamName.toLowerCase())
+      );
+      if (memTeam) {
+        memTeam.round1 = memTeam.round1 || {};
+        memTeam.round1.status = data.status || 'FIRST_LOCKED';
+        if (data.firstPrompt) memTeam.round1.firstPrompt = data.firstPrompt;
+        if (data.firstOutput) memTeam.round1.firstOutput = data.firstOutput;
+        if (data.finalPrompt) memTeam.round1.finalPrompt = data.finalPrompt;
+        if (data.finalOutput) memTeam.round1.finalOutput = data.finalOutput;
+        if (data.mutationNotes) memTeam.round1.mutationNotes = data.mutationNotes;
       }
 
       return res.json({ success: true, submission: subObj });

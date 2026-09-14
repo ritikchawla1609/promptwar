@@ -34,14 +34,13 @@ export default function Screen5Parasite({
     }
   }, [timer]);
 
+  const opCount = matchedOpponents.length;
   const op1 = matchedOpponents[0] || {
-    anonymousId: 'UNKNOWN 01',
-    output: 'Waiting for opponent data feed...',
+    anonymousId: 'HOST TARGET 01',
+    output: 'Awaiting peer output stream...',
   };
-  const op2 = matchedOpponents[1] || {
-    anonymousId: 'UNKNOWN 02',
-    output: 'Waiting for opponent data feed...',
-  };
+  const op2 = matchedOpponents[1];
+  const defaultColSpan = opCount >= 2 ? 'lg:col-span-4' : 'lg:col-span-6';
 
   const formatTimer = (secs) => {
     const mins = Math.floor(secs / 60);
@@ -158,7 +157,7 @@ export default function Screen5Parasite({
         {(!focusedCol || focusedCol === 'YOU') && (
           <div
             className={`flex flex-col border border-cyan/50 bg-charcoal-950/90 shadow-[0_0_25px_rgba(0,240,255,0.08)] transition-all ${
-              focusedCol === 'YOU' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
+              focusedCol === 'YOU' ? 'lg:col-span-12' : focusedCol ? 'hidden' : defaultColSpan
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
@@ -192,18 +191,18 @@ export default function Screen5Parasite({
           </div>
         )}
 
-        {/* COLUMN 02: UNKNOWN 01 (Cyber Crimson - Right Brain Polarity) */}
+        {/* COLUMN 02: OPPONENT 01 (Cyber Crimson - Right Brain Polarity) */}
         {(!focusedCol || focusedCol === 'OP1') && (
           <div
             className={`flex flex-col border border-crimson/40 bg-charcoal-950/90 shadow-[0_0_20px_rgba(255,42,95,0.06)] transition-all hover:border-crimson/60 ${
-              focusedCol === 'OP1' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
+              focusedCol === 'OP1' ? 'lg:col-span-12' : focusedCol ? 'hidden' : defaultColSpan
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
                 <span className="font-bold text-crimson uppercase tracking-wider">
-                  {op1.anonymousId || 'UNKNOWN 01'}
+                  {op1.anonymousId || 'HOST TARGET 01'}
                 </span>
                 <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
                   HOST STREAM A
@@ -229,18 +228,18 @@ export default function Screen5Parasite({
           </div>
         )}
 
-        {/* COLUMN 03: UNKNOWN 02 (Cyber Crimson - Right Brain Polarity) */}
-        {(!focusedCol || focusedCol === 'OP2') && (
+        {/* COLUMN 03: OPPONENT 02 (Only rendered if >= 2 opponents in cluster) */}
+        {opCount >= 2 && op2 && (!focusedCol || focusedCol === 'OP2') && (
           <div
             className={`flex flex-col border border-crimson/40 bg-charcoal-950/90 shadow-[0_0_20px_rgba(255,42,95,0.06)] transition-all hover:border-crimson/60 ${
-              focusedCol === 'OP2' ? 'lg:col-span-12' : focusedCol ? 'hidden' : 'lg:col-span-4'
+              focusedCol === 'OP2' ? 'lg:col-span-12' : focusedCol ? 'hidden' : defaultColSpan
             }`}
           >
             <div className="p-3.5 border-b border-white/[0.08] bg-charcoal-900/80 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
                 <span className="font-bold text-crimson uppercase tracking-wider">
-                  {op2.anonymousId || 'UNKNOWN 02'}
+                  {op2.anonymousId || 'HOST TARGET 02'}
                 </span>
                 <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
                   HOST STREAM B

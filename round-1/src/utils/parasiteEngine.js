@@ -1,7 +1,7 @@
 // PROMPT PARASITE // ENGINE & STATE COORDINATOR
 // Real team registration, anonymous cluster matchmaking, and central database synchronization
 
-import { DEFAULT_CHALLENGE, ANONYMOUS_HOST_OUTPUTS } from '../data/parasiteChallenge';
+import { DEFAULT_CHALLENGE } from '../data/parasiteChallenge';
 
 const API_BASE = 'http://127.0.0.1:5001';
 const STORAGE_KEY_SESSION = 'prompt_parasite_session_v2';
@@ -299,70 +299,111 @@ export async function submitJudgeScoreAPI(teamCodeOrId, scoreData) {
 }
 
 // -------------------------------------------------------------
-// REAL-TEAM ANONYMOUS MATCHMAKING ALGORITHM
+// REAL-TEAM ANONYMOUS MATCHMAKING ALGORITHM (STRICTLY REAL)
 // -------------------------------------------------------------
 
-export function generateAnonymousMatches(allSubmissions, currentParticipantId) {
+export function generateAnonymousMatches(allSubmissions, currentParticipantId, currentTeamCode) {
   // Filter for real team submissions from other contenders that have submitted a First Output
   const otherRealSubmissions = (allSubmissions || []).filter((s) => {
     const id = s.participantId || s.submissionId || s.id;
-    return id !== currentParticipantId && Boolean(s.firstOutput || s.output);
+    const teamCode = s.teamCode;
+    const isSelf =
+      id === currentParticipantId ||
+      (teamCode && currentTeamCode && teamCode.toUpperCase() === currentTeamCode.toUpperCase());
+    const hasValidOutput = Boolean(
+      (s.firstOutput && s.firstOutput.trim().length > 0) ||
+      (s.output && s.output.trim().length > 0)
+    );
+    return !isSelf && hasValidOutput;
   });
 
-  let opponents = [];
+  // STRICT REALISM: If no other real teams have submitted yet, return empty array!
+  // Normal participants will wait in the live matchmaking queue.
+  if (otherRealSubmissions.length === 0) {
+    return [];
+  }
 
-  if (otherRealSubmissions.length >= 2) {
-    // True Real Team Matching: Shuffle live peer submissions
-    const shuffled = [...otherRealSubmissions].sort(() => Math.random() - 0.5);
-    opponents = [
+  // Shuffle real peer submissions
+  const shuffled = [...otherRealSubmissions].sort(() => Math.random() - 0.5);
+
+  if (shuffled.length >= 2) {
+    return [
       {
-        id: shuffled[0].participantId || shuffled[0].submissionId || shuffled[0].id,
-        anonymousId: 'UNKNOWN 01',
+        id: shuffled[0].participantId || shuffled[0].submissionId || shuffled[0].id || 'peer_01',
+        anonymousId: 'HOST TARGET 01',
         output: shuffled[0].firstOutput || shuffled[0].output,
         isRealPeer: true,
+        teamCode: shuffled[0].teamCode,
       },
       {
-        id: shuffled[1].participantId || shuffled[1].submissionId || shuffled[1].id,
-        anonymousId: 'UNKNOWN 02',
+        id: shuffled[1].participantId || shuffled[1].submissionId || shuffled[1].id || 'peer_02',
+        anonymousId: 'HOST TARGET 02',
         output: shuffled[1].firstOutput || shuffled[1].output,
         isRealPeer: true,
-      },
-    ];
-  } else if (otherRealSubmissions.length === 1) {
-    // 1 Real Contender + 1 Host Fallback
-    opponents = [
-      {
-        id: otherRealSubmissions[0].participantId || otherRealSubmissions[0].submissionId || otherRealSubmissions[0].id,
-        anonymousId: 'UNKNOWN 01',
-        output: otherRealSubmissions[0].firstOutput || otherRealSubmissions[0].output,
-        isRealPeer: true,
-      },
-      {
-        id: ANONYMOUS_HOST_OUTPUTS[0].id,
-        anonymousId: 'UNKNOWN 02',
-        output: ANONYMOUS_HOST_OUTPUTS[0].output,
-        isRealPeer: false,
-      },
-    ];
-  } else {
-    // Host Fallback (used only if fewer than 3 teams have entered)
-    opponents = [
-      {
-        id: ANONYMOUS_HOST_OUTPUTS[0].id,
-        anonymousId: 'UNKNOWN 01',
-        output: ANONYMOUS_HOST_OUTPUTS[0].output,
-        isRealPeer: false,
-      },
-      {
-        id: ANONYMOUS_HOST_OUTPUTS[1].id,
-        anonymousId: 'UNKNOWN 02',
-        output: ANONYMOUS_HOST_OUTPUTS[1].output,
-        isRealPeer: false,
+        teamCode: shuffled[1].teamCode,
       },
     ];
   }
 
-  return opponents;
+  // Exactly 1 real peer submission in arena (1-on-1 duel cluster)
+  return [
+    {
+      id: shuffled[0].participantId || shuffled[0].submissionId || shuffled[0].id || 'peer_01',
+      anonymousId: 'HOST TARGET 01',
+      output: shuffled[0].firstOutput || shuffled[0].output,
+      isRealPeer: true,
+      teamCode: shuffled[0].teamCode,
+    },
+  ];
+}
+
+// Inject a test peer submission (ONLY for solo rehearsal / demo testing)
+export async function injectTestPeerSubmissionAPI() {
+  const code = `PW-TEST${Math.floor(10 + Math.random() * 90)}`;
+  const sampleTestOutput = `### STRATEGY MATRIX: "GUERRILLA ASSAULT"
+1. Ambassador Bounty: Incentivize 15 society heads with cash rewards for tracking link signups.
+2. Instagram Stories: Deploy teaser countdowns and student project showcases.
+3. Department Rivals: Live counter showing registration leaderboards between departments.
+4. Final 24h SMS/WhatsApp burst for pending link clicks.`;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teamCode: code,
+        teamName: `SQUAD_${code.replace('-', '_')}`,
+        leaderName: 'Test Contender',
+        college: 'Chandigarh University',
+        round: 'round-1',
+        firstPrompt: 'Act as a viral growth strategist for an engineering tech summit...',
+        firstOutput: sampleTestOutput,
+        status: 'FIRST_LOCKED',
+        updatedAt: new Date().toISOString(),
+      }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {}
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SUBMISSIONS) || '[]';
+    const list = JSON.parse(raw);
+    const testPeer = {
+      participantId: `part_${Date.now()}`,
+      submissionId: `sub_${Date.now()}`,
+      teamCode: code,
+      teamName: `SQUAD_${code.replace('-', '_')}`,
+      firstPrompt: 'Act as a viral growth strategist for an engineering tech summit...',
+      firstOutput: sampleTestOutput,
+      status: 'FIRST_LOCKED',
+      updatedAt: new Date().toISOString(),
+    };
+    list.push(testPeer);
+    localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(list));
+    return { success: true, submission: testPeer };
+  } catch (e) {}
 }
 
 // -------------------------------------------------------------

@@ -1,184 +1,294 @@
 import React, { useState, useEffect } from 'react';
 import { parasiteAudio } from '../../utils/parasiteAudio';
-import { ArrowRight, Shield, Zap } from 'lucide-react';
+import {
+  ArrowRight,
+  Shield,
+  Zap,
+  Radio,
+  Clock,
+  Users,
+  RefreshCw,
+  AlertCircle,
+  FlaskConical,
+  CheckCircle2,
+} from 'lucide-react';
+import { injectTestPeerSubmissionAPI, fetchAllArenaSubmissions } from '../../utils/parasiteEngine';
 
 export default function Screen4Match({
   session,
   matchedOpponents = [],
+  registeredTeamsCount = 1,
+  lockedSubmissionsCount = 1,
   onProceedToParasite,
+  onOpponentsMatched,
 }) {
-  const [stage, setStage] = useState('SEARCHING'); // 'SEARCHING', 'CONNECTING', 'LOCKED'
-  const [shuffledId, setShuffledId] = useState('PLAYER_017');
+  const [isInjectingTest, setIsInjectingTest] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [pollTick, setPollTick] = useState(0);
 
+  const opCount = matchedOpponents.length;
+  const op1 = matchedOpponents[0];
+  const op2 = matchedOpponents[1];
+
+  // Poll for peer submissions every 2 seconds if no opponents yet
   useEffect(() => {
-    // Audio alert
-    parasiteAudio.playInfect();
+    if (opCount > 0) return;
 
-    // ID shuffle animation
-    const interval = setInterval(() => {
-      const randomNum = Math.floor(10 + Math.random() * 90);
-      setShuffledId(`PLAYER_${randomNum}`);
+    const interval = setInterval(async () => {
+      setPollTick((p) => p + 1);
       try {
-        parasiteAudio.playTick();
+        const subs = await fetchAllArenaSubmissions();
+        if (subs && onOpponentsMatched) {
+          onOpponentsMatched(subs);
+        }
       } catch (e) {}
-    }, 120);
+    }, 2200);
 
-    const t1 = setTimeout(() => {
-      setStage('CONNECTING');
-    }, 1800);
+    return () => clearInterval(interval);
+  }, [opCount, onOpponentsMatched]);
 
-    const t2 = setTimeout(() => {
-      clearInterval(interval);
-      setStage('LOCKED');
-      parasiteAudio.playSubDrop();
-    }, 3400);
+  const handleManualScan = async () => {
+    setIsScanning(true);
+    parasiteAudio.playScan();
+    try {
+      const subs = await fetchAllArenaSubmissions();
+      if (subs && onOpponentsMatched) {
+        onOpponentsMatched(subs);
+      }
+    } finally {
+      setTimeout(() => setIsScanning(false), 500);
+    }
+  };
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-
-  const op1 = matchedOpponents[0] || { anonymousId: 'UNKNOWN 01' };
-  const op2 = matchedOpponents[1] || { anonymousId: 'UNKNOWN 02' };
+  const handleInjectTestPeer = async () => {
+    setIsInjectingTest(true);
+    parasiteAudio.playInfect();
+    try {
+      await injectTestPeerSubmissionAPI();
+      const subs = await fetchAllArenaSubmissions();
+      if (subs && onOpponentsMatched) {
+        onOpponentsMatched(subs);
+      }
+    } finally {
+      setIsInjectingTest(false);
+    }
+  };
 
   return (
-    <div className="relative min-h-[calc(100vh-56px)] flex flex-col justify-between px-6 sm:px-12 py-12 max-w-6xl mx-auto select-none">
+    <div className="relative min-h-[calc(100vh-56px)] flex flex-col justify-between px-6 sm:px-12 py-10 max-w-6xl mx-auto select-none">
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 font-mono text-xs">
-        <span className="text-bone-400 uppercase tracking-widest">
-          STAGE 02 // ANONYMOUS CLUSTER DISCOVERY
+        <span className="text-bone-400 uppercase tracking-widest flex items-center gap-2">
+          <span>STAGE 02 // REAL-TIME COHORT RADAR</span>
         </span>
-        <span className="text-acid-lime font-bold uppercase tracking-widest">
-          {stage === 'LOCKED' ? 'CLUSTER FORMED' : 'REVERSE ROUTING'}
+        <span className={`font-bold uppercase tracking-widest ${opCount > 0 ? 'text-cyan' : 'text-amber-400'}`}>
+          {opCount >= 2
+            ? 'TRIAD CLUSTER FORMED'
+            : opCount === 1
+            ? '1-ON-1 DUEL CLUSTER FORMED'
+            : 'SCANNING ARENA FOR PEERS'}
         </span>
       </div>
 
-      {/* Main Center Transition */}
-      <div className="my-auto py-12 flex flex-col items-center text-center">
-        {stage !== 'LOCKED' ? (
-          <div className="flex flex-col items-center">
-            <span className="font-mono text-xs uppercase tracking-[0.3em] text-acid-lime font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 bg-acid-lime animate-ping" />
-              SEARCHING FOR HOSTS
-            </span>
-
-            <h2 className="font-display font-black text-4xl sm:text-7xl text-bone-100 uppercase tracking-tightest mb-6">
-              SCANNING ARENA
-            </h2>
-
-            {/* Shuffling ID Box */}
-            <div className="px-6 py-3 border border-white/[0.15] bg-charcoal-900/80 font-mono text-xl sm:text-2xl font-bold tracking-[0.2em] text-acid-lime">
-              {shuffledId}
+      {/* Main Center Area */}
+      <div className="my-auto py-8 flex flex-col items-center text-center">
+        {/* ========================================================= */}
+        {/* CASE 1: WAITING FOR OTHER REAL TEAMS                      */}
+        {/* ========================================================= */}
+        {opCount === 0 ? (
+          <div className="w-full max-w-2xl flex flex-col items-center space-y-6 animate-fadeIn">
+            {/* Pulsating Radar Beacon */}
+            <div className="relative flex items-center justify-center w-20 h-20 rounded-full border border-amber-500/40 bg-amber-500/10">
+              <Radio className="w-10 h-10 text-amber-400 animate-pulse" />
+              <span className="absolute inset-0 rounded-full border border-amber-400 animate-ping opacity-30" />
             </div>
 
-            <p className="font-mono text-xs text-bone-500 uppercase tracking-widest mt-6 max-w-md">
-              Establishing 3-way asymmetric isolation ring. Extracting raw baseline outputs.
-            </p>
+            <div className="space-y-2">
+              <span className="font-mono text-xs uppercase tracking-[0.3em] text-amber-400 font-bold flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <span>FIRST FORM LOCKED // AWAITING REAL PEER TEAMS</span>
+              </span>
+
+              <h2 className="font-display font-black text-3xl sm:text-5xl text-bone-100 uppercase tracking-tight">
+                ARENA CLUSTER FORMING
+              </h2>
+
+              <p className="text-xs sm:text-sm text-bone-300 font-sans max-w-lg mx-auto leading-relaxed">
+                Your squad's First Form has been encrypted and committed to the tournament database.
+                The system requires at least one other real competitor squad to submit their First Form before reverse-routing the peer outputs.
+              </p>
+            </div>
+
+            {/* Live Arena Telemetry Card */}
+            <div className="w-full p-6 rounded-xl border border-white/[0.1] bg-charcoal-900/80 font-mono text-xs text-left space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                <span className="text-bone-400 uppercase tracking-widest text-[10px]">
+                  ARENA TELEMETRY (PORT 5001)
+                </span>
+                <span className="text-cyan text-[10px]">SCAN TICK #{pollTick}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-bone-500 text-[10px] uppercase">YOUR SQUAD</div>
+                  <div className="text-white font-bold mt-0.5">{session.teamName || 'ANONYMOUS'}</div>
+                  <div className="text-cyan text-[10px] mt-0.5">{session.teamCode} (LOCKED ✓)</div>
+                </div>
+
+                <div>
+                  <div className="text-bone-500 text-[10px] uppercase">REGISTERED IN ARENA</div>
+                  <div className="text-white font-bold mt-0.5">{registeredTeamsCount} Total Squads</div>
+                  <div className="text-amber-400 text-[10px] mt-0.5">
+                    {lockedSubmissionsCount} / {registeredTeamsCount} First Forms Ready
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Explanation */}
+              <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] leading-relaxed flex items-start gap-2.5">
+                <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Awaiting Opponent First Form:</strong> Other contenders are currently writing their baseline prompts.
+                  As soon as any squad clicks "Lock First Form", this screen will auto-lock your cluster and enter Parasite mode!
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <button
+                  onClick={handleManualScan}
+                  disabled={isScanning}
+                  className="w-full sm:w-auto px-4 py-2 rounded border border-white/20 bg-charcoal-950 hover:border-cyan text-bone-200 hover:text-cyan font-mono text-xs flex items-center justify-center gap-2 transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin text-cyan' : ''}`} />
+                  <span>CHECK FOR SUBMISSIONS NOW</span>
+                </button>
+
+                {/* Solo Test Mode Injector */}
+                <button
+                  onClick={handleInjectTestPeer}
+                  disabled={isInjectingTest}
+                  className="w-full sm:w-auto px-4 py-2 rounded border border-cyan/40 bg-cyan/10 hover:bg-cyan hover:text-charcoal-950 text-cyan font-mono text-xs font-bold transition-all flex items-center justify-center gap-2"
+                  title="If you are testing alone on a single laptop without other teams, click this to generate 1 test opponent"
+                >
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  <span>{isInjectingTest ? 'GENERATING PEER...' : 'TEST SOLO: ADD 1 TEST SQUAD'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
+          /* ========================================================= */
+          /* CASE 2: REAL OPPONENTS UNLOCKED (1-ON-1 OR TRIAD)          */
+          /* ========================================================= */
           <div className="w-full flex flex-col items-center animate-fadeIn">
-            <span className="font-mono text-xs uppercase tracking-[0.35em] text-acid-lime font-bold mb-3">
-              MATCH FOUND // TRIAD ACTIVE
+            <span className="font-mono text-xs uppercase tracking-[0.35em] text-cyan font-bold mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-cyan" />
+              <span>REAL PEER MATCH FORMED // {opCount >= 2 ? 'TRIAD ACTIVE' : '1-ON-1 DUEL ACTIVE'}</span>
             </span>
 
-            <h2 className="font-display font-black text-3xl sm:text-5xl text-bone-100 uppercase tracking-tight mb-12">
-              OPPONENT OUTPUTS UNLOCKED
+            <h2 className="font-display font-black text-3xl sm:text-5xl text-bone-100 uppercase tracking-tight mb-10">
+              REAL OPPONENT OUTPUTS UNLOCKED
             </h2>
 
-            {/* Premium Typographic Triad Grid (YOU vs UNKNOWN 01 vs UNKNOWN 02) */}
-            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 text-left font-mono">
-              {/* Pillar 1: YOU (Electric Cyan - Left Brain Polarity) */}
-              <div className="p-6 border border-cyan/60 bg-charcoal-900/90 flex flex-col justify-between shadow-[0_0_30px_rgba(0,240,255,0.15)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-cyan shadow-[0_0_10px_#00f0ff]" />
+            {/* Dynamic Grid: 2 Columns if 1 opponent, 3 Columns if 2 opponents */}
+            <div
+              className={`w-full max-w-5xl grid grid-cols-1 ${
+                opCount >= 2 ? 'md:grid-cols-3' : 'md:grid-cols-2'
+              } gap-6 text-left font-mono`}
+            >
+              {/* Pillar 1: YOU (Electric Cyan) */}
+              <div className="p-6 border-2 border-cyan/70 bg-charcoal-900/95 flex flex-col justify-between shadow-[0_0_35px_rgba(0,240,255,0.2)] relative overflow-hidden rounded-xl">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-cyan shadow-[0_0_12px_#00f0ff]" />
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
                     <span className="text-[10px] text-cyan font-bold uppercase tracking-widest">
                       YOUR FIRST FORM
                     </span>
-                    <span className="px-2 py-0.5 bg-cyan text-charcoal-950 text-[10px] font-black uppercase">
+                    <span className="px-2 py-0.5 bg-cyan text-charcoal-950 text-[10px] font-black uppercase rounded">
                       YOU
                     </span>
                   </div>
                   <h3 className="font-display font-black text-2xl text-bone-100 mb-2">
-                    {session.anonymousId}
+                    {session.teamName || session.anonymousId}
                   </h3>
-                  <p className="text-xs text-bone-400 font-sans leading-relaxed">
-                    Your baseline solution submitted in Phase 01.
+                  <p className="text-xs text-bone-300 font-sans leading-relaxed line-clamp-3">
+                    {session.firstOutput ? session.firstOutput.slice(0, 180) + '...' : 'Baseline solution submitted in Phase 01.'}
                   </p>
                 </div>
 
                 <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-cyan uppercase font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-pulse" />
-                  <span>STATUS: SYNCHRONIZED</span>
+                  <span className="w-2 h-2 bg-cyan rounded-full animate-pulse" />
+                  <span>PAYLOAD: CONFIRMED REAL</span>
                 </div>
               </div>
 
-              {/* Pillar 2: UNKNOWN 01 (Cyber Crimson - Right Brain Polarity) */}
-              <div className="p-6 border border-crimson/40 bg-charcoal-900/80 flex flex-col justify-between shadow-[0_0_25px_rgba(255,42,95,0.1)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-crimson shadow-[0_0_10px_#ff2a5f]" />
+              {/* Pillar 2: OPPONENT 01 (Cyber Crimson) */}
+              <div className="p-6 border-2 border-crimson/70 bg-charcoal-900/95 flex flex-col justify-between shadow-[0_0_35px_rgba(255,42,95,0.2)] relative overflow-hidden rounded-xl">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-crimson shadow-[0_0_12px_#ff2a5f]" />
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
                     <span className="text-[10px] text-crimson font-bold uppercase tracking-widest">
                       HOST TARGET 01
                     </span>
-                    <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
-                      OPPONENT
+                    <span className="px-2 py-0.5 bg-crimson/20 border border-crimson/50 text-crimson text-[10px] font-bold uppercase rounded">
+                      REAL PEER
                     </span>
                   </div>
-                  <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.3)]">
-                    {op1.anonymousId}
+                  <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.4)]">
+                    {op1?.anonymousId || 'OPPONENT 01'}
                   </h3>
-                  <p className="text-xs text-bone-400 font-sans leading-relaxed">
-                    External AI solution captured from competitor in your cluster.
+                  <p className="text-xs text-bone-300 font-sans leading-relaxed line-clamp-3">
+                    {op1?.output ? op1.output.slice(0, 180) + '...' : 'Real solution submitted by rival team.'}
                   </p>
                 </div>
 
                 <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-crimson uppercase font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-crimson rounded-full animate-ping" />
-                  <span>PAYLOAD: EXTRACTED</span>
+                  <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
+                  <span>PAYLOAD: EXTRACTED FROM ARENA</span>
                 </div>
               </div>
 
-              {/* Pillar 3: UNKNOWN 02 (Cyber Crimson - Right Brain Polarity) */}
-              <div className="p-6 border border-crimson/40 bg-charcoal-900/80 flex flex-col justify-between shadow-[0_0_25px_rgba(255,42,95,0.1)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-crimson shadow-[0_0_10px_#ff2a5f]" />
-                <div>
-                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
-                    <span className="text-[10px] text-crimson font-bold uppercase tracking-widest">
-                      HOST TARGET 02
-                    </span>
-                    <span className="px-1.5 py-0.2 bg-crimson/20 border border-crimson/40 text-crimson text-[9px] font-bold uppercase">
-                      OPPONENT
-                    </span>
+              {/* Pillar 3: OPPONENT 02 (Only rendered if 2 opponents present) */}
+              {opCount >= 2 && op2 && (
+                <div className="p-6 border-2 border-crimson/70 bg-charcoal-900/95 flex flex-col justify-between shadow-[0_0_35px_rgba(255,42,95,0.2)] relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 right-0 h-[3px] bg-crimson shadow-[0_0_12px_#ff2a5f]" />
+                  <div>
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.08]">
+                      <span className="text-[10px] text-crimson font-bold uppercase tracking-widest">
+                        HOST TARGET 02
+                      </span>
+                      <span className="px-2 py-0.5 bg-crimson/20 border border-crimson/50 text-crimson text-[10px] font-bold uppercase rounded">
+                        REAL PEER
+                      </span>
+                    </div>
+                    <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.4)]">
+                      {op2.anonymousId || 'OPPONENT 02'}
+                    </h3>
+                    <p className="text-xs text-bone-300 font-sans leading-relaxed line-clamp-3">
+                      {op2.output ? op2.output.slice(0, 180) + '...' : 'Second real solution captured from peer cluster.'}
+                    </p>
                   </div>
-                  <h3 className="font-display font-black text-2xl text-crimson mb-2 drop-shadow-[0_0_10px_rgba(255,42,95,0.3)]">
-                    {op2.anonymousId}
-                  </h3>
-                  <p className="text-xs text-bone-400 font-sans leading-relaxed">
-                    External AI solution captured from second competitor.
-                  </p>
-                </div>
 
-                <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-crimson uppercase font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-crimson rounded-full animate-ping" />
-                  <span>PAYLOAD: EXTRACTED</span>
+                  <div className="mt-6 pt-3 border-t border-white/[0.06] text-[10px] text-crimson uppercase font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 bg-crimson rounded-full animate-ping" />
+                    <span>PAYLOAD: EXTRACTED FROM ARENA</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Call to Enter Parasite Mode */}
-            <div className="mt-12 flex flex-col items-center gap-3">
+            <div className="mt-10 flex flex-col items-center gap-3">
               <button
                 onClick={onProceedToParasite}
-                className="editorial-btn group text-xs sm:text-sm px-8 py-4"
+                className="editorial-btn group text-xs sm:text-sm px-10 py-4 shadow-[0_0_30px_rgba(0,240,255,0.3)] hover:scale-105 transition-all flex items-center gap-3"
               >
                 <span>ENTER PARASITE MODE</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
-              <span className="font-mono text-[10px] text-bone-500 uppercase tracking-widest">
-                STAGE 03 DURATION: 05:00 MINUTES
+              <span className="font-mono text-[10px] text-bone-400 uppercase tracking-widest">
+                STAGE 03 DURATION: 05:00 MINUTES // INSPECT & MUTATE
               </span>
             </div>
           </div>
@@ -187,8 +297,8 @@ export default function Screen4Match({
 
       {/* Footer */}
       <div className="pt-4 border-t border-white/[0.06] font-mono text-[10px] text-bone-500 uppercase tracking-widest flex items-center justify-between">
-        <span>ENCRYPTION: SHUFFLED DERANGEMENT</span>
-        <span>NO PROMPTS OR IDENTITIES ACCESSIBLE</span>
+        <span>SECURITY PROTOCOL: ZERO IDENTITIES DISCLOSED</span>
+        <span>TECH TATVA PROMPT WAR // ARENA CLUSTER</span>
       </div>
     </div>
   );
