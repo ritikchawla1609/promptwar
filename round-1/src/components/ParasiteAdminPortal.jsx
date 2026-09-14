@@ -160,20 +160,22 @@ export default function ParasiteAdminPortal({
         {/* Top Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.1] bg-charcoal-900">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-acid-lime/10 border border-acid-lime flex items-center justify-center text-acid-lime">
-              <Shield className="w-4 h-4" />
-            </div>
+            <img
+              src="/tech-tatva-logo.png"
+              alt="Tech Tatva Club"
+              className="h-8 w-auto object-contain drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-black text-sm text-bone-100 uppercase tracking-wider">
-                  HOST MASTER CONSOLE
+                  TECH TATVA HOST CONSOLE
                 </span>
-                <span className="px-1.5 py-0.2 bg-acid-lime text-charcoal-950 text-[9px] font-black uppercase">
+                <span className="px-1.5 py-0.2 bg-cyan text-charcoal-950 text-[9px] font-black uppercase">
                   ACTIVE ROUND 01
                 </span>
               </div>
               <span className="text-[10px] text-bone-400">
-                PROMPT PARASITE // TELEMETRY & JUDGING MATRIX
+                PROMPT PARASITE // TOURNAMENT TELEMETRY & JUDGING MATRIX
               </span>
             </div>
           </div>

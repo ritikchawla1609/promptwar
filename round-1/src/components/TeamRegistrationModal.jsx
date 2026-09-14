@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parasiteAudio } from '../utils/parasiteAudio';
 import { registerTeamAPI, loginTeamAPI } from '../utils/parasiteEngine';
 import PromptWar3DLogo from './PromptWar3DLogo';
@@ -7,12 +7,22 @@ import { Shield, CheckCircle2, AlertTriangle, Users, Key, Terminal, ArrowRight, 
 export default function TeamRegistrationModal({
   isOpen,
   onClose,
-  currentSession,
+  currentSession = {},
   onTeamRegistered,
+  onTeamAuthenticated,
+  initialTab = 'REGISTER',
 }) {
-  const [tab, setTab] = useState('REGISTER'); // 'REGISTER' | 'LOGIN' | 'PASS_ISSUED'
+  const [tab, setTab] = useState(initialTab || 'REGISTER'); // 'REGISTER' | 'LOGIN' | 'PASS_ISSUED'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Sync tab when opened
+  useEffect(() => {
+    if (isOpen) {
+      setTab(initialTab || 'REGISTER');
+      setError(null);
+    }
+  }, [isOpen, initialTab]);
 
   // Form Fields
   const [teamName, setTeamName] = useState(currentSession.teamName || '');
@@ -29,6 +39,17 @@ export default function TeamRegistrationModal({
   const [issuedTeam, setIssuedTeam] = useState(null);
 
   if (!isOpen) return null;
+
+  // Safe notification to parent
+  const notifyAuth = (team) => {
+    if (!team) return;
+    try {
+      if (typeof onTeamRegistered === 'function') onTeamRegistered(team);
+      if (typeof onTeamAuthenticated === 'function') onTeamAuthenticated(team);
+    } catch (err) {
+      console.error('Error invoking auth callback:', err);
+    }
+  };
 
   const handleMemberChange = (idx, val) => {
     const next = [...members];
@@ -61,7 +82,7 @@ export default function TeamRegistrationModal({
       setIssuedTeam(team);
       setTab('PASS_ISSUED');
       parasiteAudio.playLock();
-      onTeamRegistered(team);
+      notifyAuth(team);
     } catch (err) {
       setError(err.message || 'Registration failed. Please check network.');
     } finally {
@@ -81,7 +102,7 @@ export default function TeamRegistrationModal({
     try {
       const team = await loginTeamAPI(loginQuery.trim());
       parasiteAudio.playSubDrop();
-      onTeamRegistered(team);
+      notifyAuth(team);
       onClose();
     } catch (err) {
       setError(err.message || 'Team credentials not found in arena ledger.');
@@ -93,13 +114,20 @@ export default function TeamRegistrationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl">
       <div className="w-full max-w-2xl border border-white/[0.12] bg-charcoal-950 font-mono text-xs shadow-2xl overflow-hidden relative animate-fadeIn">
-        {/* Top Header */}
+        {/* Top Header with Tech Tatva Club Branding */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-charcoal-900/90">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-acid-lime animate-pulse" />
-            <span className="text-bone-400 uppercase tracking-widest text-[10px]">
-              TECH TATVA CLUB // CHANDIGARH UNIVERSITY
-            </span>
+          <div className="flex items-center gap-3">
+            <img
+              src="/tech-tatva-logo.png"
+              alt="Tech Tatva Club"
+              className="h-6 w-auto object-contain drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]"
+            />
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-cyan animate-pulse rounded-full" />
+              <span className="text-bone-200 uppercase tracking-widest text-[11px] font-bold">
+                TECH TATVA CLUB // CHANDIGARH UNIVERSITY
+              </span>
+            </div>
           </div>
 
           <button
@@ -366,8 +394,11 @@ export default function TeamRegistrationModal({
               </p>
 
               <button
-                onClick={onClose}
-                className="editorial-btn px-8 py-3.5 text-xs sm:text-sm"
+                onClick={() => {
+                  notifyAuth(issuedTeam);
+                  onClose();
+                }}
+                className="editorial-btn px-8 py-3.5 text-xs sm:text-sm bg-cyan border-cyan text-charcoal-950 font-bold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:bg-white"
               >
                 <span>ENTER ROUND 01 ARENA →</span>
               </button>

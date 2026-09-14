@@ -27,7 +27,46 @@ export default function App() {
   const [challenge, setChallenge] = useState(DEFAULT_CHALLENGE);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [registerModalTab, setRegisterModalTab] = useState('REGISTER');
   const [isMuted, setIsMuted] = useState(false);
+
+  const handleOpenRegister = (tab = 'REGISTER') => {
+    setRegisterModalTab(tab);
+    setIsRegisterOpen(true);
+  };
+
+  const handleTeamAuthenticated = (teamData) => {
+    if (!teamData) return;
+    const updated = {
+      ...session,
+      teamCode: teamData.teamCode,
+      teamName: teamData.teamName,
+      leaderName: teamData.leaderName,
+      leaderContact: teamData.leaderContact,
+      college: teamData.college,
+      members: teamData.members,
+      memberCount: teamData.memberCount || (teamData.members ? teamData.members.length : 1),
+      anonymousId: teamData.teamName ? teamData.teamName.toUpperCase() : session.anonymousId,
+      status: 'REGISTERED',
+      ...(teamData.round1?.firstOutput ? { firstOutput: teamData.round1.firstOutput } : {}),
+      ...(teamData.round1?.firstPrompt ? { firstPrompt: teamData.round1.firstPrompt } : {}),
+      ...(teamData.round1?.finalOutput ? { finalOutput: teamData.round1.finalOutput } : {}),
+      ...(teamData.round1?.finalPrompt ? { finalPrompt: teamData.round1.finalPrompt } : {}),
+    };
+    handleUpdateSession(updated);
+  };
+
+  const handleLogoutTeam = () => {
+    handleUpdateSession({
+      teamCode: '',
+      teamName: '',
+      leaderName: '',
+      leaderContact: '',
+      college: 'Chandigarh University',
+      members: [],
+      status: 'NOT_REGISTERED',
+    });
+  };
 
   // Active Stage Navigation:
   // 'ENTRY' | 'HOW_IT_WORKS' | 'CHALLENGE' | 'CREATE' | 'MATCH' | 'PARASITE' | 'EVOLVE' | 'COMPLETE'
@@ -151,7 +190,8 @@ export default function App() {
         session={session}
         onUpdateSession={handleUpdateSession}
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenRegister={() => setIsRegisterOpen(true)}
+        onOpenRegister={handleOpenRegister}
+        onLogoutTeam={handleLogoutTeam}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
       />
@@ -162,7 +202,7 @@ export default function App() {
           <Screen0Entry
             session={session}
             onProceed={() => setCurrentStage('HOW_IT_WORKS')}
-            onOpenRegister={() => setIsRegisterOpen(true)}
+            onOpenRegister={handleOpenRegister}
           />
         )}
 
@@ -246,16 +286,9 @@ export default function App() {
         isOpen={isRegisterOpen}
         onClose={() => setIsRegisterOpen(false)}
         currentSession={session}
-        onTeamAuthenticated={(teamData) => {
-          handleUpdateSession({
-            teamCode: teamData.teamCode,
-            teamName: teamData.teamName,
-            leaderName: teamData.leaderName,
-            leaderContact: teamData.leaderContact,
-            college: teamData.college,
-            members: teamData.members,
-          });
-        }}
+        initialTab={registerModalTab}
+        onTeamRegistered={handleTeamAuthenticated}
+        onTeamAuthenticated={handleTeamAuthenticated}
       />
     </div>
   );

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { parasiteAudio } from '../../utils/parasiteAudio';
-import { ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, UserPlus, CheckCircle2, Key, AlertTriangle, LogOut } from 'lucide-react';
 import PromptWar3DLogo from '../PromptWar3DLogo';
 
-export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }) {
+export default function Screen0Entry({ onProceed, session = {}, onOpenRegister, onLogoutTeam }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -25,20 +25,30 @@ export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }
   }, []);
 
   const handleEnter = () => {
+    if (!session.teamCode) {
+      parasiteAudio.playInfect();
+      if (onOpenRegister) onOpenRegister('REGISTER');
+      return;
+    }
     parasiteAudio.playSubDrop();
     onProceed();
   };
 
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col justify-between px-6 sm:px-12 py-8 sm:py-12 max-w-7xl mx-auto select-none">
-      {/* Top Metadata Header */}
+      {/* Top Metadata Header with Official Tech Tatva Club Logo */}
       <div className="flex items-center justify-between font-mono text-[11px] text-bone-400 uppercase tracking-widest border-b border-white/[0.06] pb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-cyan shadow-[0_0_8px_#00f0ff] rounded-full" />
-            <span className="w-1.5 h-1.5 bg-crimson shadow-[0_0_8px_#ff2a5f] rounded-full" />
+        <div className="flex items-center gap-3">
+          <img
+            src="/tech-tatva-logo.png"
+            alt="Tech Tatva Club"
+            className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(0,240,255,0.5)] hover:scale-105 transition-transform"
+          />
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-bone-100 text-xs sm:text-sm">TECH TATVA CLUB</span>
+            <span className="text-bone-600">//</span>
+            <span className="text-bone-400 text-xs hidden sm:inline-block">CHANDIGARH UNIVERSITY</span>
           </div>
-          <span>TECH TATVA CLUB // CHANDIGARH UNIVERSITY</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-cyan font-bold">ROUND 01</span>
@@ -108,41 +118,69 @@ export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }
             </p>
           </div>
 
-          {/* Action Buttons: Enter Round & Team Registration */}
+          {/* Action Buttons: Gated Enter, Registration & Login / Resume */}
           <div
-            className={`mt-8 flex flex-wrap items-center gap-3 transition-all duration-700 ${
+            className={`mt-8 flex flex-col gap-3 transition-all duration-700 w-full max-w-lg ${
               step >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
-            <button
-              onClick={handleEnter}
-              className="editorial-btn group text-xs sm:text-sm px-8 py-3.5"
-            >
-              <span>ENTER ROUND</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-            </button>
+            {session.teamCode ? (
+              /* REGISTERED STATE */
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleEnter}
+                  className="editorial-btn group text-xs sm:text-sm px-8 py-3.5 bg-cyan border-cyan text-charcoal-950 font-bold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:bg-white"
+                >
+                  <span>ENTER ROUND 01 ARENA</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
 
-            {onOpenRegister && (
-              <button
-                onClick={onOpenRegister}
-                className={`flex items-center gap-2 px-5 py-3.5 border font-mono text-xs uppercase tracking-wider transition-all ${
-                  session.teamCode
-                    ? 'border-acid-lime/40 bg-acid-lime/10 text-acid-lime hover:border-acid-lime'
-                    : 'border-white/[0.2] bg-charcoal-900 text-bone-200 hover:border-acid-lime hover:text-acid-lime'
-                }`}
-              >
-                {session.teamCode ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-acid-lime" />
-                    <span>PASS: {session.teamCode}</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 text-acid-lime" />
-                    <span>REGISTER TEAM</span>
-                  </>
+                <button
+                  onClick={() => onOpenRegister && onOpenRegister('PASS_ISSUED')}
+                  className="flex items-center gap-2 px-4 py-3.5 border border-cyan/40 bg-cyan/10 text-cyan text-xs font-mono font-bold hover:border-cyan transition-all"
+                  title="Click to view verified Team Pass"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-cyan" />
+                  <span>PASS: {session.teamCode}</span>
+                </button>
+
+                {onLogoutTeam && (
+                  <button
+                    onClick={onLogoutTeam}
+                    className="p-3 border border-white/[0.1] hover:border-crimson hover:text-crimson text-bone-500 text-xs transition-colors"
+                    title="Switch or Logout of current team"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 )}
-              </button>
+              </div>
+            ) : (
+              /* UNREGISTERED STATE: ENTRY BLOCKED UNTIL REGISTERED / LOGGED IN */
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2.5 bg-crimson/10 border border-crimson/30 text-crimson text-xs font-mono">
+                  <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
+                  <span>REGISTRATION REQUIRED: Register or login with your pass to enter Round 01.</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => onOpenRegister && onOpenRegister('REGISTER')}
+                    className="editorial-btn text-xs sm:text-sm px-7 py-3.5 bg-cyan border-cyan text-charcoal-950 font-bold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:bg-white flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>REGISTER TEAM TO ENTER</span>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenRegister && onOpenRegister('LOGIN')}
+                    className="editorial-btn-secondary text-xs sm:text-sm px-6 py-3.5 border border-white/[0.2] hover:border-cyan hover:text-cyan flex items-center gap-2"
+                    title="If you refreshed or are on another computer, login with your PW-XXXX pass code"
+                  >
+                    <Key className="w-4 h-4 text-cyan" />
+                    <span>LOGIN / RESUME PASS</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
