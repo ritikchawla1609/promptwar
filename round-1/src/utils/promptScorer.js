@@ -1,14 +1,15 @@
 // Rigorous, 100% Transparent Prompt & Cut Scorer for Prompt War Round 1
-// Clean, credible mathematical formula:
-// 1. Context Cut (Max 40 pts): +5 pts per Signal (8 total = 40 max) - 10 pts per Trap - 2 pts per Noise
-// 2. Prompt Engineering (Max 35 pts): Effort (5), Role (8), Clue Integration (10), Constraints (6), Format (6)
-// 3. AI Execution Viability (Max 25 pts): Base 25 minus trap disruption (-7/trap) & missing context
+// Clean, credible, enterprise-grade mathematical formula:
+// 1. Context Cut (Max 40 pts): +5 pts per Signal (8 total = 40 max) - 10 pts per Trap - 3 pts per Noise
+// 2. Prompt Engineering (Max 35 pts): Directive Action (8), Role (7), Clue Synthesis vs Dump (8), Constraints (6), Format (6)
+// 3. AI Execution Viability (Max 25 pts): Base 25 minus trap disruption (-8/trap), unprompted dump penalty (-18), and missing context (-3/signal)
 // Total = Cut (0-40) + Prompt (0-35) + AI Execution (0-25) = EXACT 100 PTS MAX
 
 export function evaluatePlayerRun({ scenario, survivingFragments, promptText }) {
   const prompt = (promptText || '').trim();
   const lowerPrompt = prompt.toLowerCase();
-  const wordCount = prompt ? prompt.split(/\s+/).filter(Boolean).length : 0;
+  const words = prompt ? prompt.split(/\s+/).filter(Boolean) : [];
+  const wordCount = words.length;
 
   // 1. Fragment Breakdown
   const relevantFragments = survivingFragments.filter((f) => f.isRelevant);
@@ -26,59 +27,82 @@ export function evaluatePlayerRun({ scenario, survivingFragments, promptText }) 
   // B. Traps Penalty: -10 pts per trap enclosed
   const trapPenalty = trapCount * 10;
 
-  // C. Trivia Noise Penalty: -2 pts per trivia enclosed
-  const noisePenalty = noiseCount * 2;
+  // C. Trivia Noise Penalty: -3 pts per trivia enclosed
+  const noisePenalty = noiseCount * 3;
 
   // Cookie Cut Subtotal (Clamped between 0 and 40)
   const cookieCutScore = Math.max(0, Math.min(40, signalsScore - trapPenalty - noisePenalty));
 
   // --- PART 2: PROMPT ENGINEERING RIGOR (Max 35 pts) ---
-  // 1. Length & Effort (Max 5 pts)
-  let lengthScore = 0;
-  if (wordCount >= 30) {
-    lengthScore = 5;
-  } else if (wordCount >= 16) {
-    lengthScore = 3;
-  } else if (wordCount >= 6) {
-    lengthScore = 1;
-  }
 
-  // 2. Persona / Role Definition (+8 pts)
+  // A. Detect Directive Action Verbs (Is this a real prompt or just a data list?) (Max 8 pts)
+  const DIRECTIVE_VERBS = [
+    'create', 'generate', 'develop', 'design', 'write', 'structure', 'build',
+    'formulate', 'plan', 'draft', 'outline', 'provide', 'synthesize', 'execute',
+    'propose', 'devise', 'architect', 'compose', 'organize', 'deliver'
+  ];
+  const hasDirectiveVerb = DIRECTIVE_VERBS.some((v) => lowerPrompt.includes(v));
+  const directiveScore = (hasDirectiveVerb && wordCount >= 10) ? 8 : (hasDirectiveVerb ? 4 : 0);
+
+  // B. Persona / Role Definition (Max 7 pts)
   const hasRole =
     lowerPrompt.includes('act as') ||
     lowerPrompt.includes('you are a') ||
     lowerPrompt.includes('you are an') ||
     lowerPrompt.includes('role:') ||
-    lowerPrompt.includes('strategist') ||
-    lowerPrompt.includes('consultant') ||
-    lowerPrompt.includes('coach') ||
-    lowerPrompt.includes('director') ||
-    lowerPrompt.includes('master');
-  const roleScore = (hasRole && wordCount >= 8) ? 8 : 0;
+    lowerPrompt.includes('as a strategist') ||
+    lowerPrompt.includes('as the strategist') ||
+    lowerPrompt.includes('as a consultant') ||
+    lowerPrompt.includes('as a coach') ||
+    lowerPrompt.includes('as director') ||
+    lowerPrompt.includes('as growth lead') ||
+    lowerPrompt.includes('as lead');
+  const roleScore = (hasRole && wordCount >= 12) ? 7 : 0;
 
-  // 3. Active Clue Weaving (+10 pts)
+  // C. Clue Synthesis vs Raw Bullet Dump (Max 8 pts)
+  // Check how many non-clue words were written by the participant
+  let strippedPrompt = lowerPrompt;
+  survivingFragments.forEach((frag) => {
+    const fragWords = frag.text.toLowerCase().split(/\s+/);
+    fragWords.forEach((fw) => {
+      if (fw.length > 2) {
+        strippedPrompt = strippedPrompt.replaceAll(fw, '');
+      }
+    });
+  });
+  const originalWords = strippedPrompt.split(/\s+/).filter((w) => w.length > 2);
+  const originalWordCount = originalWords.length;
+
+  // If user only pasted clues with fewer than 8 original connective words, it's a Raw Clue Dump!
+  const isRawDataDump = originalWordCount < 8 && survivingFragments.length > 0;
+
   let cluesMentionedCount = 0;
   survivingFragments.forEach((frag) => {
     const keyWords = frag.text
       .toLowerCase()
       .replace(/[^a-z0-9 ]/g, '')
       .split(' ')
-      .filter((w) => w.length > 3 && !['role', 'goal', 'channel', 'timeline', 'format', 'target', 'constraint', 'friction', 'scope', 'metric'].includes(w));
+      .filter((w) => w.length > 3 && !['role', 'goal', 'channel', 'timeline', 'format', 'target', 'constraint', 'friction', 'scope', 'metric', 'directive', 'with'].includes(w));
 
     const matched = keyWords.some((kw) => lowerPrompt.includes(kw));
     if (matched) cluesMentionedCount++;
   });
 
-  let weavingScore = 0;
-  if (cluesMentionedCount >= 5) {
-    weavingScore = 10;
-  } else if (cluesMentionedCount >= 3) {
-    weavingScore = 7;
-  } else if (cluesMentionedCount >= 1) {
-    weavingScore = 3;
+  let synthesisScore = 0;
+  if (!isRawDataDump) {
+    if (cluesMentionedCount >= 5 && originalWordCount >= 20) {
+      synthesisScore = 8;
+    } else if (cluesMentionedCount >= 3 && originalWordCount >= 12) {
+      synthesisScore = 5;
+    } else if (cluesMentionedCount >= 1 && originalWordCount >= 6) {
+      synthesisScore = 2;
+    }
+  } else {
+    // Severe penalty for just pasting fragments without writing a prompt
+    synthesisScore = 1;
   }
 
-  // 4. Explicit Constraint Adherence (+6 pts)
+  // D. Explicit Constraint Framing (+6 pts)
   const mentionsConstraints =
     lowerPrompt.includes('10,000') ||
     lowerPrompt.includes('10000') ||
@@ -87,37 +111,52 @@ export function evaluatePlayerRun({ scenario, survivingFragments, promptText }) 
     lowerPrompt.includes('60-min') ||
     lowerPrompt.includes('60 min') ||
     lowerPrompt.includes('budget') ||
-    lowerPrompt.includes('cap');
-  const constraintScore = (mentionsConstraints && wordCount >= 10) ? 6 : 0;
+    lowerPrompt.includes('cap') ||
+    lowerPrompt.includes('limit') ||
+    lowerPrompt.includes('timeline');
+  const constraintScore = (mentionsConstraints && !isRawDataDump && wordCount >= 15) ? 6 : (mentionsConstraints && hasDirectiveVerb ? 2 : 0);
 
-  // 5. Deliverable Structure Direction (+6 pts)
+  // E. Deliverable Structure Direction (+6 pts)
   const specifiesFormat =
     lowerPrompt.includes('day-by-day') ||
     lowerPrompt.includes('day-wise') ||
     lowerPrompt.includes('slide-by-slide') ||
     lowerPrompt.includes('bullets') ||
+    lowerPrompt.includes('table') ||
     lowerPrompt.includes('act-by-act') ||
     lowerPrompt.includes('outline') ||
     lowerPrompt.includes('schedule') ||
+    lowerPrompt.includes('milestones') ||
+    lowerPrompt.includes('breakdown') ||
     lowerPrompt.includes('runbook');
-  const formatScore = (specifiesFormat && wordCount >= 10) ? 6 : 0;
+  const formatScore = (specifiesFormat && !isRawDataDump && wordCount >= 15) ? 6 : (specifiesFormat && hasDirectiveVerb ? 2 : 0);
 
-  // Low effort dampener
-  let rawPromptScore = lengthScore + roleScore + weavingScore + constraintScore + formatScore;
-  if (wordCount < 8) rawPromptScore = Math.min(2, rawPromptScore);
-  else if (wordCount < 14) rawPromptScore = Math.min(10, rawPromptScore);
+  // Raw Dump / Incomplete Prompt Clamp
+  let rawPromptScore = directiveScore + roleScore + synthesisScore + constraintScore + formatScore;
+
+  if (isRawDataDump) {
+    // If the participant just dumped clues without writing a prompt, cap prompt score at max 3 points!
+    rawPromptScore = Math.min(3, rawPromptScore);
+  } else if (!hasDirectiveVerb) {
+    // If no actionable command verb was given to the AI, cap at 5 points!
+    rawPromptScore = Math.min(5, rawPromptScore);
+  } else if (wordCount < 15) {
+    rawPromptScore = Math.min(8, rawPromptScore);
+  }
 
   const promptScore = Math.min(35, Math.max(0, rawPromptScore));
 
   // --- PART 3: AI EXECUTION FEASIBILITY (Max 25 pts) ---
-  const trapDamage = trapCount * 7;
+  const trapDamage = trapCount * 8;
   const missingContextDamage = relevantCount < 5 ? (5 - relevantCount) * 3 : 0;
-  const weakPromptPenalty = promptScore < 10 ? 4 : 0;
+  
+  // Critical: An AI model CANNOT execute an unprompted clue dump!
+  const unpromptedDumpDamage = isRawDataDump ? 18 : (!hasDirectiveVerb ? 14 : (promptScore < 12 ? 8 : 0));
 
-  let aiExecutionScore = 25 - trapDamage - missingContextDamage - weakPromptPenalty;
+  let aiExecutionScore = 25 - trapDamage - missingContextDamage - unpromptedDumpDamage;
   aiExecutionScore = Math.max(0, Math.min(25, aiExecutionScore));
 
-  // --- TOTAL SCORE: EXACT MATHEMATICAL SUM ---
+  // --- TOTAL SCORE: EXACT MATHEMATICAL SUM (0 to 100 PTS) ---
   const totalScore = Math.max(0, Math.min(100, cookieCutScore + promptScore + aiExecutionScore));
 
   // --- DYNAMIC AI OUTPUT SIMULATION ---
@@ -125,7 +164,24 @@ export function evaluatePlayerRun({ scenario, survivingFragments, promptText }) 
   let isContaminated = false;
   let contaminationReasons = [];
 
-  if (trapCount > 0) {
+  if (isRawDataDump || (!hasDirectiveVerb && wordCount > 0)) {
+    isContaminated = true;
+    contaminationReasons.push('Execution Failure: Unprompted clue list. No actionable directive verb, role, or structure provided to the AI.');
+    dynamicAiOutput = `### ⚠️ AI MODEL EXECUTION HALTED (NO OPERATIONAL DIRECTIVE)
+
+#### Prompt Audit & Diagnostic:
+* **The Error:** The participant pasted raw context fragments into the workstation without writing prompt instructions or assigning a role.
+* **LLM Ingestion Failure:** An LLM is not an autonomous mind that guesses your intent—it requires explicit directive action verbs (e.g. *'Create a 7-day marketing plan'*, *'Act as a Senior Strategist'*).
+* **Observed Input Structure:** Only raw data fragments detected:
+${survivingFragments.map((f) => `  * [CLUE FRAGMENT]: ${f.text}`).join('\n')}
+
+#### Model Outcome:
+* **Task Identified:** NONE (No action command found).
+* **Strategy Generated:** HALTED (Produced generic non-actionable hallucination).
+* **Feasibility Rating:** ${aiExecutionScore} / 25 PTS (Severe unprompted penalty applied).
+
+* **ACADEMIC & EVALUATION VERDICT:** Dumping data into a prompt window is not prompt engineering. An actionable instruction directive is mandatory.`;
+  } else if (trapCount > 0) {
     isContaminated = true;
     const trapTexts = trapFragments.map((t) => t.text.toLowerCase());
 
@@ -217,7 +273,11 @@ The prompt provided insufficient operational constraints. Without clear budget c
   let titleBadgeColor = 'text-amber-400 border-amber-500 bg-amber-500/10';
   let titleFeedback = 'Flawless precision cut and masterfully engineered prompt.';
 
-  if (totalScore < 35) {
+  if (isRawDataDump || !hasDirectiveVerb) {
+    playerTitle = 'UNPROMPTED DATA DUMP';
+    titleBadgeColor = 'text-red-400 border-red-500 bg-red-500/10';
+    titleFeedback = 'Disqualified from high marks: Dumped raw clues without writing prompt instructions or directives.';
+  } else if (totalScore < 35) {
     playerTitle = 'LOST IN THE CRUMBS';
     titleBadgeColor = 'text-zinc-400 border-zinc-700 bg-zinc-800/40';
     titleFeedback = 'Damaged by deceptive strategic traps or starved of essential context.';
@@ -247,18 +307,19 @@ The prompt provided insufficient operational constraints. Without clear budget c
       noisePenalty,
       prompt: promptScore,
       promptBreakdown: {
-        length: lengthScore,
+        directive: directiveScore,
         role: roleScore,
-        weaving: weavingScore,
+        synthesis: synthesisScore,
         constraints: constraintScore,
         format: formatScore,
+        isRawDataDump,
       },
       aiExecution: aiExecutionScore,
       aiExecutionBreakdown: {
         base: 25,
         trapDamage,
         missingContextDamage,
-        weakPromptPenalty,
+        unpromptedDumpDamage,
       },
     },
     counts: {
@@ -266,10 +327,13 @@ The prompt provided insufficient operational constraints. Without clear budget c
       noiseCount,
       trapCount,
       wordCount,
+      originalWordCount,
       cluesMentionedCount,
     },
     aiOutput: dynamicAiOutput,
     isContaminated,
     contaminationReasons,
+    isRawDataDump,
+    hasDirectiveVerb,
   };
 }

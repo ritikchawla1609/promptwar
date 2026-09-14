@@ -106,14 +106,15 @@ body {
   box-shadow: 0 0 35px rgba(6, 182, 212, 0.25);
 }
 
-/* Shimmer Light Sweep Effect */
+/* Shimmer Light Sweep Effect (pure background gradient sweep - no element movement) */
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .animate-shimmer {
-  animation: shimmer 3s infinite;
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
 }
 
 /* Subtle Screen Shake on Big Impact */
@@ -129,6 +130,79 @@ body {
   animation: screenShake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
+/* Violent Seismic Earthquake Tremor */
+@keyframes violentRumble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-5px, 4px) rotate(-1deg); }
+  20% { transform: translate(6px, -5px) rotate(1.5deg); }
+  30% { transform: translate(-6px, -3px) rotate(-1deg); }
+  40% { transform: translate(5px, 5px) rotate(1deg); }
+  50% { transform: translate(-4px, 3px) rotate(-0.5deg); }
+  60% { transform: translate(6px, -4px) rotate(1deg); }
+  70% { transform: translate(-5px, 5px) rotate(-1.5deg); }
+  80% { transform: translate(4px, -3px) rotate(1deg); }
+  90% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.animate-violent-rumble {
+  animation: violentRumble 0.15s ease-in-out infinite;
+}
+
+/* Supersonic Radial Shockwave Ring */
+@keyframes shockwaveExpand {
+  0% {
+    transform: scale(0.1);
+    opacity: 1;
+    border-width: 8px;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.animate-shockwave {
+  animation: shockwaveExpand 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+/* Anti-Gravity Tractor Beam Levitation */
+@keyframes tractorLevitate {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+  }
+  50% {
+    transform: translateY(-16px) scale(1.04);
+    box-shadow: 0 0 70px rgba(0, 240, 255, 0.8), 0 0 120px rgba(245, 158, 11, 0.4);
+  }
+  100% {
+    transform: translateY(-22px) scale(1.06);
+    box-shadow: 0 0 90px rgba(0, 240, 255, 0.9), 0 0 150px rgba(245, 158, 11, 0.6);
+  }
+}
+
+.animate-tractor-levitate {
+  animation: tractorLevitate 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+/* Electric Lightning Fissure Flicker */
+@keyframes lightningArc {
+  0%, 100% { opacity: 0.2; filter: drop-shadow(0 0 4px #00F0FF); }
+  25% { opacity: 1; filter: drop-shadow(0 0 20px #00F0FF) drop-shadow(0 0 35px #FF007F); }
+  45% { opacity: 0.4; }
+  60% { opacity: 0.95; filter: drop-shadow(0 0 25px #FFE600); }
+  85% { opacity: 0.1; }
+}
+
+.animate-lightning-arc {
+  animation: lightningArc 0.25s linear infinite;
+}
+
 /* Subtle breathing pulse */
 @keyframes breathingGlow {
   0%, 100% { opacity: 0.5; transform: scale(1); }
@@ -138,4 +212,5 @@ body {
 .animate-breathing {
   animation: breathingGlow 4s ease-in-out infinite;
 }
+
 

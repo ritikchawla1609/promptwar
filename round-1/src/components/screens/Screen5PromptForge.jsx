@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cutterAudio } from '../../utils/cutterAudio';
 import { MISSION_DATA } from '../../data/dalgonaChallengeData';
-import { Clock, Send, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
+import { Clock, Send, Sparkles, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function Screen5PromptForge({
   scenario = MISSION_DATA,
@@ -44,32 +44,49 @@ export default function Screen5PromptForge({
 
   const lowerPrompt = promptText.toLowerCase();
 
+  // Directive verbs check
+  const DIRECTIVE_VERBS = [
+    'create', 'generate', 'develop', 'design', 'write', 'structure', 'build',
+    'formulate', 'plan', 'draft', 'outline', 'provide', 'synthesize', 'execute'
+  ];
+  const hasDirectiveVerb = DIRECTIVE_VERBS.some((v) => lowerPrompt.includes(v));
+
+  // Count user's original words outside the clue fragments
+  let strippedPrompt = lowerPrompt;
+  survivingFragments.forEach((frag) => {
+    frag.text.toLowerCase().split(/\s+/).forEach((fw) => {
+      if (fw.length > 2) strippedPrompt = strippedPrompt.replaceAll(fw, '');
+    });
+  });
+  const userOriginalWords = strippedPrompt.split(/\s+/).filter((w) => w.length > 2).length;
+  const isRawDataDump = userOriginalWords < 8 && survivingFragments.length > 0 && promptText.trim().length > 0;
+
   // Dynamic Prompt Quality Indicators
   const structuralChecks = [
     {
-      id: 'role',
-      label: 'Role Framing (e.g. Strategist / Coach / Master)',
-      present: lowerPrompt.includes('act as') || lowerPrompt.includes('role') || lowerPrompt.includes('strategist') || lowerPrompt.includes('coach') || lowerPrompt.includes('master') || lowerPrompt.includes('consultant'),
+      id: 'directive',
+      label: 'Action Directive (e.g. Create / Plan / Generate)',
+      present: hasDirectiveVerb,
     },
     {
-      id: 'task',
-      label: 'Core Objective / Mission Goal',
-      present: lowerPrompt.includes('plan') || lowerPrompt.includes('deck') || lowerPrompt.includes('mystery') || lowerPrompt.includes('strategy') || lowerPrompt.includes('registration') || lowerPrompt.includes('pitch'),
+      id: 'role',
+      label: 'Role Framing (e.g. Act as Strategist / Lead)',
+      present: lowerPrompt.includes('act as') || lowerPrompt.includes('role') || lowerPrompt.includes('as a') || lowerPrompt.includes('strategist') || lowerPrompt.includes('lead') || lowerPrompt.includes('coach'),
+    },
+    {
+      id: 'synthesis',
+      label: 'Original Synthesis (Not just dumped clues)',
+      present: !isRawDataDump && userOriginalWords >= 10,
     },
     {
       id: 'constraints',
-      label: 'Specific Constraints (Budget / Time / Rules)',
-      present: lowerPrompt.includes('10,000') || lowerPrompt.includes('10000') || lowerPrompt.includes('2m') || lowerPrompt.includes('2,000,000') || lowerPrompt.includes('60-minute') || lowerPrompt.includes('60 min') || lowerPrompt.includes('budget') || lowerPrompt.includes('limit'),
-    },
-    {
-      id: 'specifics',
-      label: 'Key Channels / Suspects / Metrics',
-      present: lowerPrompt.includes('instagram') || lowerPrompt.includes('whatsapp') || lowerPrompt.includes('arr') || lowerPrompt.includes('slide') || lowerPrompt.includes('suspect') || lowerPrompt.includes('clue'),
+      label: 'Specific Constraints (₹10k Budget / Timeline)',
+      present: lowerPrompt.includes('10,000') || lowerPrompt.includes('10000') || lowerPrompt.includes('2m') || lowerPrompt.includes('budget') || lowerPrompt.includes('7-day'),
     },
     {
       id: 'format',
-      label: 'Structured Actionable Output Format',
-      present: lowerPrompt.includes('7-day') || lowerPrompt.includes('10-slide') || lowerPrompt.includes('act') || lowerPrompt.includes('step') || lowerPrompt.includes('bullet') || lowerPrompt.includes('format'),
+      label: 'Deliverable Output Format (Timeline / Table / Bullets)',
+      present: lowerPrompt.includes('day-by-day') || lowerPrompt.includes('table') || lowerPrompt.includes('timeline') || lowerPrompt.includes('bullets') || lowerPrompt.includes('format'),
     },
   ];
 
@@ -184,7 +201,7 @@ export default function Screen5PromptForge({
           </h2>
         </div>
 
-        {/* 5:00 Chronometer & Submit Action */}
+        {/* 5:00 Chronometer & Stable Submit Action */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           {/* Chronometer Display */}
           <div
@@ -201,13 +218,13 @@ export default function Screen5PromptForge({
             </div>
           </div>
 
-          {/* Submit Action */}
+          {/* Rock-Solid Submit Action (No Flying, No Shaking) */}
           <button
             onClick={handleSubmit}
             disabled={isLocking}
-            className="relative group overflow-hidden flex items-center gap-2 px-5 sm:px-7 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-pink-600 to-amber-500 animate-shimmer bg-[length:200%_100%] font-mono text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+            className="h-12 flex items-center gap-2 px-6 sm:px-8 rounded-2xl bg-gradient-to-r from-amber-500 via-pink-600 to-amber-500 font-mono text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shrink-0 cursor-pointer"
           >
-            <Send className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <Send className="w-4 h-4" />
             <span>SUBMIT PROMPT</span>
           </button>
         </div>
@@ -316,6 +333,17 @@ export default function Screen5PromptForge({
             </div>
 
             <div className="relative flex-1 min-h-[360px] p-5 flex flex-col">
+              {/* High-Impact Raw Dump Alert if user just clicked clues without writing instructions */}
+              {isRawDataDump && (
+                <div className="mb-3.5 p-3 rounded-2xl border border-red-500/60 bg-red-950/50 text-red-200 text-xs font-mono flex items-start gap-2.5 shadow-[0_0_20px_rgba(239,68,68,0.25)] animate-pulse">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <strong className="text-red-400 uppercase tracking-wider block">⚠️ UNPROMPTED CLUE DUMP DETECTED</strong>
+                    <span>You have only pasted raw clue fragments! An AI model cannot execute without instructions. You must write an actionable directive (e.g. <em>"Act as a growth strategist and create a 7-day marketing plan..."</em>) or your submission will fail the evaluation audit!</span>
+                  </div>
+                </div>
+              )}
+
               <textarea
                 ref={textareaRef}
                 value={promptText}

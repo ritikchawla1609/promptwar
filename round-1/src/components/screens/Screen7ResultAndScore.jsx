@@ -314,11 +314,15 @@ export default function Screen7ResultAndScore({
                     <span>Prompt Engineering</span>
                   </div>
                   <div className="text-[10px] text-zinc-500 pl-5">
-                    Role, context weaving, constraints, format
+                    {scores.promptBreakdown?.isRawDataDump ? (
+                      <span className="text-red-400 font-bold">⚠️ Unprompted raw dump (Capped at 3 pts)</span>
+                    ) : (
+                      'Action directives, role, synthesis, format'
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="font-black text-sm text-pink-400">
+                  <span className={`font-black text-sm ${scores.promptBreakdown?.isRawDataDump ? 'text-red-400' : 'text-pink-400'}`}>
                     +{scores.prompt}
                   </span>
                   <span className="text-[10px] text-zinc-500"> / 35</span>
@@ -597,39 +601,44 @@ export default function Screen7ResultAndScore({
                       </div>
                       <div className="space-y-1.5 text-xs text-zinc-300">
                         <div className="flex justify-between">
-                          <span>Role &amp; Persona:</span>
-                          <span className={scores.promptBreakdown?.role ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
-                            +{scores.promptBreakdown?.role || 0}/8 pts
+                          <span>Action Directive Verb:</span>
+                          <span className={scores.promptBreakdown?.directive > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                            +{scores.promptBreakdown?.directive || 0}/8 pts
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Clues Integrated:</span>
-                          <span className="text-pink-400 font-bold">
-                            +{scores.promptBreakdown?.weaving || 0}/10 pts
+                          <span>Role &amp; Persona:</span>
+                          <span className={scores.promptBreakdown?.role > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                            +{scores.promptBreakdown?.role || 0}/7 pts
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Original Synthesis:</span>
+                          <span className={scores.promptBreakdown?.synthesis > 0 ? 'text-pink-400 font-bold' : 'text-zinc-500'}>
+                            +{scores.promptBreakdown?.synthesis || 0}/8 pts
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Budget &amp; Constraints:</span>
-                          <span className={scores.promptBreakdown?.constraints ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                          <span className={scores.promptBreakdown?.constraints > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
                             +{scores.promptBreakdown?.constraints || 0}/6 pts
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Deliverable Format:</span>
-                          <span className={scores.promptBreakdown?.format ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                          <span className={scores.promptBreakdown?.format > 0 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
                             +{scores.promptBreakdown?.format || 0}/6 pts
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Depth &amp; Length:</span>
-                          <span className="text-zinc-300 font-bold">
-                            +{scores.promptBreakdown?.length || 0}/5 pts
-                          </span>
-                        </div>
+                        {scores.promptBreakdown?.isRawDataDump && (
+                          <div className="mt-2 p-1.5 rounded bg-red-950/60 border border-red-500/50 text-[10px] text-red-300 font-bold">
+                            ⚠️ UNPROMPTED DUMP: Capped at 3/35 pts
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-white/[0.08] text-[10px] text-zinc-400 leading-normal">
-                      Audits prompt architecture, explicit constraints, and deliverables.
+                      Audits command verbs, role framing, original synthesis, constraints, and format.
                     </div>
                   </div>
 
@@ -652,15 +661,21 @@ export default function Screen7ResultAndScore({
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Starvation / Missing Context:</span>
+                          <span>Context Starvation:</span>
                           <span className={(scores.aiExecutionBreakdown?.missingContextDamage || 0) > 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                             -{(scores.aiExecutionBreakdown?.missingContextDamage || 0)} pts
                           </span>
                         </div>
+                        {(scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0) > 0 && (
+                          <div className="flex justify-between text-red-400 font-bold">
+                            <span>Unprompted Dump Penalty:</span>
+                            <span>-{(scores.aiExecutionBreakdown?.unpromptedDumpDamage || 0)} pts</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-white/[0.08] text-[10px] text-zinc-400 leading-normal">
-                      Traps force the AI into contradictory, unviable execution plans.
+                      Models fail when fed contradictory traps or unprompted raw clue dumps.
                     </div>
                   </div>
                 </div>
