@@ -8,6 +8,14 @@ const submissionSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    participantId: {
+      type: String,
+      index: true,
+    },
+    anonymousId: {
+      type: String,
+      default: '',
+    },
     round: {
       type: String,
       default: 'round-1',
@@ -18,117 +26,74 @@ const submissionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    scenarioId: {
-      type: String,
-      default: 'techfest',
-    },
-    scenarioTitle: {
-      type: String,
-      default: 'Campus Techfest Launch',
-    },
-    totalScore: {
-      type: Number,
-      required: true,
-      default: 0,
-      index: true,
-    },
-    baseScore: {
-      type: Number,
-      default: 0,
-    },
-    scoreAdjustment: {
-      type: Number,
-      default: 0,
-    },
-    adjustmentReason: {
+    // Prompt Parasite First Form
+    firstPrompt: {
       type: String,
       default: '',
     },
-    title: {
-      type: String,
-      default: 'CONTEXT CUTTER',
-    },
-    cuts: {
-      type: Number,
-      default: 0,
-    },
-    trapCount: {
-      type: Number,
-      default: 0,
-    },
-    noiseCount: {
-      type: Number,
-      default: 0,
-    },
-    scores: {
-      cookieCut: { type: Number, default: 0 },
-      prompt: { type: Number, default: 0 },
-      aiExecution: { type: Number, default: 0 },
-      signalsScore: { type: Number, default: 0 },
-      trapPenalty: { type: Number, default: 0 },
-      noisePenalty: { type: Number, default: 0 },
-    },
-    promptText: {
+    firstOutput: {
       type: String,
       default: '',
     },
-    wordCount: {
-      type: Number,
-      default: 0,
+    firstSubmittedAt: {
+      type: Date,
     },
-    originalWordCount: {
-      type: Number,
-      default: 0,
-    },
-    isRawDataDump: {
-      type: Boolean,
-      default: false,
-    },
-    hasDirectiveVerb: {
-      type: Boolean,
-      default: true,
-    },
-    survivingFragments: {
-      type: Array,
-      default: [],
-    },
-    aiOutput: {
-      type: String,
-      default: '',
-    },
-    isContaminated: {
-      type: Boolean,
-      default: false,
-    },
-    contaminationReasons: {
+    // Prompt Parasite Cluster Matched Opponents
+    matchedOpponentIds: {
       type: [String],
       default: [],
     },
+    mutationNotes: {
+      type: String,
+      default: '',
+    },
+    // Prompt Parasite Final Form
+    finalPrompt: {
+      type: String,
+      default: '',
+    },
+    finalOutput: {
+      type: String,
+      default: '',
+    },
+    finalSubmittedAt: {
+      type: Date,
+    },
+    // Scoring & Evaluation
+    totalScore: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+    score: {
+      type: Number,
+      default: 0,
+    },
+    evaluation: {
+      promptQuality: { type: Number, default: 0 },
+      problemUnderstanding: { type: Number, default: 0 },
+      outputQuality: { type: Number, default: 0 },
+      improvement: { type: Number, default: 0 },
+      total: { type: Number, default: 0 },
+      judgeNotes: { type: String, default: '' },
+      evaluatedAt: { type: String },
+    },
     status: {
       type: String,
-      enum: ['submitted', 'approved_r2', 'flagged', 'rejected'],
-      default: 'submitted',
+      default: 'NOT_STARTED',
       index: true,
     },
     judgeNotes: {
       type: String,
       default: '',
     },
-    timestamp: {
-      type: Number,
-      default: () => Date.now(),
-    },
-    formattedTime: {
-      type: String,
-      default: '',
-    },
   },
   {
     timestamps: true,
+    strict: false,
   }
 );
 
-// Helpful compound index for fast leaderboard queries
 submissionSchema.index({ round: 1, totalScore: -1 });
 
 export const Submission = mongoose.model('Submission', submissionSchema);
