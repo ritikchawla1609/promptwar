@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { MISSION_DATA, MOCK_LEADERBOARD } from '../../data/dalgonaChallengeData';
 import { evaluatePlayerRun } from '../../utils/promptScorer';
 import { cutterAudio } from '../../utils/cutterAudio';
+import { useLiveArena } from '../../utils/liveArenaEngine';
 import {
   Zap,
   Skull,
@@ -18,7 +19,11 @@ import {
   AlertTriangle,
   ChevronRight,
   Activity,
-  Layers
+  Layers,
+  TrendingUp,
+  TrendingDown,
+  User,
+  Edit2
 } from 'lucide-react';
 
 export default function Screen7ResultAndScore({
@@ -30,6 +35,11 @@ export default function Screen7ResultAndScore({
   const [activeTab, setActiveTab] = useState('simulation'); // 'simulation' | 'autopsy' | 'leaderboard'
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
+
+  // Live Real-Time Arena State
+  const { leaderboard, submitPlayerRun, playerName, setPlayerName, stats } = useLiveArena();
+  const [customHandle, setCustomHandle] = useState(playerName);
+  const [isEditingHandle, setIsEditingHandle] = useState(false);
 
   // Evaluate run rigorously
   const evaluation = useMemo(() => {
@@ -46,6 +56,20 @@ export default function Screen7ResultAndScore({
   // Purity & Contamination percentage
   const purityPercentage = Math.round((goodClues.length / 8) * 100);
   const trapToxicity = Math.min(100, traps.length * 40);
+
+  // Register in live arena engine & fire victory sounds on mount
+  useEffect(() => {
+    try {
+      submitPlayerRun({
+        score: totalScore,
+        title: playerTitle,
+        cuts: goodClues.length,
+        promptScore: scores.prompt,
+        scenarioTitle: scenario.title,
+        promptText,
+      });
+    } catch (e) {}
+  }, [totalScore, playerTitle, goodClues.length, scores.prompt, scenario.title, promptText]);
 
   // Sound and animation on mount
   useEffect(() => {
@@ -75,19 +99,21 @@ export default function Screen7ResultAndScore({
     return () => clearTimeout(timer);
   }, [totalScore]);
 
-  // Combined Leaderboard
-  const playerEntry = {
-    rank: 1,
-    name: 'YOU (Player #01)',
-    score: totalScore,
-    title: playerTitle,
-    cuts: goodClues.length,
-    isPlayer: true,
+  const handleSaveHandle = (e) => {
+    e.preventDefault();
+    if (customHandle.trim()) {
+      setPlayerName(customHandle.trim());
+      setIsEditingHandle(false);
+      submitPlayerRun({
+        score: totalScore,
+        title: playerTitle,
+        cuts: goodClues.length,
+        promptScore: scores.prompt,
+        scenarioTitle: scenario.title,
+        promptText,
+      });
+    }
   };
-
-  const sortedLeaderboard = [...MOCK_LEADERBOARD, playerEntry]
-    .sort((a, b) => b.score - a.score)
-    .map((item, idx) => ({ ...item, rank: idx + 1 }));
 
   const handleCopy = () => {
     navigator.clipboard.writeText(aiOutput);
@@ -715,67 +741,134 @@ export default function Screen7ResultAndScore({
 
           {/* TAB 4: CRAZY ARCADE LEADERBOARD */}
           {activeTab === 'leaderboard' && (
-            <div className="luxury-card p-6 rounded-3xl border border-amber-500/30 bg-black/75 backdrop-blur-2xl shadow-[0_0_40px_rgba(245,158,11,0.1)] flex flex-col justify-between h-full animate-fadeIn">
+            <div className="luxury-card p-6 rounded-3xl border border-amber-500/30 bg-black/75 backdrop-blur-2xl shadow-[0_0_40px_rgba(245,158,11,0.1)] flex flex-col justify-between h-full animate-fadeIn font-mono text-xs">
               <div>
-                <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/[0.08]">
+                <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-white/[0.08]">
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-amber-400 animate-spin" style={{ animationDuration: '8s' }} />
                     <h3 className="font-display font-black text-white text-base uppercase tracking-tight">
                       GLOBAL ARENA LEADERBOARD // ROUND 1
                     </h3>
                   </div>
-                  <span className="px-3 py-1 rounded-full luxury-pill bg-amber-500/15 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/30">
-                    LIVE STANDINGS
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="px-3 py-1 rounded-full luxury-pill bg-amber-500/15 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/30">
+                      LIVE STANDINGS
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {sortedLeaderboard.map((item) => (
-                    <div
-                      key={item.name}
-                      className={`flex items-center justify-between p-3.5 rounded-2xl font-mono text-xs transition-all ${
-                        item.isPlayer
-                          ? 'luxury-card bg-gradient-to-r from-amber-500/20 via-pink-600/20 to-amber-500/20 border-2 border-amber-400 text-white font-black shadow-[0_0_25px_rgba(245,158,11,0.4)] scale-[1.01]'
-                          : 'luxury-card bg-zinc-950/40 border border-white/[0.06] text-zinc-300 hover:border-white/[0.12]'
-                      }`}
+                {/* Team Handle Quick Editor */}
+                <div className="p-3 mb-3 rounded-2xl bg-zinc-950/80 border border-white/[0.08] flex items-center justify-between gap-2 shadow-inner">
+                  <div className="flex items-center gap-2 text-xs">
+                    <User className="w-4 h-4 text-amber-400" />
+                    <span className="text-zinc-400">TEAM HANDLE:</span>
+                    {isEditingHandle ? (
+                      <form onSubmit={handleSaveHandle} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={customHandle}
+                          onChange={(e) => setCustomHandle(e.target.value)}
+                          placeholder="Your Name / Team"
+                          className="px-2.5 py-1 rounded-lg bg-black border border-amber-400/60 text-white font-bold text-xs focus:outline-none"
+                          maxLength={24}
+                        />
+                        <button
+                          type="submit"
+                          className="px-2.5 py-1 rounded-lg bg-amber-400 text-black font-black text-[11px] shadow-sm hover:brightness-110"
+                        >
+                          SAVE
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="font-black text-amber-300 text-sm">{playerName}</span>
+                    )}
+                  </div>
+                  {!isEditingHandle && (
+                    <button
+                      onClick={() => setIsEditingHandle(true)}
+                      className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white flex items-center gap-1 text-[11px] transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
-                          item.rank === 1
-                            ? 'bg-gradient-to-tr from-amber-400 to-yellow-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.5)]'
-                            : item.rank === 2
-                            ? 'bg-gradient-to-tr from-slate-200 to-zinc-400 text-black shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                            : item.rank === 3
-                            ? 'bg-gradient-to-tr from-amber-700 to-orange-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.3)]'
-                            : 'bg-white/[0.04] border border-white/[0.08] text-zinc-400'
-                        }`}>
-                          #{item.rank}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2 font-bold text-sm">
-                            <span>{item.name}</span>
-                            {item.isPlayer && (
-                              <span className="text-[10px] bg-amber-400 text-black px-2 py-0.2 rounded font-black tracking-widest">
-                                YOU
+                      <Edit2 className="w-3 h-3" />
+                      <span>EDIT HANDLE</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Real-time Dynamic Standings */}
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {leaderboard.map((item) => {
+                    const rankDelta = (item.prevRank || item.rank) - item.rank;
+                    return (
+                      <div
+                        key={item.id || item.name}
+                        className={`flex items-center justify-between p-3.5 rounded-2xl transition-all ${
+                          item.isPlayer
+                            ? 'luxury-card bg-gradient-to-r from-amber-500/25 via-pink-600/25 to-amber-500/25 border-2 border-amber-400 text-white font-black shadow-[0_0_25px_rgba(245,158,11,0.4)] scale-[1.01]'
+                            : item.isNew
+                            ? 'bg-cyan-950/40 border border-cyan-400 text-white animate-pulse'
+                            : 'luxury-card bg-zinc-950/40 border border-white/[0.06] text-zinc-300 hover:border-white/[0.12]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                              item.rank === 1
+                                ? 'bg-gradient-to-tr from-amber-400 to-yellow-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.5)]'
+                                : item.rank === 2
+                                ? 'bg-gradient-to-tr from-slate-200 to-zinc-400 text-black shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                                : item.rank === 3
+                                ? 'bg-gradient-to-tr from-amber-700 to-orange-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.3)]'
+                                : 'bg-white/[0.04] border border-white/[0.08] text-zinc-400'
+                            }`}
+                          >
+                            #{item.rank}
+                          </span>
+
+                          {/* Rank Shift Indicator */}
+                          <div className="w-5 text-center text-[10px] font-black">
+                            {rankDelta > 0 ? (
+                              <span className="text-emerald-400 flex items-center gap-0.5">
+                                <TrendingUp className="w-3 h-3" />+{rankDelta}
                               </span>
+                            ) : rankDelta < 0 ? (
+                              <span className="text-red-400 flex items-center gap-0.5">
+                                <TrendingDown className="w-3 h-3" />
+                                {rankDelta}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-600">-</span>
                             )}
                           </div>
-                          <span className="text-[10px] text-zinc-400 block">{item.title}</span>
+
+                          <div>
+                            <div className="flex items-center gap-2 font-bold text-sm">
+                              <span className={item.isPlayer ? 'text-amber-200 font-black' : 'text-white'}>
+                                {item.name}
+                              </span>
+                              {item.isPlayer && (
+                                <span className="text-[10px] bg-amber-400 text-black px-2 py-0.2 rounded font-black tracking-widest">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-zinc-400 block">{item.title}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-base font-black text-metallic-gold">{item.score} PTS</div>
+                          <div className="text-[10px] text-zinc-500">{item.cuts || 8} SIGNALS</div>
                         </div>
                       </div>
-
-                      <div className="text-right">
-                        <div className="text-base font-black text-metallic-gold">{item.score} PTS</div>
-                        <div className="text-[10px] text-zinc-500">{item.cuts} SIGNALS</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-zinc-400">
-                <span>Rankings computed across multi-vector AI performance.</span>
-                <span className="text-metallic-gold font-bold">TOP 3 QUALIFY FOR ROUND 2!</span>
+              <div className="pt-3 mt-3 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-zinc-500">
+                <span>🔴 REAL-TIME MULTI-TAB BROADCAST SYNC ACTIVE</span>
+                <span className="text-cyan-400 font-bold">{stats.activeParticipants} CONTENDERS IN ARENA</span>
               </div>
             </div>
           )}

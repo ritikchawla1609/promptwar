@@ -11,7 +11,10 @@ import Screen5PromptForge from './components/screens/Screen5PromptForge';
 import Screen6AiExecution from './components/screens/Screen6AiExecution';
 import Screen7ResultAndScore from './components/screens/Screen7ResultAndScore';
 
-import { Volume2, VolumeX, Sparkles, Layers } from 'lucide-react';
+import LiveArenaTicker from './components/LiveArenaTicker';
+import LiveArenaRadarModal from './components/LiveArenaRadarModal';
+
+import { Volume2, VolumeX, Sparkles, Layers, Activity } from 'lucide-react';
 
 const SCREENS = {
   INTRO: 1,
@@ -38,6 +41,7 @@ export default function App() {
   const [showEvaluatorBar, setShowEvaluatorBar] = useState(
     typeof window !== 'undefined' && window.location.search.includes('admin')
   );
+  const [isRadarOpen, setIsRadarOpen] = useState(false);
 
   const goToScreen = (screenNum) => {
     try {
@@ -193,10 +197,24 @@ export default function App() {
             )}
             <span className="text-[11px] font-mono">{isMuted ? 'MUTE' : 'AUDIO'}</span>
           </button>
+
+          {/* Quick Arena Radar Button */}
+          <button
+            onClick={() => setIsRadarOpen(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-300 font-mono text-xs font-bold transition-all shadow-[0_0_15px_rgba(0,240,255,0.2)]"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span>ARENA RADAR</span>
+          </button>
         </div>
       </header>
 
-      {/* EVALUATOR & SCENARIO BAR */}
+      {/* REAL-TIME DYNAMIC LIVE ARENA TICKER */}
+      <LiveArenaTicker onOpenRadar={() => setIsRadarOpen(true)} />
+
+      {/* REAL-TIME TELEMETRY RADAR MODAL */}
+      <LiveArenaRadarModal isOpen={isRadarOpen} onClose={() => setIsRadarOpen(false)} />
       {showEvaluatorBar && (
         <div className="relative z-30 w-full bg-zinc-950 border-b border-zinc-800 text-[11px] font-mono py-1.5 px-4 flex flex-wrap items-center justify-between gap-2 shadow-md">
           {/* Scenario Switcher */}

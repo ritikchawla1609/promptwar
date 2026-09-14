@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import DalgonaCookie3D from '../DalgonaCookie3D';
 import ArenaBackgroundVideo from '../ArenaBackgroundVideo';
 import { cutterAudio } from '../../utils/cutterAudio';
-import { Sparkles, ChevronRight, Zap, Target, Award } from 'lucide-react';
+import { useLiveArena } from '../../utils/liveArenaEngine';
+import { Sparkles, ChevronRight, Zap, Target, Award, Users } from 'lucide-react';
 
 const TAGLINES = [
   'EVERY PROMPT HAS NOISE...',
@@ -13,6 +14,7 @@ const TAGLINES = [
 
 export default function Screen1Intro({ onStartGame }) {
   const [taglineIndex, setTaglineIndex] = useState(0);
+  const { stats } = useLiveArena();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -41,8 +43,9 @@ export default function Screen1Intro({ onStartGame }) {
             PROMPT WAR // ARENA ZERO
           </span>
           <span className="text-zinc-600 text-[10px]">•</span>
-          <span className="text-zinc-400 font-mono text-[10px] uppercase tracking-widest font-semibold">
-            LIVE SPRINT
+          <span className="text-emerald-400 font-mono text-[10px] uppercase tracking-widest font-black flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            <span>{stats.activeParticipants} HACKERS LIVE</span>
           </span>
         </div>
 

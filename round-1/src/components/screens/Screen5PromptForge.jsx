@@ -90,6 +90,21 @@ export default function Screen5PromptForge({
     },
   ];
 
+  // Dynamic Real-Time Live Score Projection (0 to 35 PTS)
+  let estRigor = 0;
+  if (hasDirectiveVerb) estRigor += 8;
+  if (structuralChecks[1].present) estRigor += 7;
+  if (structuralChecks[2].present) estRigor += 8;
+  else if (userOriginalWords >= 5) estRigor += 3;
+  if (structuralChecks[3].present) estRigor += 6;
+  if (structuralChecks[4].present) estRigor += 6;
+
+  if (isRawDataDump) {
+    estRigor = Math.min(3, estRigor);
+  } else if (!hasDirectiveVerb && promptText.trim().length > 0) {
+    estRigor = Math.min(5, estRigor);
+  }
+
   // Insert fragment directly into prompt
   const handleInsertFragment = (fragmentText) => {
     try {
@@ -315,19 +330,39 @@ export default function Screen5PromptForge({
         {/* Right Column: Prompt Editor */}
         <div className="lg:col-span-7 flex flex-col h-full">
           <div className="luxury-card bg-black/70 backdrop-blur-2xl rounded-3xl border border-amber-500/30 flex flex-col h-full shadow-[0_0_40px_rgba(245,158,11,0.08)] overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 bg-zinc-950/60 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-3 bg-zinc-950/70 border-b border-white/[0.08] gap-3">
+              <div className="flex items-center gap-2.5">
                 <FileText className="w-4 h-4 text-amber-400" />
                 <span className="font-mono text-xs font-bold text-zinc-200 uppercase tracking-wider">
                   PROMPT FORGE WORKSPACE
                 </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               </div>
-              <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
+
+              {/* Dynamic Real-Time Score Projection HUD */}
+              <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/60 border border-white/[0.1] shadow-inner">
+                  <span className="text-[10px] text-zinc-400">EST. RIGOR:</span>
+                  <span
+                    className={`font-black text-xs sm:text-sm ${
+                      estRigor >= 28
+                        ? 'text-emerald-400'
+                        : estRigor >= 18
+                        ? 'text-amber-400'
+                        : estRigor > 3
+                        ? 'text-pink-400'
+                        : 'text-red-400'
+                    }`}
+                  >
+                    {estRigor} / 35 PTS
+                  </span>
+                </div>
+
                 <span className="px-2 py-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] text-zinc-300">
                   {wordCount} Words
                 </span>
-                <span className="px-2 py-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] text-zinc-300">
-                  {promptText.length} Chars
+                <span className="px-2 py-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] text-zinc-400">
+                  {userOriginalWords} Original
                 </span>
               </div>
             </div>
