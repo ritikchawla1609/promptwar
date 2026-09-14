@@ -309,15 +309,15 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
   const excludedCount = fragments.length - selectedCount;
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full select-none max-w-7xl mx-auto px-2">
-      {/* TOP SUSPENSE STATUS BAR (No spoilers on which clue is a trap!) */}
-      <div className="w-full flex items-center justify-between p-3 mb-2 rounded-2xl glass-panel border border-amber-500/30 bg-zinc-950/90 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400 shrink-0">
+    <div className="relative flex flex-col items-center justify-center w-full select-none max-w-7xl mx-auto px-2 animate-fadeIn">
+      {/* TOP SUSPENSE STATUS BAR (Luxury Obsidian Header) */}
+      <div className="w-full flex items-center justify-between p-3.5 mb-2 rounded-2xl luxury-card shadow-2xl">
+        <div className="flex items-center gap-3.5">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
             <Scissors className="w-4 h-4 transform -rotate-45" />
           </div>
           <div>
-            <div className="text-[10px] font-mono tracking-widest text-amber-400 uppercase font-black">
+            <div className="text-[10px] font-mono tracking-[0.2em] text-amber-400 uppercase font-black">
               DALGONA PROMPT // THE CUT
             </div>
             <div className="text-xs sm:text-sm font-mono font-bold text-white">
@@ -334,27 +334,27 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
         <div className="flex items-center gap-3">
           {isClosed && (
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="px-3 py-1.5 rounded-xl bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-bold">
+              <span className="px-3.5 py-1.5 rounded-xl bg-cyan-950/80 border border-cyan-400/60 text-cyan-300 font-bold shadow-[0_0_15px_rgba(0,240,255,0.25)]">
                 ENCLOSED: {selectedCount} CLUES
               </span>
-              <span className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold">
+              <span className="px-3.5 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-700 text-zinc-400 font-bold">
                 OUTSIDE: {excludedCount} CLUES
               </span>
             </div>
           )}
 
           {isClosed && breakState === 'closed_preview' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={handleCancelCut}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white font-mono text-xs font-bold transition-all hover:bg-zinc-800"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.1] bg-zinc-900/90 text-zinc-300 hover:text-white font-mono text-xs font-bold transition-all hover:bg-zinc-800"
               >
                 <RefreshCcw className="w-3.5 h-3.5" />
                 <span>REDRAW</span>
               </button>
               <button
                 onClick={handleOpenFinalizeModal}
-                className="flex items-center gap-1.5 px-6 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-pink-600 to-amber-500 text-white font-mono text-xs sm:text-sm font-black tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105 active:scale-95"
+                className="flex items-center gap-2 px-7 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-pink-600 to-amber-500 text-white font-mono text-xs sm:text-sm font-black tracking-wider uppercase shadow-[0_0_25px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105 active:scale-95"
               >
                 <Check className="w-4 h-4" />
                 <span>BREAK COOKIE 💥</span>
@@ -367,7 +367,7 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
       {/* THE SPACIOUS DALGONA COOKIE ARENA */}
       <div
         ref={containerRef}
-        className="relative flex items-center justify-center rounded-3xl p-3 border-2 border-zinc-800 shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden bg-zinc-950/80"
+        className="relative flex items-center justify-center rounded-3xl p-3 border border-white/[0.08] shadow-[0_25px_70px_rgba(0,0,0,0.95)] overflow-hidden bg-black/60 backdrop-blur-2xl"
         style={{
           width: dimensions.width,
           height: dimensions.height,
@@ -383,11 +383,11 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
           }`}
           style={{
             background: 'radial-gradient(circle at 50% 45%, #92400E 0%, #78350F 35%, #451A03 70%, #1A0702 100%)',
-            boxShadow: 'inset 0 0 70px rgba(0,0,0,0.85), 0 15px 45px rgba(0,0,0,0.95)',
+            boxShadow: 'inset 0 0 80px rgba(0,0,0,0.9), 0 20px 50px rgba(0,0,0,0.95)',
           }}
         >
-          {/* Subtle Sugar Honeycomb Texture */}
-          <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none" />
+          {/* Subtle Sugar Sparkle Texture */}
+          <div className="absolute inset-0 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
 
           {/* Fracture crack lines when broken */}
           {(breakState === 'cracking' || breakState === 'broken') && (
@@ -409,7 +409,7 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
             </svg>
           )}
 
-          {/* Embedded Clues — ALL LOOK EQUALLY PLAUSIBLE & SUSPICIOUS! */}
+          {/* Embedded Clues — Luxury Frosted Parchment Chips */}
           {fragments.map((frag) => {
             const isInside = selectedFragmentIds.includes(frag.id);
             const isExcluded = isClosed && !isInside;
@@ -421,12 +421,12 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
             return (
               <div
                 key={frag.id}
-                className={`absolute transition-all duration-300 pointer-events-none z-20 transform -translate-x-1/2 -translate-y-1/2 px-3.5 py-2 rounded-2xl text-xs font-mono font-bold tracking-wide select-none flex items-center gap-2.5 shadow-lg backdrop-blur-md whitespace-nowrap max-w-[320px] ${
+                className={`absolute transition-all duration-300 pointer-events-none z-20 transform -translate-x-1/2 -translate-y-1/2 px-3.5 py-2 rounded-2xl text-xs font-mono font-bold tracking-wide select-none flex items-center gap-2.5 shadow-xl backdrop-blur-xl whitespace-nowrap max-w-[320px] ${
                   isInside
-                    ? 'bg-black/95 border-2 border-cyan-400 text-cyan-200 shadow-[0_0_22px_rgba(0,240,255,0.7)] scale-110 z-30 ring-2 ring-cyan-400/50'
+                    ? 'bg-zinc-950/95 border-2 border-cyan-400 text-cyan-200 shadow-[0_0_25px_rgba(0,240,255,0.7)] scale-105 z-30 ring-2 ring-cyan-400/50'
                     : isExcluded
                     ? 'bg-zinc-950/40 border border-zinc-800 text-zinc-600 line-through opacity-25 scale-90'
-                    : 'bg-black/85 border border-amber-500/50 text-amber-100 shadow-md'
+                    : 'bg-zinc-950/85 border border-amber-500/40 text-amber-100 shadow-lg'
                 } ${breakState === 'cracking' && isExcluded ? 'animate-glitch rotate-6' : ''}`}
                 style={{
                   left: `${frag.x}%`,
@@ -435,7 +435,7 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
               >
                 <span className="text-base shrink-0">{frag.icon || '📌'}</span>
                 <div className="flex flex-col text-left leading-tight overflow-hidden">
-                  <span className="text-xs sm:text-[13px] whitespace-nowrap truncate">{frag.text}</span>
+                  <span className="text-xs sm:text-[13px] whitespace-nowrap truncate font-extrabold">{frag.text}</span>
                   {frag.source && (
                     <span className="text-[9px] text-zinc-400 font-normal mt-0.5 tracking-normal whitespace-nowrap truncate max-w-[240px]">
                       src: {frag.source}
@@ -466,9 +466,9 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
 
       {/* CONFIRMATION MODAL BEFORE BREAKING (High Suspense!) */}
       {breakState === 'confirm_modal' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md p-8 rounded-3xl glass-panel border-2 border-amber-500 text-center shadow-2xl animate-scaleUp bg-zinc-950">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fadeIn">
+          <div className="relative w-full max-w-md p-8 rounded-3xl luxury-card border-2 border-amber-500/80 text-center shadow-[0_0_60px_rgba(245,158,11,0.3)] animate-scaleUp">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/15 border border-amber-400 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_25px_rgba(245,158,11,0.4)]">
               <AlertTriangle className="w-8 h-8 animate-pulse" />
             </div>
 
@@ -477,9 +477,9 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
             </h3>
 
             <p className="text-zinc-300 font-mono text-xs sm:text-sm mb-4 leading-relaxed">
-              You have enclosed <strong className="text-cyan-400">{selectedCount} clues</strong> inside your cut.
+              You have enclosed <strong className="text-cyan-400">{selectedCount} clues</strong> inside your cut boundary.
               <br />
-              Everything outside will crumble into dust and be lost forever.
+              Everything outside will shatter into sugar dust and be eliminated forever.
             </p>
 
             <p className="text-amber-400 font-mono text-xs font-bold mb-6">
@@ -489,13 +489,13 @@ export default function CookieCutterCanvas({ fragments = PROMPT_FRAGMENTS, onCut
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setBreakState('closed_preview')}
-                className="flex-1 py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-mono text-xs font-bold hover:text-white"
+                className="flex-1 py-3 rounded-xl border border-white/[0.1] bg-zinc-900 text-zinc-300 font-mono text-xs font-bold hover:text-white transition-all"
               >
                 LET ME REDRAW
               </button>
               <button
                 onClick={handleConfirmBreak}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-600 via-pink-600 to-amber-500 text-white font-mono text-xs font-black tracking-wider shadow-[0_0_25px_rgba(255,0,127,0.7)] hover:scale-105 active:scale-95 transition-all"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-600 via-pink-600 to-amber-500 text-white font-mono text-xs font-black tracking-wider uppercase shadow-[0_0_25px_rgba(255,0,127,0.7)] hover:scale-105 active:scale-95 transition-all"
               >
                 BREAK THE COOKIE! 💥
               </button>

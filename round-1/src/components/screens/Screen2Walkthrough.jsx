@@ -83,31 +83,31 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] flex flex-col justify-between px-4 py-8 max-w-5xl mx-auto">
+    <div className="relative min-h-[calc(100vh-64px)] flex flex-col justify-between px-4 py-8 max-w-5xl mx-auto select-none animate-fadeIn">
       {/* Top Header & Step Navigation */}
-      <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+      <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>HOW TO PLAY // SIMPLE GUIDE</span>
+            <span>OPERATIONAL GUIDE // STAGE 02</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black font-display text-white uppercase tracking-tight">
+          <h2 className="text-2xl sm:text-4xl font-black font-display text-white uppercase tracking-tight">
             HOW ROUND 1 WORKS
           </h2>
         </div>
 
-        {/* Step Indicator Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Step Indicator Buttons (Luxury Segmented Control) */}
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-zinc-950/80 border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
           {STEPS.map((s, idx) => (
             <button
               key={s.step}
               onClick={() => handleDirectStep(idx)}
-              className={`w-9 h-9 rounded-xl font-mono text-xs font-bold transition-all ${
+              className={`w-10 h-10 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center ${
                 idx === currentStepIndex
-                  ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.6)] scale-110'
+                  ? 'bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] scale-105'
                   : idx < currentStepIndex
-                  ? 'bg-zinc-800 text-emerald-400 border border-emerald-500/40'
-                  : 'bg-zinc-900 text-zinc-500 border border-zinc-800 hover:text-zinc-300'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
               }`}
             >
               {idx < currentStepIndex ? '✓' : `0${s.step}`}
@@ -116,16 +116,17 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
         </div>
       </div>
 
-      {/* Main Visual Slide Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-6">
+      {/* Main Visual Slide Card (Luxury Obsidian Card) */}
+      <div className="luxury-card rounded-3xl p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-6">
         {/* Left Side: Plain English Explanation */}
         <div className="flex flex-col gap-4 animate-fadeIn">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-xs font-bold w-fit">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-xs font-bold w-fit shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+            <Sparkles className="w-3 h-3 animate-spin" style={{ animationDuration: '6s' }} />
             <span>{step.badge}</span>
           </div>
 
           <div>
-            <h3 className="text-3xl sm:text-4xl font-black font-display uppercase tracking-tight text-white mb-1">
+            <h3 className="text-3xl sm:text-4xl font-black font-display uppercase tracking-tight text-white mb-1.5">
               {step.title}
             </h3>
             <p className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase">
@@ -133,21 +134,21 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
             </p>
           </div>
 
-          <p className="text-zinc-200 text-sm sm:text-base leading-relaxed">
+          <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
             {step.description}
           </p>
 
-          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm flex items-start gap-3">
+          <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md flex items-start gap-3 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
             <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-xs sm:text-sm font-mono text-amber-200 leading-relaxed">
-              <strong className="text-amber-400 uppercase tracking-wide">QUICK TIP:</strong> {step.tip}
+              <strong className="text-amber-400 uppercase tracking-wide">STRATEGY TIP:</strong> {step.tip}
             </div>
           </div>
         </div>
 
         {/* Right Side: Visual Preview */}
-        <div className="relative rounded-3xl border border-zinc-800 bg-zinc-950/80 p-6 flex flex-col items-center justify-center min-h-[320px] shadow-2xl overflow-hidden group">
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px]" />
+        <div className="relative rounded-2xl border border-white/[0.08] bg-black/60 p-6 flex flex-col items-center justify-center min-h-[320px] shadow-2xl overflow-hidden group">
+          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px]" />
 
           {step.visual === 'cookie' && (
             <div className="relative flex flex-col items-center animate-scaleUp">
@@ -179,7 +180,7 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
                 <circle cx="60" cy="80" r="7" fill="#00F0FF" className="animate-ping" />
                 <circle cx="60" cy="80" r="5" fill="#FFFFFF" />
               </svg>
-              <div className="absolute bottom-2 px-3 py-1 rounded bg-black/90 border border-cyan-500/60 font-mono text-xs text-cyan-300">
+              <div className="absolute bottom-2 px-3 py-1 rounded-full bg-black/90 border border-cyan-500/60 font-mono text-xs text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.3)]">
                 Bring line back to the dot to close the cut
               </div>
             </div>
@@ -239,10 +240,10 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
       </div>
 
       {/* Navigation Controls Bar */}
-      <div className="w-full flex items-center justify-between pt-4 border-t border-zinc-800/80">
+      <div className="w-full flex items-center justify-between pt-4 border-t border-white/[0.08]">
         <button
           onClick={onSkip}
-          className="text-zinc-400 hover:text-white font-mono text-xs tracking-wider uppercase underline underline-offset-4"
+          className="text-zinc-400 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors"
         >
           SKIP TUTORIAL →
         </button>
@@ -251,7 +252,7 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
           {currentStepIndex > 0 && (
             <button
               onClick={handlePrev}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-200 font-mono text-xs font-bold hover:bg-zinc-800 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.1] bg-zinc-900 text-zinc-200 font-mono text-xs font-bold hover:bg-zinc-800 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>BACK</span>
@@ -260,9 +261,9 @@ export default function Screen2Walkthrough({ onProceed, onSkip }) {
 
           <button
             onClick={handleNext}
-            className="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-600 text-white font-mono text-xs font-black tracking-wider uppercase shadow-[0_0_20px_rgba(245,158,11,0.5)] hover:scale-105 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-pink-600 to-amber-500 text-white font-mono text-xs font-black tracking-wider uppercase shadow-[0_0_25px_rgba(245,158,11,0.5)] hover:scale-105 active:scale-95 transition-all"
           >
-            <span>{currentStepIndex === STEPS.length - 1 ? 'GO TO MISSION BRIEF' : 'NEXT STEP'}</span>
+            <span>{currentStepIndex === STEPS.length - 1 ? 'PROCEED TO MISSION BRIEF' : 'NEXT STEP'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
