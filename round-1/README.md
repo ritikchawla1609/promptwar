@@ -1,29 +1,40 @@
-# 🍪 PROMPT WAR: ROUND 01 — DALGONA PROMPT (THE PERFECT CUT)
+# 🧬 PROMPT WAR: ROUND 01 — PROMPT PARASITE
 
-> **TAGLINE:** CUT THE PERFECT CONTEXT.
-
-An arena-grade competitive prompt engineering experience built for live tournament environments.
+> **Presented by Tech Tatva Club, Chandigarh University**  
+> An arena-grade adversarial prompt engineering tournament platform featuring synchronized cohort progression, real peer matchmaking, and automated phase advancement.
 
 ---
 
-## 🎮 Game Flow (7 Stages)
+## 🎮 Game Architecture & Synchronized Phases
 
-1. **Stage 1: Arena Intro** — High-voltage sci-fi briefing and ambient audio synthesizer.
-2. **Stage 2: Walkthrough** — Interactive tutorial explaining the 3 pillars of scoring (Cut, Prompt, AI).
-3. **Stage 3: Mission Brief** — Real-world strategic challenges across 3 scenarios (`Campus Campaign`, `Venture Capital`, `Immersive Game`).
-4. **Stage 4: The Cut** — 2D canvas cutter where players use a needle to draw a smooth boundary around verified signals while dodging 4 deceptive traps scattered across all 4 quadrants.
-5. **Stage 5: Prompt Forge** — 5-minute timed prompt engineering workspace with real-time structural checklist. *(Sample prompt auto-fill disabled for live tournament competition).*
-6. **Stage 6: AI Core Simulation** — Real-time firmware execution stream rendering prompt output.
-7. **Stage 7: Score & Audit** — 100-point transparent mathematical ledger with official locked status for event judging.
+Round 01 features a strictly synchronized tournament flow where all participating teams advance together across standardized phases:
+
+1. **Holding Lobby**: Teams register their squad details (team name, leader, contact, college, members) and receive an official passcode (`PW-XXXX`). Contenders wait until the host commences the round.
+2. **Phase 01: Briefing (1 min)**: Global briefing displaying rules and scoring criteria.
+3. **Phase 02: First Form (10 min)**: Teams craft their baseline prompt using external AI tools (ChatGPT, Claude, Gemini) and paste prompt + output. Early submitters enter a secured waiting room with a synchronized countdown badge.
+4. **Phase 03: Peer Matching (30 sec)**: Central server executes balanced random matchmaking, assigning 1–2 real opponent outputs to each squad while minimizing reuse.
+5. **Phase 04: Parasite Study (10 min)**: Teams analyze competitor outputs and record private tactical mutation notes.
+6. **Phase 05: Evolve Final Form (10 min)**: Teams reconstruct their solution synthesizing peer strengths. When the timer expires, drafts auto-lock and seal into the judging matrix.
+7. **Phase 06: Concluded & Judging**: Complete arena standings with judge evaluation scores.
+
+---
+
+## 🛡️ Core Rules & Mechanics
+
+* **Quorum Gate**: A minimum of **3 teams** is strictly required to start Round 01.
+* **Synchronized Timers**: Server-authoritative phase clock at `/api/arena/phase-clock` prevents client drift.
+* **Auto-Save on Timeout**: Any drafted text is automatically locked and saved if the 10-minute timer expires.
+* **Balanced Peer Matching**: Opponents are assigned randomly and distributed evenly across the cohort.
+* **External AI Workflow**: Contenders use their own external LLMs and submit prompts and outputs to the platform.
 
 ---
 
 ## 💻 Tech Stack
 
-* **Framework:** React 18 + Vite
-* **Styling:** Tailwind CSS + Lucide Icons
-* **Effects:** Canvas-confetti, Custom Web Audio API Synthesizer & Sound FX
-* **Algorithms:** Smooth Bezier Curve interpolation, Ray-Casting Point-in-Polygon (PIP) detection, Deterministic NLP & heuristic prompt scorer.
+* **Framework**: React 18 + Vite
+* **Styling**: Tailwind CSS + Lucide Icons
+* **Audio**: Custom Web Audio API synthesizer for arena sound FX
+* **Palette**: Tech Tatva Electric Cyan (`#00f0ff`) & Cyber Crimson (`#ff2a5f`)
 
 ---
 
@@ -33,12 +44,15 @@ An arena-grade competitive prompt engineering experience built for live tourname
 # Install dependencies
 npm install
 
-# Start local dev server
+# Start development server
 npm run dev
 
 # Build for production
 npm run build
 
-# Preview production build
+# Preview build
 npm run preview
 ```
+
+Access the application at `http://localhost:5173`.  
+Access the Host Admin Console at `http://localhost:5173/#/admin` with passcode `TATVA@2026`.
