@@ -188,8 +188,8 @@ app.delete('/api/submissions', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 [Backend] Prompt War API Server listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 [Backend] Prompt War API Server listening on http://127.0.0.1:${PORT}`);
   console.log(`📡 [Backend] Endpoints:`);
   console.log(`   - GET  /api/health`);
   console.log(`   - GET  /api/submissions`);
