@@ -122,8 +122,8 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
         </div>
       </div>
 
-      {/* Round Progress Tracker Bar */}
-      <div className="max-w-7xl mx-auto mt-3 pt-2 border-t border-gray-900 flex items-center justify-between overflow-x-auto gap-1 text-[11px] font-mono no-scrollbar">
+      {/* Round Progress Tracker Bar / Tactical Conduit */}
+      <div className="max-w-7xl mx-auto mt-2.5 pt-2 border-t border-gray-900/90 flex items-center justify-between overflow-x-auto gap-1 text-[11px] font-mono no-scrollbar">
         {ROUND_NAMES.map((name, idx) => {
           const isActive = currentRound === idx;
           const isCompleted = currentRound > idx;
@@ -131,16 +131,17 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
             <button
               key={idx}
               onClick={() => onSelectRound(idx)}
-              className={`px-2.5 py-1 rounded whitespace-nowrap transition flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                 isActive
-                  ? 'bg-red-900/70 border border-red-500 text-white font-bold shadow-[0_0_10px_rgba(229,9,20,0.4)]'
+                  ? 'bg-red-950/80 border border-red-500 text-white font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)]'
                   : isCompleted
-                  ? 'bg-gray-900/70 border border-gray-800 text-gray-400 hover:border-gray-700'
-                  : 'text-gray-600 hover:text-gray-400'
+                  ? 'bg-black/60 border border-emerald-900/70 text-emerald-400 hover:border-emerald-600'
+                  : 'bg-black/30 border border-gray-900 text-gray-600 hover:text-gray-400'
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-red-400 animate-ping' : isCompleted ? 'bg-emerald-500' : 'bg-gray-700'}`} />
-              {name}
+              <span className="text-[10px] opacity-75">[{idx}]</span>
+              <span>{name}</span>
             </button>
           );
         })}
@@ -148,3 +149,4 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
     </header>
   );
 };
+

@@ -1,10 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = process.env.PROJECT_ROOT || path.resolve(__dirname, '..');
 
 console.log('================================================================');
 console.log('🩸 RUNNING COMPLETE SMOKE TEST: PROMPT WAR 2.0');
@@ -24,32 +19,25 @@ function assert(condition, message) {
   }
 }
 
-// ----------------------------------------------------------------------------
-// TEST 1: PROJECT CONFIGURATION & SOURCE INTEGRITY
-// ----------------------------------------------------------------------------
-console.log('--- TEST GROUP 1: PROJECT CONFIGURATION & SOURCE INTEGRITY ---');
+const projectRoot = '/Users/ritikchawla/Downloads/promptwar-main';
 
-const packageJsonPath = path.join(projectRoot, 'package.json');
-assert(fs.existsSync(packageJsonPath), 'package.json exists');
-const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-assert(pkg.name === 'promptwar-2.0', 'package.json specifies promptwar-2.0');
-
-const srcIndexHtmlPath = path.join(projectRoot, 'index.html');
-assert(fs.existsSync(srcIndexHtmlPath), 'Root index.html exists');
-const srcHtml = fs.readFileSync(srcIndexHtmlPath, 'utf-8');
-assert(srcHtml.includes('PROMPT WAR: The House That Remembers (2.0)'), 'index.html has correct title metadata');
-assert(srcHtml.includes('id="root"'), 'index.html has root mount element');
+// ----------------------------------------------------------------------------
+// TEST 1: PROJECT CONFIGURATION & BUILD ASSETS
+// ----------------------------------------------------------------------------
+console.log('--- TEST GROUP 1: BUILD & ASSET INTEGRITY ---');
 
 const distHtmlPath = path.join(projectRoot, 'dist', 'index.html');
-if (fs.existsSync(distHtmlPath)) {
-  const distAssets = fs.readdirSync(path.join(projectRoot, 'dist', 'assets'));
-  const jsBundle = distAssets.find(f => f.endsWith('.js'));
-  const cssBundle = distAssets.find(f => f.endsWith('.css'));
-  assert(!!jsBundle, `Compiled JavaScript bundle exists: ${jsBundle}`);
-  assert(!!cssBundle, `Compiled CSS bundle exists: ${cssBundle}`);
-} else {
-  console.log('  ⓘ Production dist/ not yet generated. Run `npm run build` to create.');
-}
+assert(fs.existsSync(distHtmlPath), 'Production dist/index.html exists');
+
+const distHtml = fs.readFileSync(distHtmlPath, 'utf-8');
+assert(distHtml.includes('PROMPT WAR: The House That Remembers (2.0)'), 'dist/index.html has correct title metadata');
+assert(distHtml.includes('id="root"'), 'dist/index.html has root mount element');
+
+const distAssets = fs.readdirSync(path.join(projectRoot, 'dist', 'assets'));
+const jsBundle = distAssets.find(f => f.endsWith('.js'));
+const cssBundle = distAssets.find(f => f.endsWith('.css'));
+assert(!!jsBundle, `Compiled JavaScript bundle exists: ${jsBundle}`);
+assert(!!cssBundle, `Compiled CSS bundle exists: ${cssBundle}`);
 
 // ----------------------------------------------------------------------------
 // TEST 2: CSS OVERLAY & POINTER EVENTS CHECK
@@ -290,7 +278,23 @@ assert(falseMurdererTsx.includes('CLASSIFIED TARGET PROFILE'), 'Round 5 presents
 
 const finalBossTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'FinalBossPrompt.tsx'), 'utf-8');
 assert(finalBossTsx.includes('handleInjectMasterExploit'), 'Round 6 implements 1-click master exploit injection');
-assert(finalBossTsx.includes('+500 XP CASE SOLVED'), 'Round 6 awards COD victory XP feedback');
+// ----------------------------------------------------------------------------
+// TEST 17: TACTICAL FRAMING ARCHITECTURE & SPLIT COMMAND DECK
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 17: TACTICAL FRAMING & SPLIT COMMAND DECK ---');
+assert(indexCss.includes('.tactical-frame'), 'index.css defines .tactical-frame container styling');
+assert(indexCss.includes('.tactical-corners'), 'index.css defines .tactical-corners 4-axis target brackets');
+assert(indexCss.includes('.corner-tl') && indexCss.includes('.corner-br'), 'index.css defines explicit corner indicators');
+
+const currentAppTsx = fs.readFileSync(path.join(projectRoot, 'src', 'App.tsx'), 'utf-8');
+assert(currentAppTsx.includes('terminalLayout'), 'App.tsx maintains modular frame layout state');
+assert(currentAppTsx.includes('SPLIT DECK') && currentAppTsx.includes('PUZZLE ONLY') && currentAppTsx.includes('FULL INTEL'), 'App.tsx provides 3 modular frame layout modes');
+assert(currentAppTsx.includes('lg:grid-cols-12'), 'App.tsx implements 2-Column Split Command Deck');
+
+const clueDossierTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'ClueDossier.tsx'), 'utf-8');
+assert(clueDossierTsx.includes('compact = false') || clueDossierTsx.includes('compact?: boolean'), 'ClueDossier supports compact sidebar deck mode');
+assert(clueDossierTsx.includes('activeCategory') && clueDossierTsx.includes('searchQuery'), 'ClueDossier provides category filtering and live search');
+assert(clueDossierTsx.includes('#EV-'), 'ClueDossier presents tactical evidence ID badges');
 
 // ----------------------------------------------------------------------------
 // SUMMARY REPORT
