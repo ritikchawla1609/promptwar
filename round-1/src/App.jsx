@@ -13,6 +13,7 @@ import Screen7ResultAndScore from './components/screens/Screen7ResultAndScore';
 
 import LiveArenaTicker from './components/LiveArenaTicker';
 import LiveArenaRadarModal from './components/LiveArenaRadarModal';
+import AdminPortal from './components/AdminPortal';
 
 import { Volume2, VolumeX, Sparkles, Layers, Activity } from 'lucide-react';
 
@@ -36,11 +37,15 @@ export default function App() {
   const [survivingFragments, setSurvivingFragments] = useState(
     currentScenario.fragments.filter((f) => f.isRelevant)
   );
-  const [promptText, setPromptText] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
-  const [showEvaluatorBar, setShowEvaluatorBar] = useState(
-    typeof window !== 'undefined' && window.location.search.includes('admin')
-  );
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      return search.includes('admin') || hash.includes('admin') ? 'admin' : 'player';
+    }
+    return 'player';
+  });
+  const [showEvaluatorBar, setShowEvaluatorBar] = useState(false);
   const [isRadarOpen, setIsRadarOpen] = useState(false);
 
   const goToScreen = (screenNum) => {
@@ -104,6 +109,10 @@ export default function App() {
   const handlePlayAgain = () => {
     // Locked for live event integrity
   };
+
+  if (viewMode === 'admin') {
+    return <AdminPortal onSwitchToPlayer={() => setViewMode('player')} />;
+  }
 
   return (
     <div className="min-h-screen bg-black text-slate-100 flex flex-col font-sans selection:bg-pink-600 selection:text-white relative overflow-x-hidden">
@@ -206,6 +215,21 @@ export default function App() {
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             <Activity className="w-3.5 h-3.5 text-cyan-400" />
             <span>ARENA RADAR</span>
+          </button>
+
+          {/* Combined Admin & Evaluator Portal Switch */}
+          <button
+            onClick={() => {
+              try {
+                cutterAudio.playClick();
+              } catch (e) {}
+              setViewMode('admin');
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-amber-500/50 bg-gradient-to-r from-amber-500/15 to-pink-500/15 hover:from-amber-500/25 hover:to-pink-500/25 text-amber-300 font-mono text-xs font-black transition-all shadow-[0_0_18px_rgba(245,158,11,0.25)] hover:scale-105"
+            title="Switch to Combined Evaluator & Admin Console"
+          >
+            <span>👑</span>
+            <span className="tracking-wider">ADMIN</span>
           </button>
         </div>
       </header>

@@ -66,10 +66,29 @@ export default function Screen7ResultAndScore({
         cuts: goodClues.length,
         promptScore: scores.prompt,
         scenarioTitle: scenario.title,
+        scenarioId: scenario.id || 'techfest',
         promptText,
+        scores,
+        counts,
+        survivingFragments,
+        aiOutput,
+        isContaminated,
+        contaminationReasons,
       });
     } catch (e) {}
-  }, [totalScore, playerTitle, goodClues.length, scores.prompt, scenario.title, promptText]);
+  }, [
+    totalScore,
+    playerTitle,
+    goodClues.length,
+    scores,
+    counts,
+    scenario,
+    promptText,
+    survivingFragments,
+    aiOutput,
+    isContaminated,
+    contaminationReasons,
+  ]);
 
   // Sound and animation on mount
   useEffect(() => {
@@ -110,7 +129,14 @@ export default function Screen7ResultAndScore({
         cuts: goodClues.length,
         promptScore: scores.prompt,
         scenarioTitle: scenario.title,
+        scenarioId: scenario.id || 'techfest',
         promptText,
+        scores,
+        counts,
+        survivingFragments,
+        aiOutput,
+        isContaminated,
+        contaminationReasons,
       });
     }
   };

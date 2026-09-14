@@ -8,9 +8,196 @@ const STORAGE_KEYS = {
   STATS: 'prompt_war_live_stats',
   PLAYER_NAME: 'prompt_war_player_name',
   TIMER_START: 'prompt_war_timer_start',
+  SUBMISSIONS: 'prompt_war_admin_submissions',
 };
 
 const CHANNEL_NAME = 'prompt_war_arena_broadcast_channel';
+
+// Default Demo Submissions for Admin Evaluation
+const SEED_SUBMISSIONS = [
+  {
+    id: 'sub_seed_1',
+    teamName: 'Team CipherForge',
+    scenarioId: 'techfest',
+    scenarioTitle: 'Campus Techfest Launch',
+    totalScore: 94,
+    baseScore: 94,
+    scoreAdjustment: 0,
+    adjustmentReason: '',
+    title: 'DALGONA MASTER',
+    cuts: 8,
+    trapCount: 0,
+    noiseCount: 0,
+    scores: {
+      cookieCut: 40,
+      prompt: 31,
+      aiExecution: 23,
+      signalsScore: 40,
+      trapPenalty: 0,
+      noisePenalty: 0,
+    },
+    promptText: `Act as a senior growth marketing strategist specializing in collegiate digital campaigns.
+Develop a rigorous 7-day tactical execution schedule to drive paid student ticket registrations for our annual engineering festival.
+
+Core Constraints:
+- Total Budget Cap: Strictly capped at ₹10,000.
+- Primary Audience: 4,000 undergraduate engineering students across 8 academic blocks.
+- Conversion Funnel: Focus primarily on peer WhatsApp group announcements (82% open rate) paired with daily Instagram carousel teasers.
+
+Deliverable Structure:
+Provide a day-by-day executable runbook (Day 1 through Day 7) detailing morning broadcast copy, evening conversion pushes, and allocated budget per day.`,
+    wordCount: 88,
+    originalWordCount: 52,
+    isRawDataDump: false,
+    hasDirectiveVerb: true,
+    survivingFragments: [
+      { id: 'tf_1', text: 'Audience: 4,000 College Students', isRelevant: true, isMisleading: false },
+      { id: 'tf_2', text: 'Budget: ₹10,000 Total Ad Spend', isRelevant: true, isMisleading: false },
+      { id: 'tf_3', text: 'Channel: Instagram Story Teasers', isRelevant: true, isMisleading: false },
+      { id: 'tf_5', text: 'Platform: WhatsApp Community Broadcast', isRelevant: true, isMisleading: false },
+      { id: 'tf_6', text: 'Timeline: 7-Day Sprint Plan', isRelevant: true, isMisleading: false },
+      { id: 'tf_7', text: 'Goal: Maximize Verified Registrations', isRelevant: true, isMisleading: false },
+      { id: 'tf_8', text: 'Format: Day-Wise Actionable Guide', isRelevant: true, isMisleading: false },
+    ],
+    aiOutput: `### 🚀 7-DAY CAMPUS TECHFEST SPRINT
+* **Day 1 (₹1,000):** WhatsApp ambassador broadcast teaser.
+* **Day 2–3 (₹3,000):** Instagram speaker reveals with early-bird discount code.
+* **Day 4–5 (₹3,500):** WhatsApp group flash competitions & departmental ambassador blitz.
+* **Day 6–7 (₹2,500):** Final countdown urgency blast: "Only 40 passes remaining".
+* **Projected Registrations:** 740 verified students (Cost per Registration: ₹13.50).`,
+    isContaminated: false,
+    contaminationReasons: [],
+    status: 'approved_r2',
+    judgeNotes: 'Flawless prompt framing. Balanced constraints and concrete day-by-day table structure.',
+    timestamp: Date.now() - 360000,
+    formattedTime: '11:15:20 AM',
+  },
+  {
+    id: 'sub_seed_2',
+    teamName: 'ByteCrafters',
+    scenarioId: 'startup',
+    scenarioTitle: 'Silicon Valley VC Seed Pitch',
+    totalScore: 89,
+    baseScore: 89,
+    scoreAdjustment: 0,
+    adjustmentReason: '',
+    title: 'DALGONA MASTER',
+    cuts: 8,
+    trapCount: 0,
+    noiseCount: 0,
+    scores: {
+      cookieCut: 40,
+      prompt: 27,
+      aiExecution: 22,
+      signalsScore: 40,
+      trapPenalty: 0,
+      noisePenalty: 0,
+    },
+    promptText: `Act as a venture-backed founder pitching a Tier-1 institutional seed syndicate.
+Synthesize a 10-slide investor deck structure requesting a $2M Seed Round at an $8M post-money valuation.
+
+Constraints & Market Reality:
+- TAM: $4.2B global enterprise compliance automation market.
+- Competitive Landscape: Acknowledge incumbents (UiPath, Microsoft Copilot) and highlight our proprietary workflow API moat.
+- Deliverable: Slide-by-slide outline with investor talking points.`,
+    wordCount: 65,
+    originalWordCount: 40,
+    isRawDataDump: false,
+    hasDirectiveVerb: true,
+    survivingFragments: [],
+    aiOutput: `### 📈 10-SLIDE SEED PITCH ARCHITECTURE
+* Slide 1: The Enterprise Compliance Chokepoint
+* Slide 2: Proprietary Workflow Moat vs Legacy RPA
+* Slide 3: Unit Economics ($280k ARR growing 22% MoM)
+* Slide 4: Use of Proceeds ($2M Seed Round)`,
+    isContaminated: false,
+    contaminationReasons: [],
+    status: 'approved_r2',
+    judgeNotes: 'Clean competitive differentiation without deceptive 0% risk claims.',
+    timestamp: Date.now() - 280000,
+    formattedTime: '11:18:45 AM',
+  },
+  {
+    id: 'sub_seed_3',
+    teamName: 'SiliconViper',
+    scenarioId: 'techfest',
+    scenarioTitle: 'Campus Techfest Launch',
+    totalScore: 64,
+    baseScore: 64,
+    scoreAdjustment: 0,
+    adjustmentReason: '',
+    title: 'CONTEXT CUTTER',
+    cuts: 7,
+    trapCount: 1,
+    noiseCount: 1,
+    scores: {
+      cookieCut: 23,
+      prompt: 26,
+      aiExecution: 15,
+      signalsScore: 35,
+      trapPenalty: 10,
+      noisePenalty: 2,
+    },
+    promptText: `Create a marketing campaign for our campus event. We need to build a native mobile app for iOS and Android so students can scan tickets, and post Instagram reels with our ₹10,000 budget.`,
+    wordCount: 35,
+    originalWordCount: 22,
+    isRawDataDump: false,
+    hasDirectiveVerb: true,
+    survivingFragments: [
+      { id: 'tf_12', text: 'Strategy: Native Mobile Scanner App', isRelevant: false, isMisleading: true },
+    ],
+    aiOutput: `### ⚠️ PROJECT MANAGEMENT SCOPE CREEP DETONATION
+* **The Error:** Directing resources toward full native iOS/Android ticket scanner app development.
+* **Budget Reality:** ₹350k required; only ₹10,000 available. Campaign derailed.`,
+    isContaminated: true,
+    contaminationReasons: ['Scope Creep Trap: Attempted 6-month mobile app build with ₹10k budget.'],
+    status: 'submitted',
+    judgeNotes: 'Enclosed the mobile app trap. AI accurately diagnosed fatal scope creep.',
+    timestamp: Date.now() - 190000,
+    formattedTime: '11:21:10 AM',
+  },
+  {
+    id: 'sub_seed_4',
+    teamName: 'PromptClicker_07',
+    scenarioId: 'techfest',
+    scenarioTitle: 'Campus Techfest Launch',
+    totalScore: 24,
+    baseScore: 24,
+    scoreAdjustment: 0,
+    adjustmentReason: '',
+    title: 'UNPROMPTED DATA DUMP',
+    cuts: 6,
+    trapCount: 0,
+    noiseCount: 0,
+    scores: {
+      cookieCut: 30,
+      prompt: 3,
+      aiExecution: 3,
+      signalsScore: 30,
+      trapPenalty: 0,
+      noisePenalty: 0,
+    },
+    promptText: `- Audience: 4,000 College Students
+- Budget: ₹10,000 Total Ad Spend
+- Channel: Instagram Story Teasers
+- Platform: WhatsApp Community Broadcast
+- Timeline: 7-Day Sprint Plan`,
+    wordCount: 22,
+    originalWordCount: 0,
+    isRawDataDump: true,
+    hasDirectiveVerb: false,
+    survivingFragments: [],
+    aiOutput: `### ⚠️ AI MODEL EXECUTION HALTED (NO OPERATIONAL DIRECTIVE)
+* **The Error:** The participant pasted raw context fragments into the workstation without writing prompt instructions or assigning a role.
+* **LLM Ingestion Failure:** An LLM requires explicit directive action verbs. Output halted.`,
+    isContaminated: true,
+    contaminationReasons: ['Execution Failure: Unprompted clue list. No actionable directive verb, role, or structure.'],
+    status: 'flagged',
+    judgeNotes: 'Zero prompt engineering. Just clicked "Add Clue" and submitted raw data fragments. Penalized to 24 pts as mandated.',
+    timestamp: Date.now() - 95000,
+    formattedTime: '11:24:30 AM',
+  },
+];
 
 // Default Competitor Names for Live Stream Simulation
 const COMPETITOR_NAMES = [
@@ -86,6 +273,21 @@ class LiveArenaEngine {
       }));
     }
 
+    let submissions = [];
+    try {
+      const storedSubs = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
+      if (storedSubs) {
+        submissions = JSON.parse(storedSubs);
+      }
+    } catch (e) {}
+
+    if (!submissions || submissions.length === 0) {
+      submissions = [...SEED_SUBMISSIONS];
+      try {
+        localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));
+      } catch (e) {}
+    }
+
     let playerName = 'YOU (Player #01)';
     try {
       const storedName = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
@@ -129,13 +331,15 @@ class LiveArenaEngine {
 
     return {
       leaderboard,
+      submissions,
       events: initialEvents,
       stats: {
         activeParticipants: 146,
-        totalSubmissions: leaderboard.length,
+        totalSubmissions: Math.max(leaderboard.length, submissions.length),
         avgPurity: 74.5,
         trapsTriggered: 29,
         serverLatencyMs: 14,
+        isFrozen: false,
       },
       playerName,
       timerStart,
@@ -250,7 +454,30 @@ class LiveArenaEngine {
   }
 
   // Register an official Player Run Submission
-  submitPlayerRun({ score, title, cuts, promptScore, scenarioTitle, promptText }) {
+  saveSubmissions(submissions) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));
+    } catch (e) {}
+  }
+
+  // Register an official Player Run Submission & Full Dossier
+  submitPlayerRun(params) {
+    const {
+      score,
+      title,
+      cuts,
+      promptScore,
+      scenarioTitle,
+      scenarioId,
+      promptText,
+      scores,
+      counts,
+      survivingFragments,
+      aiOutput,
+      isContaminated,
+      contaminationReasons,
+    } = params;
+
     const existingIndex = this.state.leaderboard.findIndex((x) => x.isPlayer);
     const newEntry = {
       id: 'player_run_' + Date.now(),
@@ -266,7 +493,6 @@ class LiveArenaEngine {
 
     let updatedList = [...this.state.leaderboard];
     if (existingIndex >= 0) {
-      // Overwrite player's previous entry
       updatedList[existingIndex] = newEntry;
     } else {
       updatedList.push(newEntry);
@@ -287,6 +513,42 @@ class LiveArenaEngine {
 
     const playerRank = updatedList.find((x) => x.isPlayer)?.rank || 1;
 
+    // Create Complete Admin Submission Record
+    const newSubmission = {
+      id: 'sub_' + Date.now(),
+      teamName: this.state.playerName || 'YOU (Player #01)',
+      scenarioId: scenarioId || 'techfest',
+      scenarioTitle: scenarioTitle || 'Campus Techfest Launch',
+      totalScore: score,
+      baseScore: score,
+      scoreAdjustment: 0,
+      adjustmentReason: '',
+      title,
+      cuts: cuts || 8,
+      trapCount: counts?.trapCount || 0,
+      noiseCount: counts?.noiseCount || 0,
+      scores: scores || { cookieCut: 40, prompt: promptScore || 20, aiExecution: 20 },
+      promptText: promptText || '',
+      wordCount: counts?.wordCount || (promptText ? promptText.split(/\s+/).length : 0),
+      originalWordCount: counts?.originalWordCount || 0,
+      isRawDataDump: counts?.isRawDataDump || false,
+      hasDirectiveVerb: true,
+      survivingFragments: survivingFragments || [],
+      aiOutput: aiOutput || '',
+      isContaminated: isContaminated || false,
+      contaminationReasons: contaminationReasons || [],
+      status: score >= 75 ? 'approved_r2' : 'submitted',
+      judgeNotes: '',
+      timestamp: Date.now(),
+      formattedTime: this.formatTime(),
+    };
+
+    // Filter out previous player submission if any, and prepend new submission
+    const updatedSubmissions = [
+      newSubmission,
+      ...this.state.submissions.filter((s) => s.teamName !== newSubmission.teamName),
+    ];
+
     // Push high-visibility live event
     const newEvent = {
       id: 'ev_user_' + Date.now(),
@@ -303,26 +565,85 @@ class LiveArenaEngine {
     // Update Stats
     const newStats = {
       ...this.state.stats,
-      totalSubmissions: updatedList.length,
+      totalSubmissions: Math.max(updatedList.length, updatedSubmissions.length),
       activeParticipants: Math.max(140, this.state.stats.activeParticipants + 1),
     };
 
     this.state = {
       ...this.state,
       leaderboard: updatedList,
+      submissions: updatedSubmissions,
       events: newEvents,
       stats: newStats,
     };
 
     this.saveLeaderboard(updatedList);
+    this.saveSubmissions(updatedSubmissions);
     this.broadcast('SYNC_STATE', {
       leaderboard: updatedList,
+      submissions: updatedSubmissions,
       events: newEvents,
       stats: newStats,
     });
     this.notify();
 
-    return { rank: playerRank, entry: newEntry };
+    return { rank: playerRank, entry: newEntry, submission: newSubmission };
+  }
+
+  // Admin: Update Submission Status / Adjust Score / Add Judge Notes
+  updateSubmission(id, updates) {
+    const updated = this.state.submissions.map((sub) => {
+      if (sub.id === id) {
+        const merged = { ...sub, ...updates };
+        if (updates.scoreAdjustment !== undefined) {
+          merged.totalScore = Math.max(0, Math.min(100, merged.baseScore + (Number(updates.scoreAdjustment) || 0)));
+        }
+        return merged;
+      }
+      return sub;
+    });
+
+    this.state = { ...this.state, submissions: updated };
+    this.saveSubmissions(updated);
+    this.broadcast('SYNC_STATE', { submissions: updated });
+    this.notify();
+    return updated;
+  }
+
+  // Admin: Delete Submission
+  deleteSubmission(id) {
+    const updated = this.state.submissions.filter((s) => s.id !== id);
+    this.state = { ...this.state, submissions: updated };
+    this.saveSubmissions(updated);
+    this.broadcast('SYNC_STATE', { submissions: updated });
+    this.notify();
+    return updated;
+  }
+
+  // Admin: Clear All Submissions
+  clearAllSubmissions() {
+    this.state = { ...this.state, submissions: [] };
+    this.saveSubmissions([]);
+    this.broadcast('SYNC_STATE', { submissions: [] });
+    this.notify();
+  }
+
+  // Admin: Seed / Re-populate Demo Submissions
+  seedDemoSubmissions() {
+    this.state = { ...this.state, submissions: [...SEED_SUBMISSIONS] };
+    this.saveSubmissions(this.state.submissions);
+    this.broadcast('SYNC_STATE', { submissions: this.state.submissions });
+    this.notify();
+  }
+
+  // Admin: Freeze Arena Submissions Toggle
+  toggleFreezeArena() {
+    const isFrozen = !this.state.stats.isFrozen;
+    const newStats = { ...this.state.stats, isFrozen };
+    this.state = { ...this.state, stats: newStats };
+    this.broadcast('SYNC_STATE', { stats: newStats });
+    this.notify();
+    return isFrozen;
   }
 
   // Push arbitrary live event
@@ -512,13 +833,20 @@ export function useLiveArena() {
 
   return {
     leaderboard: arenaState.leaderboard,
+    submissions: arenaState.submissions || [],
     events: arenaState.events,
     stats: arenaState.stats,
     playerName: arenaState.playerName,
     timeRemainingSeconds: arenaState.timeRemainingSeconds,
     formattedTimer: formatTimer(arenaState.timeRemainingSeconds),
+    isFrozen: arenaState.stats.isFrozen,
     submitPlayerRun: (runData) => liveArenaEngine.submitPlayerRun(runData),
     setPlayerName: (name) => liveArenaEngine.setPlayerName(name),
     pushEvent: (ev) => liveArenaEngine.pushEvent(ev),
+    updateSubmission: (id, patch) => liveArenaEngine.updateSubmission(id, patch),
+    deleteSubmission: (id) => liveArenaEngine.deleteSubmission(id),
+    clearAllSubmissions: () => liveArenaEngine.clearAllSubmissions(),
+    seedDemoSubmissions: () => liveArenaEngine.seedDemoSubmissions(),
+    toggleFreezeArena: () => liveArenaEngine.toggleFreezeArena(),
   };
 }
