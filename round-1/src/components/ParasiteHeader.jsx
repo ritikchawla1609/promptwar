@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Shield, Terminal, Clock, Activity, Key, LogOut } from 'lucide-react';
+import { Volume2, VolumeX, Terminal, Clock, Activity, Key, LogOut } from 'lucide-react';
 import { parasiteAudio } from '../utils/parasiteAudio';
 
 export default function ParasiteHeader({
@@ -7,7 +7,6 @@ export default function ParasiteHeader({
   timer = null,
   session = {},
   onUpdateSession,
-  onOpenAdmin,
   onOpenRegister,
   onLogoutTeam,
   isMuted = false,
@@ -128,15 +127,6 @@ export default function ParasiteHeader({
             title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-acid-lime" />}
-          </button>
-
-          {/* Host / Admin Portal Access */}
-          <button
-            onClick={onOpenAdmin}
-            className="px-2.5 py-1 rounded border border-white/[0.12] bg-charcoal-900/60 hover:border-acid-lime hover:bg-acid-lime/10 font-mono text-[10px] font-bold uppercase tracking-widest text-bone-300 hover:text-acid-lime transition-all flex items-center gap-1.5"
-          >
-            <Shield className="w-3 h-3 text-acid-lime" />
-            <span>HOST</span>
           </button>
         </div>
       </div>

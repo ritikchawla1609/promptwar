@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NetworkCanvas from './components/NetworkCanvas';
 import ParasiteHeader from './components/ParasiteHeader';
 import Screen0Entry from './components/screens/Screen0Entry';
+import HoldingLobby from './components/screens/HoldingLobby';
 import Screen1HowItWorks from './components/screens/Screen1HowItWorks';
 import Screen2Challenge from './components/screens/Screen2Challenge';
 import Screen3Create from './components/screens/Screen3Create';
@@ -9,7 +10,7 @@ import Screen4Match from './components/screens/Screen4Match';
 import Screen5Parasite from './components/screens/Screen5Parasite';
 import Screen6Evolve from './components/screens/Screen6Evolve';
 import Screen7Complete from './components/screens/Screen7Complete';
-import ParasiteAdminPortal from './components/ParasiteAdminPortal';
+import TechTatvaAdminPortal from './components/admin/TechTatvaAdminPortal';
 import TeamRegistrationModal from './components/TeamRegistrationModal';
 import { DEFAULT_CHALLENGE } from './data/parasiteChallenge';
 import {
@@ -18,6 +19,7 @@ import {
   generateAnonymousMatches,
   syncSubmissionToBackend,
   fetchAllArenaSubmissions,
+  fetchArenaStateAPI,
 } from './utils/parasiteEngine';
 import { parasiteAudio } from './utils/parasiteAudio';
 
@@ -25,10 +27,104 @@ export default function App() {
   // Session & Contender State
   const [session, setSession] = useState(loadLocalSession);
   const [challenge, setChallenge] = useState(DEFAULT_CHALLENGE);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [registerModalTab, setRegisterModalTab] = useState('REGISTER');
   const [isMuted, setIsMuted] = useState(false);
+
+  // Global Arena Tournament State (Controlled by Admin Panel)
+  const [arenaState, setArenaState] = useState({
+    isRoundStarted: false,
+    activePhase: 'LOBBY',
+    startedAt: null,
+    timers: { create: 600, parasite: 300, evolve: 600 },
+  });
+
+  // Active Stage Navigation:
+  // 'ENTRY' | 'HOLDING_LOBBY' | 'HOW_IT_WORKS' | 'CHALLENGE' | 'CREATE' | 'MATCH' | 'PARASITE' | 'EVOLVE' | 'COMPLETE'
+  const [currentStage, setCurrentStage] = useState('ENTRY');
+
+  // Timers (in seconds)
+  const [createTimer, setCreateTimer] = useState(600); // 10:00
+  const [parasiteTimer, setParasiteTimer] = useState(300); // 05:00
+  const [evolveTimer, setEvolveTimer] = useState(600); // 10:00
+
+  // All Submissions list (for matchmaking)
+  const [allSubmissions, setAllSubmissions] = useState([]);
+
+  // Check URL route for hidden Admin Console: #/admin or ?admin=true
+  const checkIsAdminRoute = () => {
+    const hash = window.location.hash.toLowerCase();
+    const path = window.location.pathname.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    return (
+      hash === '#/admin' ||
+      hash === '#admin' ||
+      path.startsWith('/admin') ||
+      search.includes('admin=true')
+    );
+  };
+
+  const [isAdminRoute, setIsAdminRoute] = useState(checkIsAdminRoute);
+
+  useEffect(() => {
+    const onRouteCheck = () => {
+      setIsAdminRoute(checkIsAdminRoute());
+    };
+    window.addEventListener('hashchange', onRouteCheck);
+    window.addEventListener('popstate', onRouteCheck);
+    return () => {
+      window.removeEventListener('hashchange', onRouteCheck);
+      window.removeEventListener('popstate', onRouteCheck);
+    };
+  }, []);
+
+  // Poll arena state from backend every 3 seconds
+  useEffect(() => {
+    let isMounted = true;
+    const pollArena = async () => {
+      try {
+        const state = await fetchArenaStateAPI();
+        if (isMounted && state) {
+          setArenaState(state);
+        }
+      } catch (e) {}
+    };
+    pollArena();
+    const interval = setInterval(pollArena, 3000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Gating effect: If host resets/pauses arena, kick active participants back to holding lobby
+  useEffect(() => {
+    if (session.teamCode && !arenaState.isRoundStarted) {
+      if (['HOW_IT_WORKS', 'CHALLENGE', 'CREATE', 'MATCH', 'PARASITE', 'EVOLVE'].includes(currentStage)) {
+        setCurrentStage('HOLDING_LOBBY');
+      }
+    }
+  }, [arenaState.isRoundStarted, session.teamCode, currentStage]);
+
+  // Sync initial submissions for peer matchmaking
+  useEffect(() => {
+    fetchAllArenaSubmissions().then((subs) => {
+      if (subs && subs.length > 0) {
+        setAllSubmissions(subs);
+      } else {
+        setAllSubmissions([session]);
+      }
+    });
+  }, []);
+
+  // Update session helper
+  const handleUpdateSession = (updates) => {
+    setSession((prev) => {
+      const next = { ...prev, ...updates };
+      saveLocalSession(next);
+      return next;
+    });
+  };
 
   const handleOpenRegister = (tab = 'REGISTER') => {
     setRegisterModalTab(tab);
@@ -54,6 +150,13 @@ export default function App() {
       ...(teamData.round1?.finalPrompt ? { finalPrompt: teamData.round1.finalPrompt } : {}),
     };
     handleUpdateSession(updated);
+
+    // If host hasn't started round 1, advance to Holding Lobby; if already started, go to HOW_IT_WORKS
+    if (!arenaState.isRoundStarted) {
+      setCurrentStage('HOLDING_LOBBY');
+    } else {
+      setCurrentStage('HOW_IT_WORKS');
+    }
   };
 
   const handleLogoutTeam = () => {
@@ -66,47 +169,20 @@ export default function App() {
       members: [],
       status: 'NOT_REGISTERED',
     });
+    setCurrentStage('ENTRY');
   };
 
-  // Active Stage Navigation:
-  // 'ENTRY' | 'HOW_IT_WORKS' | 'CHALLENGE' | 'CREATE' | 'MATCH' | 'PARASITE' | 'EVOLVE' | 'COMPLETE'
-  const [currentStage, setCurrentStage] = useState('ENTRY');
-
-  // Timers (in seconds)
-  const [createTimer, setCreateTimer] = useState(600);   // 10:00
-  const [parasiteTimer, setParasiteTimer] = useState(300); // 05:00
-  const [evolveTimer, setEvolveTimer] = useState(600);   // 10:00
-
-  // All Submissions list (for matchmaking & admin)
-  const [allSubmissions, setAllSubmissions] = useState([]);
-
-  // Check URL query parameters for ?admin=true
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === 'true') {
-      setIsAdminOpen(true);
+  const handleProceedFromEntry = () => {
+    if (!session.teamCode) {
+      handleOpenRegister('REGISTER');
+      return;
     }
-  }, []);
-
-  // Sync initial submissions
-  useEffect(() => {
-    fetchAllArenaSubmissions().then((subs) => {
-      if (subs && subs.length > 0) {
-        setAllSubmissions(subs);
-      } else {
-        // Seed default session as first contender
-        setAllSubmissions([session]);
-      }
-    });
-  }, []);
-
-  // Update session helper
-  const handleUpdateSession = (updates) => {
-    setSession((prev) => {
-      const next = { ...prev, ...updates };
-      saveLocalSession(next);
-      return next;
-    });
+    // Gating check: Round started or waiting lobby?
+    if (!arenaState.isRoundStarted) {
+      setCurrentStage('HOLDING_LOBBY');
+    } else {
+      setCurrentStage('HOW_IT_WORKS');
+    }
   };
 
   // Timer Tick Effects
@@ -141,7 +217,6 @@ export default function App() {
     handleUpdateSession(updated);
     syncSubmissionToBackend(updated);
 
-    // After a brief pause in waiting room, proceed to anonymous matchmaking
     setTimeout(() => {
       const matches = generateAnonymousMatches(allSubmissions, session.participantId);
       handleUpdateSession({ matchedOpponents: matches, status: 'MATCHED' });
@@ -172,6 +247,23 @@ export default function App() {
     parasiteAudio.setMuted(next);
   };
 
+  // If visiting admin route, render standalone TechTatvaAdminPortal
+  if (isAdminRoute) {
+    return (
+      <TechTatvaAdminPortal
+        onClose={() => {
+          window.location.hash = '';
+          const url = new URL(window.location.href);
+          url.searchParams.delete('admin');
+          window.history.pushState({}, '', url.pathname + url.hash);
+          setIsAdminRoute(false);
+        }}
+        challenge={challenge}
+        onUpdateChallenge={setChallenge}
+      />
+    );
+  }
+
   // Active Timer for Header
   let activeHeaderTimer = null;
   if (currentStage === 'CREATE') activeHeaderTimer = createTimer;
@@ -183,13 +275,12 @@ export default function App() {
       {/* Background Generative Network Canvas */}
       <NetworkCanvas density={currentStage === 'PARASITE' ? 60 : 40} />
 
-      {/* Top Header */}
+      {/* Top Header with Tech Tatva Club Emblem - ZERO HOST BUTTONS */}
       <ParasiteHeader
         currentPhase={currentStage}
         timer={activeHeaderTimer}
         session={session}
         onUpdateSession={handleUpdateSession}
-        onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenRegister={handleOpenRegister}
         onLogoutTeam={handleLogoutTeam}
         isMuted={isMuted}
@@ -201,8 +292,18 @@ export default function App() {
         {currentStage === 'ENTRY' && (
           <Screen0Entry
             session={session}
+            onProceed={handleProceedFromEntry}
+            onOpenRegister={handleOpenRegister}
+            onLogoutTeam={handleLogoutTeam}
+          />
+        )}
+
+        {currentStage === 'HOLDING_LOBBY' && (
+          <HoldingLobby
+            session={session}
             onProceed={() => setCurrentStage('HOW_IT_WORKS')}
             onOpenRegister={handleOpenRegister}
+            onLogoutTeam={handleLogoutTeam}
           />
         )}
 
@@ -263,23 +364,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Host Admin Portal Modal */}
-      <ParasiteAdminPortal
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        challenge={challenge}
-        onUpdateChallenge={setChallenge}
-        currentPhase={currentStage}
-        onChangePhase={(newPhase) => setCurrentStage(newPhase)}
-        submissions={allSubmissions.length > 0 ? allSubmissions : [session]}
-        onUpdateSubmissions={(updated) => {
-          setAllSubmissions(updated);
-          // If our current session is updated (e.g. scored), sync it
-          const mine = updated.find((s) => s.participantId === session.participantId);
-          if (mine) handleUpdateSession(mine);
-        }}
-      />
 
       {/* Real Team Registration & Session Pass Modal */}
       <TeamRegistrationModal

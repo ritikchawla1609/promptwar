@@ -15,9 +15,23 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 // In-memory fallback if MongoDB connection is pending
-let isMongoConnected = false;
 const inMemoryTeams = [];
 const inMemorySubmissions = [];
+let isMongoConnected = false;
+
+// Global Arena State (Round 1 lifecycle controller)
+let arenaState = {
+  isRoundStarted: false, // Default: false (waiting for Tech Tatva host broadcast!)
+  activePhase: 'LOBBY', // 'LOBBY' | 'CREATE' | 'MATCH' | 'PARASITE' | 'EVOLVE' | 'COMPLETE'
+  startedAt: null,
+  activeChallenge: null,
+  timers: {
+    create: 600,
+    parasite: 300,
+    evolve: 600,
+  },
+  lastUpdated: new Date().toISOString(),
+};
 
 async function connectDB() {
   if (!MONGODB_URI || MONGODB_URI.includes('<db_password>')) {
@@ -59,6 +73,40 @@ app.get('/api/health', (req, res) => {
     hasConfiguredUri: Boolean(MONGODB_URI && !MONGODB_URI.includes('<db_password>')),
     timestamp: new Date().toISOString(),
   });
+});
+
+// -------------------------------------------------------------
+// ARENA STATE & LIFECYCLE CONTROLLER (START / PAUSE / PHASES)
+// -------------------------------------------------------------
+
+// GET /api/arena/state (Pollable by contestants in Holding Lobby)
+app.get('/api/arena/state', (req, res) => {
+  res.json({ success: true, state: arenaState });
+});
+
+// POST /api/arena/state (Updated exclusively by Tech Tatva Host Admin)
+app.post('/api/arena/state', (req, res) => {
+  try {
+    const updates = req.body;
+    arenaState = {
+      ...arenaState,
+      ...updates,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    if (updates.isRoundStarted && !arenaState.startedAt) {
+      arenaState.startedAt = new Date().toISOString();
+    }
+
+    if (updates.isRoundStarted === false) {
+      arenaState.startedAt = null;
+    }
+
+    console.log(`📡 [Arena State Broadcast] Started: ${arenaState.isRoundStarted} | Phase: ${arenaState.activePhase}`);
+    return res.json({ success: true, state: arenaState });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Helper: Generate Unique Team Code (e.g. PW-7482)
@@ -290,6 +338,161 @@ app.post('/api/teams/:codeOrId/qualify-r2', async (req, res) => {
       team.round1.isQualifiedR2 = isQualified;
       team.round2 = team.round2 || {};
       team.round2.status = isQualified ? 'QUALIFIED' : 'LOCKED';
+
+      return res.json({ success: true, team });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/teams/:codeOrId (Host deletion of test/duplicate/disqualified teams)
+app.delete('/api/teams/:codeOrId', async (req, res) => {
+  try {
+    const { codeOrId } = req.params;
+    const upper = codeOrId.toUpperCase();
+
+    if (isMongoConnected) {
+      const deleted = await Team.findOneAndDelete({
+        $or: [
+          { teamCode: upper },
+          { teamName: new RegExp(`^${codeOrId}$`, 'i') },
+          { _id: mongoose.isValidObjectId(codeOrId) ? codeOrId : null },
+        ],
+      });
+
+      if (!deleted) return res.status(404).json({ error: 'Team not found in arena database.' });
+
+      // Clean up linked submissions
+      await Submission.deleteMany({ teamName: deleted.teamName });
+
+      console.log(`🗑️ [Team Deleted] Purged ${deleted.teamName} (${deleted.teamCode})`);
+      return res.json({ success: true, message: 'Team successfully purged', team: deleted });
+    } else {
+      const idx = inMemoryTeams.findIndex(
+        (t) => t.teamCode.toUpperCase() === upper || t.teamName.toLowerCase() === codeOrId.toLowerCase()
+      );
+
+      if (idx === -1) return res.status(404).json({ error: 'Team not found in arena ledger.' });
+
+      const deleted = inMemoryTeams.splice(idx, 1)[0];
+      return res.json({ success: true, message: 'Team successfully purged', team: deleted });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/teams/:codeOrId (Host editing of team details, typos, leader contact)
+app.put('/api/teams/:codeOrId', async (req, res) => {
+  try {
+    const { codeOrId } = req.params;
+    const { teamName, leaderName, leaderContact, college, members, memberCount } = req.body;
+    const upper = codeOrId.toUpperCase();
+
+    if (isMongoConnected) {
+      const team = await Team.findOne({
+        $or: [
+          { teamCode: upper },
+          { teamName: new RegExp(`^${codeOrId}$`, 'i') },
+          { _id: mongoose.isValidObjectId(codeOrId) ? codeOrId : null },
+        ],
+      });
+
+      if (!team) return res.status(404).json({ error: 'Team not found' });
+
+      if (teamName) team.teamName = teamName.trim();
+      if (leaderName) team.leaderName = leaderName.trim();
+      if (leaderContact !== undefined) team.leaderContact = leaderContact.trim();
+      if (college) team.college = college.trim();
+      if (members && Array.isArray(members)) team.members = members;
+      if (memberCount) team.memberCount = Number(memberCount);
+
+      await team.save();
+      return res.json({ success: true, team });
+    } else {
+      const team = inMemoryTeams.find(
+        (t) => t.teamCode.toUpperCase() === upper || t.teamName.toLowerCase() === codeOrId.toLowerCase()
+      );
+      if (!team) return res.status(404).json({ error: 'Team not found' });
+
+      if (teamName) team.teamName = teamName.trim();
+      if (leaderName) team.leaderName = leaderName.trim();
+      if (leaderContact !== undefined) team.leaderContact = leaderContact.trim();
+      if (college) team.college = college.trim();
+      if (members && Array.isArray(members)) team.members = members;
+      if (memberCount) team.memberCount = Number(memberCount);
+
+      return res.json({ success: true, team });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/teams/:codeOrId/score (Official Judge verdict submission)
+app.post('/api/teams/:codeOrId/score', async (req, res) => {
+  try {
+    const { codeOrId } = req.params;
+    const { promptQuality, problemUnderstanding, outputQuality, improvement, judgeNotes, totalScore, total } = req.body;
+    const upper = codeOrId.toUpperCase();
+    const computedTotal =
+      totalScore != null
+        ? Number(totalScore)
+        : total != null
+        ? Number(total)
+        : Number(promptQuality || 0) +
+          Number(problemUnderstanding || 0) +
+          Number(outputQuality || 0) +
+          Number(improvement || 0);
+    const score = isNaN(computedTotal) ? 0 : computedTotal;
+
+    if (isMongoConnected) {
+      const team = await Team.findOne({
+        $or: [
+          { teamCode: upper },
+          { teamName: new RegExp(`^${codeOrId}$`, 'i') },
+          { _id: mongoose.isValidObjectId(codeOrId) ? codeOrId : null },
+        ],
+      });
+
+      if (!team) return res.status(404).json({ error: 'Team not found' });
+
+      team.round1 = team.round1 || {};
+      team.round1.score = score;
+      team.round1.status = 'COMPLETED';
+      team.round1.evaluation = {
+        promptQuality: Number(promptQuality || 0),
+        problemUnderstanding: Number(problemUnderstanding || 0),
+        outputQuality: Number(outputQuality || 0),
+        improvement: Number(improvement || 0),
+        total: score,
+        judgeNotes: judgeNotes || '',
+        evaluatedAt: new Date(),
+      };
+      team.totalTournamentScore = score;
+      await team.save();
+
+      return res.json({ success: true, team });
+    } else {
+      const team = inMemoryTeams.find(
+        (t) => t.teamCode.toUpperCase() === upper || t.teamName.toLowerCase() === codeOrId.toLowerCase()
+      );
+      if (!team) return res.status(404).json({ error: 'Team not found' });
+
+      team.round1 = team.round1 || {};
+      team.round1.score = score;
+      team.round1.status = 'COMPLETED';
+      team.round1.evaluation = {
+        promptQuality: Number(promptQuality || 0),
+        problemUnderstanding: Number(problemUnderstanding || 0),
+        outputQuality: Number(outputQuality || 0),
+        improvement: Number(improvement || 0),
+        total: score,
+        judgeNotes: judgeNotes || '',
+        evaluatedAt: new Date().toISOString(),
+      };
+      team.totalTournamentScore = score;
 
       return res.json({ success: true, team });
     }

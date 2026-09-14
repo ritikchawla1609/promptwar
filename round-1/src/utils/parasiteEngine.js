@@ -192,6 +192,112 @@ export async function qualifyTeamForRound2(teamCode, isQualified = true) {
   return { success: false };
 }
 
+// Aliases for admin console
+export { fetchAllRegisteredTeams as fetchAllTeamsAPI, qualifyTeamForRound2 as setRound2QualificationAPI };
+
+// -------------------------------------------------------------
+// ARENA STATE (ROUND START GATE & BROADCASTER)
+// -------------------------------------------------------------
+
+export async function fetchArenaStateAPI() {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/state`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.state;
+    }
+  } catch (e) {}
+
+  // Local fallback
+  try {
+    const raw = localStorage.getItem('pw_arena_state');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+
+  return {
+    isRoundStarted: false,
+    activePhase: 'LOBBY',
+    startedAt: null,
+    timers: { create: 600, parasite: 300, evolve: 600 },
+  };
+}
+
+export async function updateArenaStateAPI(updates) {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('pw_arena_state', JSON.stringify(data.state));
+      return data.state;
+    }
+  } catch (e) {}
+
+  try {
+    const current = await fetchArenaStateAPI();
+    const next = { ...current, ...updates, lastUpdated: new Date().toISOString() };
+    localStorage.setItem('pw_arena_state', JSON.stringify(next));
+    return next;
+  } catch (e) {}
+}
+
+// Delete Team from Tournament
+export async function deleteTeamAPI(teamCodeOrId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/teams/${teamCodeOrId}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      // Also update local storage cache
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_TEAMS) || '[]';
+        const teams = JSON.parse(raw).filter(
+          (t) => t.teamCode.toUpperCase() !== teamCodeOrId.toUpperCase()
+        );
+        localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
+      } catch (e) {}
+      return { success: true, team: data.team };
+    }
+  } catch (e) {}
+  return { success: false };
+}
+
+// Update Team Details (name, leader, contact, members)
+export async function updateTeamAPI(teamCodeOrId, updates) {
+  try {
+    const res = await fetch(`${API_BASE}/api/teams/${teamCodeOrId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, team: data.team };
+    }
+  } catch (e) {}
+  return { success: false };
+}
+
+// Submit Official Judge Score
+export async function submitJudgeScoreAPI(teamCodeOrId, scoreData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/teams/${teamCodeOrId}/score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scoreData),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, team: data.team };
+    }
+  } catch (e) {}
+  return { success: false };
+}
+
 // -------------------------------------------------------------
 // REAL-TEAM ANONYMOUS MATCHMAKING ALGORITHM
 // -------------------------------------------------------------
