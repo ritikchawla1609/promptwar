@@ -1,7 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Sliders, CheckCircle2, Clock, Play, RotateCcw, X, Edit3, ArrowRight, Eye, Trophy, Sparkles } from 'lucide-react';
+import {
+  Shield,
+  Users,
+  Sliders,
+  CheckCircle2,
+  Clock,
+  Play,
+  RotateCcw,
+  X,
+  Edit3,
+  ArrowRight,
+  Eye,
+  Trophy,
+  Sparkles,
+  RefreshCw,
+  Award,
+  ExternalLink,
+  Phone,
+  School,
+  UserCheck,
+  UserX,
+} from 'lucide-react';
 import { DEFAULT_CHALLENGE } from '../data/parasiteChallenge';
-import { generateAnonymousMatches } from '../utils/parasiteEngine';
+import {
+  generateAnonymousMatches,
+  fetchAllRegisteredTeams,
+  qualifyTeamForRound2,
+} from '../utils/parasiteEngine';
 
 export default function ParasiteAdminPortal({
   isOpen,
@@ -13,8 +38,11 @@ export default function ParasiteAdminPortal({
   submissions = [],
   onUpdateSubmissions,
 }) {
-  const [activeTab, setActiveTab] = useState('PHASES'); // 'PHASES' | 'SUBMISSIONS' | 'JUDGING' | 'SETTINGS'
+  const [activeTab, setActiveTab] = useState('TEAMS'); // 'TEAMS' | 'PHASES' | 'SUBMISSIONS' | 'JUDGING' | 'SETTINGS'
   const [selectedSubForJudging, setSelectedSubForJudging] = useState(null);
+  const [registeredTeams, setRegisteredTeams] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [qualifyingCode, setQualifyingCode] = useState(null);
 
   // Judging score state
   const [scores, setScores] = useState({
@@ -77,12 +105,54 @@ export default function ParasiteAdminPortal({
     alert('Anonymous matchmaking successfully generated for all contenders!');
   };
 
+  const loadTeams = async () => {
+    setLoadingTeams(true);
+    try {
+      const teams = await fetchAllRegisteredTeams();
+      setRegisteredTeams(teams || []);
+    } catch (err) {
+      console.error('Error fetching registered teams:', err);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadTeams();
+    }
+  }, [isOpen]);
+
+  const handleToggleQualify = async (teamCode, currentQualified) => {
+    setQualifyingCode(teamCode);
+    const nextQualified = !currentQualified;
+    const res = await qualifyTeamForRound2(teamCode, nextQualified);
+    if (res && res.success) {
+      setRegisteredTeams((prev) =>
+        prev.map((t) => {
+          if (t.teamCode.toUpperCase() === teamCode.toUpperCase()) {
+            return {
+              ...t,
+              round1: { ...(t.round1 || {}), isQualifiedR2: nextQualified },
+              round2: { ...(t.round2 || {}), status: nextQualified ? 'QUALIFIED' : 'LOCKED' },
+            };
+          }
+          return t;
+        })
+      );
+    } else {
+      alert('Could not update Round 2 qualification status.');
+    }
+    setQualifyingCode(null);
+  };
+
   if (!isOpen) return null;
 
   // Compute live telemetry counts
   const totalContenders = Math.max(submissions.length, 1);
   const firstSubmitted = submissions.filter((s) => s.firstOutput || s.firstSubmittedAt).length;
   const finalSubmitted = submissions.filter((s) => s.finalOutput || s.finalSubmittedAt).length;
+  const qualifiedR2Count = registeredTeams.filter((t) => t.round1 && t.round1.isQualifiedR2).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-xl">
@@ -110,7 +180,7 @@ export default function ParasiteAdminPortal({
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-1 bg-charcoal-950 p-1 border border-white/[0.08]">
-            {['PHASES', 'SUBMISSIONS', 'JUDGING', 'SETTINGS'].map((tab) => (
+            {['TEAMS', 'PHASES', 'SUBMISSIONS', 'JUDGING', 'SETTINGS'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -120,7 +190,7 @@ export default function ParasiteAdminPortal({
                     : 'text-bone-400 hover:text-bone-100'
                 }`}
               >
-                {tab}
+                {tab === 'TEAMS' ? `TEAMS (${registeredTeams.length})` : tab}
               </button>
             ))}
           </div>
@@ -155,6 +225,194 @@ export default function ParasiteAdminPortal({
 
         {/* Tab Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* TAB 0: REAL REGISTERED TEAMS & ROUND 2 PIPELINE */}
+          {activeTab === 'TEAMS' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-black text-lg text-bone-100 uppercase tracking-wider">
+                      OFFICIAL TOURNAMENT TEAMS & ROUND 2 PIPELINE
+                    </h3>
+                    <span className="px-2 py-0.5 bg-acid-lime/20 border border-acid-lime/40 text-acid-lime text-[10px] font-bold uppercase">
+                      MONGODB CENTRAL REGISTRY
+                    </span>
+                  </div>
+                  <p className="text-bone-400 text-xs mt-0.5">
+                    Real human teams registered for Prompt War. Qualify top performers here; Round 2 & 3 teams access them live via API.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadTeams}
+                    disabled={loadingTeams}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-white/[0.1] bg-charcoal-900 hover:border-acid-lime text-bone-300 hover:text-acid-lime text-xs transition-all"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingTeams ? 'animate-spin' : ''}`} />
+                    <span>REFRESH LEDGER</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Developer API Contract Banner */}
+              <div className="p-4 border border-acid-lime/20 bg-acid-lime/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-6 h-6 bg-acid-lime/20 border border-acid-lime/40 flex items-center justify-center text-acid-lime shrink-0 mt-0.5">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-acid-lime font-bold uppercase tracking-wider block">
+                      ROUND 2 & 3 DEVELOPER CONTRACT ENDPOINT
+                    </span>
+                    <span className="text-bone-400 text-[11px]">
+                      GET <code className="text-bone-200 bg-black/40 px-1.5 py-0.5 rounded">http://localhost:5001/api/teams</code> — returns all teams with <code className="text-bone-200">round1.isQualifiedR2</code> and scores.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] shrink-0">
+                  <div>
+                    <span className="text-bone-500 uppercase block text-[9px]">TOTAL REGISTERED</span>
+                    <span className="font-bold text-bone-100 text-sm">{registeredTeams.length} TEAMS</span>
+                  </div>
+                  <div>
+                    <span className="text-bone-500 uppercase block text-[9px]">QUALIFIED FOR R2</span>
+                    <span className="font-bold text-acid-lime text-sm">{qualifiedR2Count} TEAMS</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Teams Table */}
+              <div className="border border-white/[0.08] bg-charcoal-900/40 overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="border-b border-white/[0.08] bg-charcoal-900 text-bone-400 text-[10px] uppercase tracking-wider">
+                    <tr>
+                      <th className="p-3">TEAM CODE</th>
+                      <th className="p-3">TEAM NAME / COLLEGE</th>
+                      <th className="p-3">LEADER & CONTACT</th>
+                      <th className="p-3">MEMBERS</th>
+                      <th className="p-3">ROUND 1 STATUS</th>
+                      <th className="p-3">ROUND 1 SCORE</th>
+                      <th className="p-3 text-right">ROUND 2 QUALIFICATION</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.06] text-bone-300">
+                    {registeredTeams.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="p-8 text-center text-bone-500 font-mono text-xs">
+                          {loadingTeams ? 'FETCHING REGISTERED TEAMS FROM MONGODB...' : 'NO REAL TEAMS REGISTERED YET. TEAMS CAN REGISTER USING THE PASS BUTTON ON SCREEN.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      registeredTeams.map((team, idx) => {
+                        const isQualified = team.round1 && team.round1.isQualifiedR2;
+                        const isQualifyingThis = qualifyingCode === team.teamCode;
+                        return (
+                          <tr key={team.teamCode || idx} className="hover:bg-white/[0.02] transition-colors">
+                            {/* Team Code */}
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 bg-black/60 border border-acid-lime/40 text-acid-lime font-bold text-xs rounded">
+                                {team.teamCode}
+                              </span>
+                            </td>
+
+                            {/* Team Name & College */}
+                            <td className="p-3">
+                              <div className="font-bold text-bone-100 text-sm">{team.teamName}</div>
+                              <div className="text-[10px] text-bone-400 flex items-center gap-1 mt-0.5">
+                                <School className="w-3 h-3 text-bone-500 shrink-0" />
+                                <span>{team.college || 'Not specified'}</span>
+                              </div>
+                            </td>
+
+                            {/* Leader */}
+                            <td className="p-3">
+                              <div className="font-semibold text-bone-200">{team.leaderName || '—'}</div>
+                              {team.leaderContact && (
+                                <div className="text-[10px] text-bone-500 flex items-center gap-1">
+                                  <Phone className="w-2.5 h-2.5" />
+                                  <span>{team.leaderContact}</span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Members */}
+                            <td className="p-3">
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {team.members && team.members.length > 0 ? (
+                                  team.members.map((m, mIdx) => (
+                                    <span
+                                      key={mIdx}
+                                      className="px-1.5 py-0.5 bg-white/[0.05] border border-white/[0.08] text-[10px] text-bone-300 rounded"
+                                    >
+                                      {m}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-bone-600 text-[10px]">Solo</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Round 1 Status */}
+                            <td className="p-3">
+                              <span
+                                className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${
+                                  team.round1 && team.round1.status === 'COMPLETED'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : team.round1 && team.round1.status === 'IN_PROGRESS'
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                    : 'bg-white/[0.05] text-bone-500'
+                                }`}
+                              >
+                                {(team.round1 && team.round1.status) || 'REGISTERED'}
+                              </span>
+                            </td>
+
+                            {/* Round 1 Score */}
+                            <td className="p-3">
+                              <span className="font-bold text-bone-100">
+                                {team.round1 && team.round1.score != null
+                                  ? `${team.round1.score} PTS`
+                                  : '—'}
+                              </span>
+                            </td>
+
+                            {/* R2 Qualification Action */}
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => handleToggleQualify(team.teamCode, isQualified)}
+                                disabled={isQualifyingThis}
+                                className={`px-3 py-1.5 text-[10px] font-bold uppercase transition-all flex items-center gap-1.5 ml-auto ${
+                                  isQualified
+                                    ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-rose-500/20 hover:border-rose-500/40 hover:text-rose-300'
+                                    : 'bg-acid-lime text-charcoal-950 hover:bg-white hover:text-charcoal-950 font-black shadow-sm'
+                                }`}
+                                title={isQualified ? 'Click to revoke Round 2 qualification' : 'Click to qualify this team for Round 2'}
+                              >
+                                {isQualified ? (
+                                  <>
+                                    <UserCheck className="w-3 h-3 text-emerald-400" />
+                                    <span>QUALIFIED R2</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Award className="w-3 h-3" />
+                                    <span>QUALIFY FOR R2</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: PHASES */}
           {activeTab === 'PHASES' && (
             <div className="space-y-6">

@@ -10,6 +10,7 @@ import Screen5Parasite from './components/screens/Screen5Parasite';
 import Screen6Evolve from './components/screens/Screen6Evolve';
 import Screen7Complete from './components/screens/Screen7Complete';
 import ParasiteAdminPortal from './components/ParasiteAdminPortal';
+import TeamRegistrationModal from './components/TeamRegistrationModal';
 import { DEFAULT_CHALLENGE } from './data/parasiteChallenge';
 import {
   loadLocalSession,
@@ -25,6 +26,7 @@ export default function App() {
   const [session, setSession] = useState(loadLocalSession);
   const [challenge, setChallenge] = useState(DEFAULT_CHALLENGE);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
   // Active Stage Navigation:
@@ -149,6 +151,7 @@ export default function App() {
         session={session}
         onUpdateSession={handleUpdateSession}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenRegister={() => setIsRegisterOpen(true)}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
       />
@@ -156,7 +159,11 @@ export default function App() {
       {/* Main Viewport Routing */}
       <main className="relative z-10">
         {currentStage === 'ENTRY' && (
-          <Screen0Entry onProceed={() => setCurrentStage('HOW_IT_WORKS')} />
+          <Screen0Entry
+            session={session}
+            onProceed={() => setCurrentStage('HOW_IT_WORKS')}
+            onOpenRegister={() => setIsRegisterOpen(true)}
+          />
         )}
 
         {currentStage === 'HOW_IT_WORKS' && (
@@ -231,6 +238,23 @@ export default function App() {
           // If our current session is updated (e.g. scored), sync it
           const mine = updated.find((s) => s.participantId === session.participantId);
           if (mine) handleUpdateSession(mine);
+        }}
+      />
+
+      {/* Real Team Registration & Session Pass Modal */}
+      <TeamRegistrationModal
+        isOpen={isRegisterOpen}
+        onClose={() => setIsRegisterOpen(false)}
+        currentSession={session}
+        onTeamAuthenticated={(teamData) => {
+          handleUpdateSession({
+            teamCode: teamData.teamCode,
+            teamName: teamData.teamName,
+            leaderName: teamData.leaderName,
+            leaderContact: teamData.leaderContact,
+            college: teamData.college,
+            members: teamData.members,
+          });
         }}
       />
     </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { parasiteAudio } from '../../utils/parasiteAudio';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 import PromptWar3DLogo from '../PromptWar3DLogo';
 
-export default function Screen0Entry({ onProceed }) {
+export default function Screen0Entry({ onProceed, session = {}, onOpenRegister }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -96,9 +96,9 @@ export default function Screen0Entry({ onProceed }) {
             </p>
           </div>
 
-          {/* Enter Action Button */}
+          {/* Action Buttons: Enter Round & Team Registration */}
           <div
-            className={`mt-8 transition-all duration-700 ${
+            className={`mt-8 flex flex-wrap items-center gap-3 transition-all duration-700 ${
               step >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
@@ -109,6 +109,29 @@ export default function Screen0Entry({ onProceed }) {
               <span>ENTER ROUND</span>
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </button>
+
+            {onOpenRegister && (
+              <button
+                onClick={onOpenRegister}
+                className={`flex items-center gap-2 px-5 py-3.5 border font-mono text-xs uppercase tracking-wider transition-all ${
+                  session.teamCode
+                    ? 'border-acid-lime/40 bg-acid-lime/10 text-acid-lime hover:border-acid-lime'
+                    : 'border-white/[0.2] bg-charcoal-900 text-bone-200 hover:border-acid-lime hover:text-acid-lime'
+                }`}
+              >
+                {session.teamCode ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-acid-lime" />
+                    <span>PASS: {session.teamCode}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 text-acid-lime" />
+                    <span>REGISTER TEAM</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

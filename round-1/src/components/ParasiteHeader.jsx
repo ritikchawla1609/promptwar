@@ -8,6 +8,7 @@ export default function ParasiteHeader({
   session = {},
   onUpdateSession,
   onOpenAdmin,
+  onOpenRegister,
   isMuted = false,
   onToggleMute,
 }) {
@@ -70,38 +71,31 @@ export default function ParasiteHeader({
 
         {/* Right: Team Tag, Audio, Admin Trigger */}
         <div className="flex items-center gap-3">
-          {/* Team Handle Badge */}
-          {isEditingTeam ? (
-            <form onSubmit={handleSaveTeam} className="flex items-center gap-1 font-mono text-xs">
-              <input
-                type="text"
-                value={teamInput}
-                onChange={(e) => setTeamInput(e.target.value)}
-                placeholder="Team Handle"
-                maxLength={20}
-                className="bg-charcoal-900 border border-acid-lime/50 text-bone-100 px-2 py-0.5 text-xs outline-none rounded-none w-28"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="px-2 py-0.5 bg-acid-lime text-charcoal-950 font-bold text-[10px] uppercase"
-              >
-                SAVE
-              </button>
-            </form>
-          ) : (
-            <button
-              onClick={() => {
-                setTeamInput(session.teamName || '');
-                setIsEditingTeam(true);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/[0.08] bg-charcoal-900/40 hover:border-white/[0.2] font-mono text-[11px] text-bone-300 transition-colors"
-              title="Click to rename team handle"
-            >
-              <span className="text-[9px] text-bone-500 uppercase">TEAM:</span>
-              <span className="font-bold text-bone-100">{session.teamName || 'SYNAPSE'}</span>
-            </button>
-          )}
+          {/* Team Handle Badge / Registration Trigger */}
+          <button
+            onClick={onOpenRegister}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded border font-mono text-[11px] transition-all ${
+              session.teamCode
+                ? 'border-acid-lime/40 bg-acid-lime/10 text-bone-100 hover:border-acid-lime hover:bg-acid-lime/20'
+                : 'border-acid-lime/60 bg-charcoal-900/90 text-acid-lime hover:bg-acid-lime hover:text-charcoal-950 animate-pulse'
+            }`}
+            title={session.teamCode ? 'View Verified Team Credentials' : 'Register Official Team for Prompt War'}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                session.teamCode ? 'bg-acid-lime' : 'bg-acid-lime animate-ping'
+              }`}
+            />
+            <span className="text-[9px] uppercase tracking-wider text-bone-400">
+              {session.teamCode ? 'TEAM' : 'REGISTER:'}
+            </span>
+            <span className="font-bold">{session.teamName || 'SYNAPSE'}</span>
+            {session.teamCode && (
+              <span className="text-[10px] px-1.5 py-0.2 bg-black/50 text-acid-lime font-mono rounded border border-acid-lime/30">
+                {session.teamCode}
+              </span>
+            )}
+          </button>
 
           {/* Sound Toggle */}
           <button
