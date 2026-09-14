@@ -29,7 +29,9 @@ export default function TeamRegistrationModal({
   const [leaderName, setLeaderName] = useState(currentSession.leaderName || '');
   const [leaderContact, setLeaderContact] = useState(currentSession.leaderContact || '');
   const [college, setCollege] = useState(currentSession.college || 'Chandigarh University');
-  const [memberCount, setMemberCount] = useState(currentSession.memberCount || 2);
+  const [memberCount, setMemberCount] = useState(
+    currentSession.memberCount && currentSession.memberCount >= 2 ? currentSession.memberCount : 2
+  );
   const [members, setMembers] = useState(currentSession.members || ['', '', '']);
 
   // Login Field
@@ -62,6 +64,12 @@ export default function TeamRegistrationModal({
     setError(null);
     if (!teamName.trim() || !leaderName.trim()) {
       setError('Please provide Team Name and Team Leader Name.');
+      return;
+    }
+
+    const additionalEntered = members.slice(0, memberCount - 1).filter((m) => m && m.trim().length > 0);
+    if (additionalEntered.length === 0) {
+      setError('Tournament Rule: Teams must have 2 to 4 members. Please enter at least 1 additional member name.');
       return;
     }
 
@@ -256,14 +264,13 @@ export default function TeamRegistrationModal({
 
                 <div>
                   <label className="text-[10px] text-bone-400 uppercase tracking-widest block mb-1">
-                    MEMBER COUNT (1–4)
+                    SQUAD SIZE (2–4 MEMBERS) *
                   </label>
                   <select
                     value={memberCount}
                     onChange={(e) => setMemberCount(Number(e.target.value))}
-                    className="w-full p-2.5 bg-charcoal-900 border border-white/[0.1] text-bone-100 text-xs outline-none focus:border-acid-lime"
+                    className="w-full p-2.5 bg-charcoal-900 border border-white/[0.1] text-bone-100 text-xs outline-none focus:border-cyan"
                   >
-                    <option value={1}>Solo Player (1 Member)</option>
                     <option value={2}>Duo Squad (2 Members)</option>
                     <option value={3}>Trio Squad (3 Members)</option>
                     <option value={4}>Full Squad (4 Members)</option>
@@ -271,24 +278,28 @@ export default function TeamRegistrationModal({
                 </div>
               </div>
 
-              {/* Dynamic Member Name Inputs */}
-              {memberCount > 1 && (
-                <div className="p-3 bg-charcoal-900/60 border border-white/[0.06] space-y-2">
-                  <span className="text-[10px] text-bone-500 uppercase tracking-widest block">
-                    ADDITIONAL MEMBER NAMES
+              {/* Dynamic Member Name Inputs (Min 2 to Max 4 Members) */}
+              <div className="p-3 bg-charcoal-900/60 border border-white/[0.06] space-y-2">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-bone-400 uppercase tracking-widest">
+                    ADDITIONAL SQUAD MEMBERS
                   </span>
-                  {Array.from({ length: memberCount - 1 }).map((_, i) => (
-                    <input
-                      key={i}
-                      type="text"
-                      value={members[i] || ''}
-                      onChange={(e) => handleMemberChange(i, e.target.value)}
-                      placeholder={`Member 0${i + 2} Full Name`}
-                      className="w-full p-2 bg-charcoal-950 border border-white/[0.08] text-bone-200 text-xs outline-none"
-                    />
-                  ))}
+                  <span className="text-cyan font-bold font-mono text-[9px]">
+                    2–4 MEMBERS MANDATORY
+                  </span>
                 </div>
-              )}
+                {Array.from({ length: memberCount - 1 }).map((_, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    required={i === 0}
+                    value={members[i] || ''}
+                    onChange={(e) => handleMemberChange(i, e.target.value)}
+                    placeholder={`Member 0${i + 2} Full Name ${i === 0 ? '(Required)' : '(Optional)'}`}
+                    className="w-full p-2 bg-charcoal-950 border border-white/[0.08] focus:border-cyan text-bone-200 text-xs outline-none"
+                  />
+                ))}
+              </div>
 
               <button
                 type="submit"

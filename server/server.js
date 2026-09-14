@@ -431,6 +431,7 @@ app.post('/api/teams/register', async (req, res) => {
 
     const trimmedTeamName = teamName.trim();
     const teamCode = req.body.teamCode ? req.body.teamCode.toUpperCase().trim() : generateTeamCode();
+    const finalMemberCount = Math.min(4, Math.max(2, Number(memberCount) || 2));
 
     if (isMongoConnected) {
       let team = await Team.findOne({
@@ -441,7 +442,7 @@ app.post('/api/teams/register', async (req, res) => {
         team.leaderName = leaderName;
         if (leaderContact) team.leaderContact = leaderContact;
         if (college) team.college = college;
-        if (memberCount) team.memberCount = Number(memberCount);
+        team.memberCount = finalMemberCount;
         if (members) team.members = members;
         await team.save();
         return res.json({ success: true, team, isExisting: true });
@@ -453,7 +454,7 @@ app.post('/api/teams/register', async (req, res) => {
         leaderName,
         leaderContact: leaderContact || '',
         college: college || 'Chandigarh University',
-        memberCount: Number(memberCount) || 1,
+        memberCount: finalMemberCount,
         members: members || [leaderName],
         round1: {
           status: 'NOT_STARTED',
@@ -473,7 +474,7 @@ app.post('/api/teams/register', async (req, res) => {
         team.leaderName = leaderName;
         if (leaderContact) team.leaderContact = leaderContact;
         if (college) team.college = college;
-        if (memberCount) team.memberCount = Number(memberCount);
+        team.memberCount = finalMemberCount;
         if (members) team.members = members;
         return res.json({ success: true, team, isExisting: true });
       }
@@ -484,7 +485,7 @@ app.post('/api/teams/register', async (req, res) => {
         leaderName,
         leaderContact: leaderContact || '',
         college: college || 'Chandigarh University',
-        memberCount: Number(memberCount) || 1,
+        memberCount: finalMemberCount,
         members: members || [leaderName],
         round1: { status: 'NOT_STARTED', score: 0 },
         round2: { status: 'LOCKED', score: 0 },
