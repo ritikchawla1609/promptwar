@@ -37,6 +37,8 @@ export default function App() {
   const [survivingFragments, setSurvivingFragments] = useState(
     currentScenario.fragments.filter((f) => f.isRelevant)
   );
+  const [promptText, setPromptText] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search || '';
