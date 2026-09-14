@@ -273,6 +273,27 @@ export default function TechTatvaAdminPortal({
     }
   };
 
+  const handlePurgeAllData = async () => {
+    if (!window.confirm('⚠️ PURGE ALL TEST DATA?\n\nThis will permanently delete all test teams, wipe all submissions, and reset the arena to initial LOBBY state with 0 squads.\n\nAre you sure you want to clean up all test data?')) {
+      return;
+    }
+    setIsUpdatingArena(true);
+    try {
+      const res = await fetch('http://127.0.0.1:5001/api/arena/purge-data', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Tournament Reset Complete: All test teams and submissions have been wiped clean.');
+        loadConsoleData();
+      }
+    } catch (e) {
+      alert('Failed to purge data.');
+    } finally {
+      setIsUpdatingArena(false);
+    }
+  };
+
   // -------------------------------------------------------------
   // TEAM MANAGEMENT ACTIONS
   // -------------------------------------------------------------
@@ -798,6 +819,16 @@ export default function TechTatvaAdminPortal({
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>RESET</span>
+                  </button>
+
+                  <button
+                    onClick={handlePurgeAllData}
+                    disabled={isUpdatingArena}
+                    className="w-full sm:w-auto px-4 py-4 rounded-xl border border-crimson/40 bg-crimson/10 hover:bg-crimson hover:text-white text-crimson font-mono text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                    title="Permanently wipe all test teams and submissions"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>PURGE TEST DATA</span>
                   </button>
                 </div>
               </div>

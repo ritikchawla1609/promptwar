@@ -307,108 +307,130 @@ export default function AudienceProjectorView({ onClose, onGoToAdmin }) {
         {/* ========================================================= */}
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 text-left pt-2">
           {/* Deck 1: Live Squad Radar */}
-          <div className="p-5 rounded-2xl border border-white/[0.1] bg-charcoal-950/80 backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 font-mono text-xs">
-              <div className="flex items-center gap-2 text-cyan font-bold uppercase tracking-wider">
-                <Radio className="w-4 h-4 text-cyan animate-pulse" />
-                <span>ARENA SQUAD RADAR ({teams.length} REGISTERED)</span>
+          {/* Deck 1: Live Squad Radar (Optimized for 60+ Contenders) */}
+          <div className="p-5 rounded-2xl border border-white/[0.1] bg-charcoal-950/80 backdrop-blur-md space-y-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5 font-mono text-xs">
+                <div className="flex items-center gap-2 text-cyan font-bold uppercase tracking-wider">
+                  <Radio className="w-4 h-4 text-cyan animate-pulse" />
+                  <span>ARENA SQUAD RADAR ({teams.length} SQUADS)</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="px-2 py-0.5 rounded bg-cyan/15 border border-cyan/30 text-cyan font-bold">
+                    {teams.filter((t) => t.round1?.firstOutput).length} LOCKED
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                    {teams.filter((t) => !t.round1?.firstOutput).length} DRAFTING
+                  </span>
+                </div>
               </div>
-              <span className="text-bone-400 text-[11px]">
-                {teams.filter((t) => t.round1?.firstOutput).length} / {teams.length} LOCKED
-              </span>
+
+              {/* Dense Esports Squad Grid (Scrollable for 60+ Teams) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 max-h-72 sm:max-h-80 overflow-y-auto pr-1 mt-3">
+                {teams.length === 0 ? (
+                  <div className="col-span-3 text-center py-12 text-bone-500 font-mono text-xs">
+                    Awaiting squad registration entries from contenders...
+                  </div>
+                ) : (
+                  teams.map((team) => {
+                    const hasSubmittedFirst = Boolean(team.round1?.firstOutput);
+                    const hasSubmittedFinal = Boolean(team.round1?.finalOutput);
+
+                    let statusBadge = {
+                      text: 'DRAFT',
+                      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+                    };
+
+                    if (hasSubmittedFinal) {
+                      statusBadge = {
+                        text: 'EVOLVED',
+                        color: 'text-acid-lime border-acid-lime/30 bg-acid-lime/10',
+                      };
+                    } else if (hasSubmittedFirst) {
+                      statusBadge = {
+                        text: 'LOCKED',
+                        color: 'text-cyan border-cyan/30 bg-cyan/10',
+                      };
+                    }
+
+                    return (
+                      <div
+                        key={team.teamCode}
+                        className="p-2 rounded-lg border border-white/[0.06] bg-charcoal-900/60 flex items-center justify-between hover:border-cyan/30 transition-colors"
+                      >
+                        <div className="min-w-0 pr-1.5 font-mono">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-cyan font-bold">{team.teamCode}</span>
+                            <span className="text-[11px] text-white font-bold truncate max-w-[85px]">
+                              {team.teamName}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-bone-500 truncate">
+                            {team.members?.length || team.memberCount || 2}p • {team.college ? team.college.split(' ')[0] : 'CU'}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border shrink-0 ${statusBadge.color}`}
+                        >
+                          {statusBadge.text}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
-            {/* Squad List Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-              {teams.length === 0 ? (
-                <div className="col-span-2 text-center py-6 text-bone-500 font-mono text-xs">
-                  Awaiting squad registration entries from contenders...
-                </div>
-              ) : (
-                teams.map((team) => {
-                  const hasSubmittedFirst = Boolean(team.round1?.firstOutput);
-                  const hasSubmittedFinal = Boolean(team.round1?.finalOutput);
-
-                  let statusBadge = {
-                    text: 'DRAFTING AI',
-                    color: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
-                  };
-
-                  if (hasSubmittedFinal) {
-                    statusBadge = {
-                      text: 'EVOLVED',
-                      color: 'text-acid-lime border-acid-lime/30 bg-acid-lime/10',
-                    };
-                  } else if (hasSubmittedFirst) {
-                    statusBadge = {
-                      text: 'LOCKED',
-                      color: 'text-cyan border-cyan/30 bg-cyan/10',
-                    };
-                  }
-
-                  return (
-                    <div
-                      key={team.teamCode}
-                      className="p-2.5 rounded-lg border border-white/[0.06] bg-charcoal-900/60 flex items-center justify-between"
-                    >
-                      <div className="min-w-0 pr-2 font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-cyan font-bold">{team.teamCode}</span>
-                          <span className="text-xs text-white font-bold truncate max-w-[110px]">
-                            {team.teamName}
-                          </span>
-                        </div>
-                        <div className="text-[9px] text-bone-500 truncate">
-                          {team.members?.length || team.memberCount || 2} Members
-                        </div>
-                      </div>
-
-                      <span
-                        className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase border shrink-0 ${statusBadge.color}`}
-                      >
-                        {statusBadge.text}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+            <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-bone-500">
+              <span>ARENA QUORUM: MIN 3 REQUIRED</span>
+              <span className="text-cyan font-bold">{teams.length} REGISTERED TEAMS COMPETING</span>
             </div>
           </div>
 
           {/* Deck 2: Live Anonymous Strategy Telemetry Ticker */}
-          <div className="p-5 rounded-2xl border border-white/[0.1] bg-charcoal-950/80 backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 font-mono text-xs">
-              <div className="flex items-center gap-2 text-crimson font-bold uppercase tracking-wider">
-                <Terminal className="w-4 h-4 text-crimson animate-pulse" />
-                <span>SPECTATOR STRATEGY STREAM (ANONYMOUS)</span>
+          <div className="p-5 rounded-2xl border border-white/[0.1] bg-charcoal-950/80 backdrop-blur-md space-y-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5 font-mono text-xs">
+                <div className="flex items-center gap-2 text-crimson font-bold uppercase tracking-wider">
+                  <Terminal className="w-4 h-4 text-crimson animate-pulse" />
+                  <span>SPECTATOR STRATEGY STREAM (ANONYMIZED)</span>
+                </div>
+                <span className="text-[10px] text-bone-500 uppercase">REAL-TIME FEEDS</span>
               </div>
-              <span className="text-[10px] text-bone-500 uppercase">REAL-TIME TELEMETRY</span>
+
+              <div className="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto pr-1 mt-3">
+                {liveSnippets.length === 0 ? (
+                  <div className="text-center py-12 text-bone-500 font-mono text-xs">
+                    Contenders are actively drafting prompts in ChatGPT & Claude. Captured strategy streams will populate here live!
+                  </div>
+                ) : (
+                  liveSnippets.slice(0, 8).map((snippet, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg border border-white/[0.06] bg-charcoal-900/40 font-mono text-xs space-y-1 hover:border-crimson/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-cyan font-bold flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-cyan" />
+                          <span>SQUAD TRANSMISSION [{snippet.teamCode}]</span>
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] text-bone-400 font-bold uppercase">
+                          {snippet.stage}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-bone-300 font-sans italic line-clamp-2 leading-relaxed">
+                        "{snippet.text}..."
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-              {liveSnippets.length === 0 ? (
-                <div className="text-center py-6 text-bone-500 font-mono text-xs">
-                  Contenders are currently interrogating external AI tools. Captured solution streams will appear here as teams lock their forms!
-                </div>
-              ) : (
-                liveSnippets.slice(0, 4).map((snippet, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-lg border border-white/[0.06] bg-charcoal-900/40 font-mono text-xs space-y-1"
-                  >
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-cyan font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        <span>SQUAD FEED [REDACTED]</span>
-                      </span>
-                      <span className="text-bone-500 text-[9px] uppercase">{snippet.stage}</span>
-                    </div>
-                    <p className="text-[11px] text-bone-300 font-sans italic line-clamp-2 leading-relaxed">
-                      "{snippet.text}..."
-                    </p>
-                  </div>
-                ))
-              )}
+            <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-bone-500">
+              <span>ZERO IDENTITIES DISCLOSED</span>
+              <span className="text-crimson font-bold">PROMPT PARASITE AUDIENCE MATRIX</span>
             </div>
           </div>
         </div>

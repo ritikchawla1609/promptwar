@@ -373,6 +373,41 @@ app.post('/api/arena/state', (req, res) => {
   }
 });
 
+// POST /api/arena/purge-data (Clear all test teams and submissions, reset arena to initial LOBBY)
+app.post('/api/arena/purge-data', async (req, res) => {
+  try {
+    stopAutoAdvance();
+
+    arenaState = {
+      isRoundStarted: false,
+      activePhase: 'LOBBY',
+      startedAt: null,
+      phaseStartedAt: null,
+      phaseEndsAt: null,
+      phaseDuration: 0,
+      minTeamsToStart: 3,
+      autoAdvance: true,
+      activeChallenge: null,
+      timers: { create: 600, parasite: 600, evolve: 600 },
+      lastUpdated: new Date().toISOString(),
+    };
+
+    matchAssignments = {};
+    inMemoryTeams.length = 0;
+    inMemorySubmissions.length = 0;
+
+    if (isMongoConnected) {
+      await Team.deleteMany({});
+      await Submission.deleteMany({});
+    }
+
+    console.log('🧹 [Arena Purge] All tournament data, teams, and submissions wiped clean.');
+    return res.json({ success: true, message: 'All arena data purged successfully', state: arenaState });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/arena/phase-clock (Server-authoritative countdown for all clients)
 app.get('/api/arena/phase-clock', (req, res) => {
   const now = Date.now();
