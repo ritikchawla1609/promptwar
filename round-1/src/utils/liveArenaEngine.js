@@ -251,6 +251,9 @@ class LiveArenaEngine {
     // Start Real-Time Simulation & Timer Loops
     this.startTimerLoop();
     this.startCompetitorSimulation();
+
+    // Check MongoDB backend health & sync remote state
+    this.checkMongoHealth();
   }
 
   loadInitialState() {
@@ -344,6 +347,11 @@ class LiveArenaEngine {
       playerName,
       timerStart,
       timeRemainingSeconds: this.calcRemainingSeconds(timerStart),
+      mongoStatus: {
+        isOnline: false,
+        isConnected: false,
+        hasConfiguredUri: false,
+      },
     };
   }
 
@@ -457,6 +465,92 @@ class LiveArenaEngine {
   saveSubmissions(submissions) {
     try {
       localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));
+    } catch (e) {}
+  }
+
+  // MongoDB Backend Synchronization & Health
+  async checkMongoHealth() {
+    try {
+      const res = await fetch('/api/health');
+      if (res.ok) {
+        const data = await res.json();
+        this.state = {
+          ...this.state,
+          mongoStatus: {
+            isOnline: true,
+            isConnected: Boolean(data.mongoConnected),
+            hasConfiguredUri: Boolean(data.hasConfiguredUri),
+          },
+        };
+        this.notify();
+
+        if (data.mongoConnected) {
+          this.loadSubmissionsFromMongo();
+        }
+      }
+    } catch (e) {
+      this.state = {
+        ...this.state,
+        mongoStatus: { isOnline: false, isConnected: false, hasConfiguredUri: false },
+      };
+      this.notify();
+    }
+  }
+
+  async loadSubmissionsFromMongo() {
+    try {
+      const res = await fetch('/api/submissions?round=round-1');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.submissions && data.submissions.length > 0) {
+          const mongoSubs = data.submissions.map((s) => ({
+            ...s,
+            id: s.submissionId || s.id,
+          }));
+          this.state = {
+            ...this.state,
+            submissions: mongoSubs,
+          };
+          this.saveSubmissions(mongoSubs);
+          this.notify();
+        }
+      }
+    } catch (e) {}
+  }
+
+  async syncToMongo(submission) {
+    try {
+      await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...submission, round: 'round-1' }),
+      });
+    } catch (e) {}
+  }
+
+  async updateMongoSubmission(id, updates) {
+    try {
+      await fetch(`/api/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch (e) {}
+  }
+
+  async deleteMongoSubmission(id) {
+    try {
+      await fetch(`/api/submissions/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (e) {}
+  }
+
+  async clearMongoSubmissions() {
+    try {
+      await fetch('/api/submissions?round=round-1', {
+        method: 'DELETE',
+      });
     } catch (e) {}
   }
 
@@ -587,6 +681,9 @@ class LiveArenaEngine {
     });
     this.notify();
 
+    // Async sync to MongoDB Atlas
+    this.syncToMongo(newSubmission);
+
     return { rank: playerRank, entry: newEntry, submission: newSubmission };
   }
 
@@ -607,6 +704,10 @@ class LiveArenaEngine {
     this.saveSubmissions(updated);
     this.broadcast('SYNC_STATE', { submissions: updated });
     this.notify();
+
+    // Async update to MongoDB Atlas
+    this.updateMongoSubmission(id, updates);
+
     return updated;
   }
 
@@ -617,6 +718,10 @@ class LiveArenaEngine {
     this.saveSubmissions(updated);
     this.broadcast('SYNC_STATE', { submissions: updated });
     this.notify();
+
+    // Async delete in MongoDB Atlas
+    this.deleteMongoSubmission(id);
+
     return updated;
   }
 
@@ -626,6 +731,9 @@ class LiveArenaEngine {
     this.saveSubmissions([]);
     this.broadcast('SYNC_STATE', { submissions: [] });
     this.notify();
+
+    // Async clear in MongoDB Atlas
+    this.clearMongoSubmissions();
   }
 
   // Admin: Seed / Re-populate Demo Submissions
@@ -840,6 +948,12 @@ export function useLiveArena() {
     timeRemainingSeconds: arenaState.timeRemainingSeconds,
     formattedTimer: formatTimer(arenaState.timeRemainingSeconds),
     isFrozen: arenaState.stats.isFrozen,
+    mongoStatus: arenaState.mongoStatus || {
+      isOnline: false,
+      isConnected: false,
+      hasConfiguredUri: false,
+    },
+    refreshMongo: () => liveArenaEngine.checkMongoHealth(),
     submitPlayerRun: (runData) => liveArenaEngine.submitPlayerRun(runData),
     setPlayerName: (name) => liveArenaEngine.setPlayerName(name),
     pushEvent: (ev) => liveArenaEngine.pushEvent(ev),

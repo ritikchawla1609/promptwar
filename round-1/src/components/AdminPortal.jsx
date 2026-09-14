@@ -45,6 +45,8 @@ export default function AdminPortal({ onSwitchToPlayer }) {
     events,
     stats,
     isFrozen,
+    mongoStatus,
+    refreshMongo,
     updateSubmission,
     deleteSubmission,
     clearAllSubmissions,
@@ -282,17 +284,37 @@ export default function AdminPortal({ onSwitchToPlayer }) {
                   ROUND 01 COMBINED PORTAL
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 mt-0.5">
+              <div className="flex items-center flex-wrap gap-3 text-xs font-mono text-zinc-400 mt-0.5">
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>LIVE MULTI-TAB SYNC ACTIVE</span>
+                  <span>LIVE MULTI-TAB SYNC</span>
                 </span>
                 <span className="text-zinc-600">•</span>
                 <span className={isFrozen ? 'text-rose-400 font-bold' : 'text-zinc-400'}>
-                  {isFrozen ? '🔒 ARENA FROZEN' : '🔓 OPEN FOR SUBMISSIONS'}
+                  {isFrozen ? '🔒 ARENA FROZEN' : '🔓 OPEN'}
                 </span>
                 <span className="text-zinc-600">•</span>
                 <span className="text-zinc-300 font-bold">CLOCK: {formattedTimer}</span>
+                <span className="text-zinc-600">•</span>
+                {mongoStatus?.isConnected ? (
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>MONGODB ATLAS: CONNECTED</span>
+                  </span>
+                ) : mongoStatus?.hasConfiguredUri ? (
+                  <span className="flex items-center gap-1.5 text-cyan-400">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span>MONGODB: CONNECTING...</span>
+                  </span>
+                ) : (
+                  <span
+                    className="flex items-center gap-1.5 text-amber-400 font-medium"
+                    title="Database URI configured. Add your password in server/.env to enable remote cloud storage."
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>MONGODB: AWAITING PASSWORD</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
