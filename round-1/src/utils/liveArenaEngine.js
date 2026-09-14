@@ -469,9 +469,19 @@ class LiveArenaEngine {
   }
 
   // MongoDB Backend Synchronization & Health
+  getApiBase() {
+    if (typeof window === 'undefined') return 'http://127.0.0.1:5001';
+    const host = window.location.hostname || '127.0.0.1';
+    return `${window.location.protocol}//${host}:5001`;
+  }
+
   async checkMongoHealth() {
     try {
-      const res = await fetch('/api/health');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1200);
+      const res = await fetch(`${this.getApiBase()}/api/health`, { signal: controller.signal });
+      clearTimeout(timer);
+
       if (res.ok) {
         const data = await res.json();
         this.state = {
@@ -499,7 +509,11 @@ class LiveArenaEngine {
 
   async loadSubmissionsFromMongo() {
     try {
-      const res = await fetch('/api/submissions?round=round-1');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(`${this.getApiBase()}/api/submissions?round=round-1`, { signal: controller.signal });
+      clearTimeout(timer);
+
       if (res.ok) {
         const data = await res.json();
         if (data.submissions && data.submissions.length > 0) {
@@ -520,37 +534,53 @@ class LiveArenaEngine {
 
   async syncToMongo(submission) {
     try {
-      await fetch('/api/submissions', {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      await fetch(`${this.getApiBase()}/api/submissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...submission, round: 'round-1' }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
     } catch (e) {}
   }
 
   async updateMongoSubmission(id, updates) {
     try {
-      await fetch(`/api/submissions/${id}`, {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      await fetch(`${this.getApiBase()}/api/submissions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
     } catch (e) {}
   }
 
   async deleteMongoSubmission(id) {
     try {
-      await fetch(`/api/submissions/${id}`, {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      await fetch(`${this.getApiBase()}/api/submissions/${id}`, {
         method: 'DELETE',
+        signal: controller.signal,
       });
+      clearTimeout(timer);
     } catch (e) {}
   }
 
   async clearMongoSubmissions() {
     try {
-      await fetch('/api/submissions?round=round-1', {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      await fetch(`${this.getApiBase()}/api/submissions?round=round-1`, {
         method: 'DELETE',
+        signal: controller.signal,
       });
+      clearTimeout(timer);
     } catch (e) {}
   }
 
@@ -919,36 +949,48 @@ export const liveArenaEngine = new LiveArenaEngine();
 
 // React Custom Hook for Real-Time Dynamic Arena Subscriptions
 export function useLiveArena() {
-  const [arenaState, setArenaState] = useState(() => liveArenaEngine.getState());
+  const [arenaState, setArenaState] = useState(() => liveArenaEngine.getState() || {});
 
   useEffect(() => {
     // Initial sync
-    setArenaState(liveArenaEngine.getState());
+    const current = liveArenaEngine.getState();
+    if (current) setArenaState(current);
 
     // Subscribe to engine changes
     const unsubscribe = liveArenaEngine.subscribe((nextState) => {
-      setArenaState({ ...nextState });
+      if (nextState) setArenaState({ ...nextState });
     });
 
     return unsubscribe;
   }, []);
 
   const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const s = Math.max(0, Number(seconds) || 0);
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const s = arenaState || liveArenaEngine.getState() || {};
+  const stats = s.stats || {
+    activeParticipants: 146,
+    totalSubmissions: 24,
+    avgPurity: 74.5,
+    trapsTriggered: 29,
+    serverLatencyMs: 14,
+    isFrozen: false,
+  };
+
   return {
-    leaderboard: arenaState.leaderboard,
-    submissions: arenaState.submissions || [],
-    events: arenaState.events,
-    stats: arenaState.stats,
-    playerName: arenaState.playerName,
-    timeRemainingSeconds: arenaState.timeRemainingSeconds,
-    formattedTimer: formatTimer(arenaState.timeRemainingSeconds),
-    isFrozen: arenaState.stats.isFrozen,
-    mongoStatus: arenaState.mongoStatus || {
+    leaderboard: Array.isArray(s.leaderboard) ? s.leaderboard : [],
+    submissions: Array.isArray(s.submissions) ? s.submissions : [],
+    events: Array.isArray(s.events) ? s.events : [],
+    stats,
+    playerName: s.playerName || 'YOU (Player #01)',
+    timeRemainingSeconds: s.timeRemainingSeconds ?? 1200,
+    formattedTimer: formatTimer(s.timeRemainingSeconds ?? 1200),
+    isFrozen: Boolean(stats.isFrozen),
+    mongoStatus: s.mongoStatus || {
       isOnline: false,
       isConnected: false,
       hasConfiguredUri: false,
