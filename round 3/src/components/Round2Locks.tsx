@@ -18,7 +18,8 @@ import {
   Terminal,
   FileWarning,
   Sparkles,
-  Zap
+  Zap,
+  Volume2
 } from 'lucide-react';
 
 interface Round2LocksProps {
@@ -36,6 +37,20 @@ export const Round2Locks: React.FC<Round2LocksProps> = ({
   const [inputVal, setInputVal] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [showHint, setShowHint] = useState<boolean>(false);
+  const [playingSuspect, setPlayingSuspect] = useState<SuspectId | null>(null);
+
+  const handleToggleVoice = (id: SuspectId, statement: string) => {
+    if (playingSuspect === id) {
+      sound.stopAllSpeech();
+      setPlayingSuspect(null);
+    } else {
+      sound.stopAllSpeech();
+      setPlayingSuspect(id);
+      sound.speakSuspect(id, statement, () => {
+        setPlayingSuspect(null);
+      });
+    }
+  };
 
   const suspect = SUSPECTS[activeTab];
   const isUnlocked = suspectLocks[activeTab];
@@ -126,7 +141,10 @@ export const Round2Locks: React.FC<Round2LocksProps> = ({
             <button
               key={id}
               onClick={() => {
+                sound.stopAllSpeech();
+                setPlayingSuspect(null);
                 setActiveTab(id);
+                setInputVal('');
                 setErrorMsg('');
                 setShowHint(false);
                 sound.playTick(false);
@@ -175,13 +193,31 @@ export const Round2Locks: React.FC<Round2LocksProps> = ({
               </div>
             </div>
 
-            {/* Official Statement */}
-            <div className="space-y-1">
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
-                OFFICIAL ALIBI STATEMENT:
-              </span>
-              <p className="text-xs text-gray-200 italic bg-gray-950/90 p-3 rounded border border-gray-900 leading-relaxed">
+            {/* Official Statement with Natural Voice Presentation */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                  OFFICIAL ALIBI STATEMENT:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleVoice(suspect.id, suspect.statement)}
+                  className={`px-2.5 py-1 rounded text-[10px] font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                    playingSuspect === suspect.id
+                      ? 'bg-red-700 text-white border-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.5)]'
+                      : 'bg-black/60 text-red-300 hover:text-white border-red-900/60 hover:border-red-600'
+                  }`}
+                  title="Listen to suspect sworn statement with human-like voice synthesis"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>{playingSuspect === suspect.id ? 'STOP AUDIO' : '🎙️ LISTEN TO STATEMENT'}</span>
+                </button>
+              </div>
+              <p className="text-xs text-gray-200 italic bg-gray-950/90 p-3 rounded border border-gray-900 leading-relaxed relative">
                 "{suspect.statement}"
+                {playingSuspect === suspect.id && (
+                  <span className="inline-block w-2 h-2 ml-2 rounded-full bg-red-500 animate-ping" />
+                )}
               </p>
             </div>
 

@@ -267,3 +267,19 @@
   50% { opacity: 0.4; filter: drop-shadow(0 0 1px #06b6d4); }
 }
 
+/* Subtle Screen Vibration / Camera Shake */
+@keyframes screen-shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  15% { transform: translate(-1.5px, -1.5px) rotate(-0.5deg); }
+  30% { transform: translate(-2px, 0.5px) rotate(0.5deg); }
+  45% { transform: translate(2px, 1.5px) rotate(0deg); }
+  60% { transform: translate(1px, -1px) rotate(0.5deg); }
+  75% { transform: translate(-1px, 1.5px) rotate(-0.5deg); }
+  90% { transform: translate(1.5px, 0.5px) rotate(0deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+.animate-shake {
+  animation: screen-shake 0.35s ease-in-out;
+}
+

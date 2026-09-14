@@ -12,7 +12,8 @@ import {
   Compass, 
   Layers,
   Sparkles,
-  Zap
+  Zap,
+  Settings
 } from 'lucide-react';
 
 interface HeaderTimerProps {
@@ -23,6 +24,7 @@ interface HeaderTimerProps {
   audioMuted: boolean;
   onToggleMute: () => void;
   onOpenHostModal: () => void;
+  onOpenSettingsModal: () => void;
   onSelectPhase: (phase: number) => void;
   maxUnlockedPhase?: number;
 }
@@ -45,6 +47,7 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
   audioMuted,
   onToggleMute,
   onOpenHostModal,
+  onOpenSettingsModal,
   onSelectPhase,
   maxUnlockedPhase = 6
 }) => {
@@ -130,17 +133,17 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
           </div>
         </div>
 
-        {/* Right: Facilitator Tools, Audio Mute & Speedrun Judge Button */}
+        {/* Right: Facilitator Tools, Audio Mute, Settings & Override Button */}
         <div className="flex items-center gap-2">
-          {/* Judge / Quick Demo Button */}
+          {/* Master Case Facilitator Console Button */}
           <button
             onClick={onOpenHostModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-amber-500 bg-amber-950/40 hover:bg-amber-950/70 text-amber-300 text-xs font-bold transition shadow-[0_0_15px_rgba(245,158,11,0.3)] active:scale-95 cursor-pointer"
-            title="Judge / Quick Demo Speedrun & Auto-Solve"
+            title="Facilitator Case Override & Auto-Solve"
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span>JUDGE / DEMO</span>
+            <span>OVERRIDE CONSOLE</span>
           </button>
 
           <button
@@ -149,6 +152,14 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
             title={audioMuted ? "Unmute Procedural Audio" : "Mute Audio"}
           >
             {audioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
+
+          <button
+            onClick={onOpenSettingsModal}
+            className="p-1.5 rounded border border-gray-800 bg-black/60 hover:border-cyan-500 text-gray-400 hover:text-cyan-400 transition cursor-pointer"
+            title="Audio & Accessibility Settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
           </button>
 
           <button

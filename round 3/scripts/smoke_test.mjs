@@ -19,7 +19,11 @@ function assert(condition, message) {
   }
 }
 
-const projectRoot = '/Users/ritikchawla/Downloads/promptwar-main';
+const scriptDir = path.dirname(new URL(import.meta.url).pathname);
+const candidateRoot = path.resolve(scriptDir, '..');
+const projectRoot = fs.existsSync(path.join(candidateRoot, 'package.json'))
+  ? candidateRoot
+  : '/Users/ritikchawla/Downloads/promptwar-main';
 
 // ----------------------------------------------------------------------------
 // TEST 1: PROJECT CONFIGURATION & BUILD ASSETS
@@ -348,6 +352,81 @@ assert(currentAppTsx.includes('currentPhase={currentRound}'), 'App.tsx passes cu
 assert(currentAppTsx.includes('onSelectPhase='), 'App.tsx passes onSelectPhase handler to HeaderTimer');
 
 // ----------------------------------------------------------------------------
+// TEST 19: MULTI-BUS AUDIO GRAPH, AMBIENCE & CHARACTER VOICES
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 19: MULTI-BUS AUDIO GRAPH & CHARACTER VOICES ---');
+const audioEngineCode = fs.readFileSync(path.join(projectRoot, 'src', 'utils', 'audioEngine.ts'), 'utf-8');
+assert(audioEngineCode.includes('masterGain') && audioEngineCode.includes('musicGain') && audioEngineCode.includes('sfxGain'), 'AudioEngine implements 3-tier master audio bus graph');
+assert(audioEngineCode.includes('setMasterVolume') && audioEngineCode.includes('setMusicVolume') && audioEngineCode.includes('setSfxVolume') && audioEngineCode.includes('setVoiceVolume'), 'AudioEngine implements volume setters for Master, Music, SFX, and Voice');
+assert(audioEngineCode.includes('startAmbient') && audioEngineCode.includes('stopAmbient'), 'AudioEngine implements procedural ambient sound generator');
+assert(audioEngineCode.includes('setMusicMood'), 'AudioEngine implements dynamic mood controller');
+assert(audioEngineCode.includes('fadeToSilence'), 'AudioEngine implements strategic silence fader');
+assert(audioEngineCode.includes('duckAudio') && audioEngineCode.includes('restoreAudio'), 'AudioEngine implements automatic audio ducking for speech');
+assert(audioEngineCode.includes('speakSuspect'), 'AudioEngine implements speakSuspect speech synthesis function');
+['aarav', 'riya', 'kabir', 'meera', 'dev', 'sen'].forEach(charKey => {
+  assert(audioEngineCode.includes(`'${charKey}'`), `AudioEngine contains character voice profile for "${charKey}"`);
+});
+
+const round2LocksTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'Round2Locks.tsx'), 'utf-8');
+assert(round2LocksTsx.includes('LISTEN TO STATEMENT') || round2LocksTsx.includes('PLAYING STATEMENT'), 'Round 2 Suspects include character statement speech playback button');
+assert(round2LocksTsx.includes('speakSuspect'), 'Round 2 Suspects trigger speakSuspect with audio ducking');
+
+// ----------------------------------------------------------------------------
+// TEST 20: CENTRALIZED VFX SYSTEM & ACCESSIBILITY CONTROLS
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 20: CENTRALIZED VFX ENGINE & ACCESSIBILITY ---');
+const vfxEngineTs = fs.readFileSync(path.join(projectRoot, 'src', 'utils', 'vfxEngine.ts'), 'utf-8');
+assert(vfxEngineTs.includes('shake(') && vfxEngineTs.includes('flicker(') && vfxEngineTs.includes('glitch(') && vfxEngineTs.includes('evidenceFocus(') && vfxEngineTs.includes('heartbeat(') && vfxEngineTs.includes('shock('), 'VFXEngine provides shake, flicker, glitch, evidenceFocus, heartbeat, and shock triggers');
+assert(vfxEngineTs.includes('setReduceMotion') && vfxEngineTs.includes('setReduceFlashing'), 'VFXEngine respects accessibility motion and flashing constraints');
+
+const vfxOverlayTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'VFXOverlay.tsx'), 'utf-8');
+assert(vfxOverlayTsx.includes('flickerOpacity'), 'VFXOverlay renders electric light flickering');
+assert(vfxOverlayTsx.includes('glitchActive'), 'VFXOverlay renders CRT glitch scanlines');
+assert(vfxOverlayTsx.includes('evidenceFocusActive'), 'VFXOverlay renders forensic evidence focus vignette');
+assert(vfxOverlayTsx.includes('dust') || vfxOverlayTsx.includes('Dust Motes'), 'VFXOverlay renders floating atmospheric dust motes');
+
+assert(indexCss.includes('@keyframes screen-shake'), 'index.css defines screen shake keyframes');
+assert(indexCss.includes('.animate-shake'), 'index.css defines .animate-shake utility class');
+
+// ----------------------------------------------------------------------------
+// TEST 21: STATE PERSISTENCE & RELIABILITY
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 21: LOCALSTORAGE STATE PERSISTENCE & SETTINGS ---');
+const gameStorageTs = fs.readFileSync(path.join(projectRoot, 'src', 'utils', 'gameStorage.ts'), 'utf-8');
+assert(gameStorageTs.includes('loadSavedGame') && gameStorageTs.includes('saveGame') && gameStorageTs.includes('clearSavedGame'), 'gameStorage implements loadSavedGame, saveGame, and clearSavedGame');
+assert(gameStorageTs.includes('DEFAULT_SETTINGS'), 'gameStorage exports DEFAULT_SETTINGS');
+assert(gameStorageTs.includes('reExaminedClues?: string[]'), 'gameStorage tracks reExaminedClues in SavedGameState');
+
+const settingsModalTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'SettingsModal.tsx'), 'utf-8');
+assert(settingsModalTsx.includes('Master Output:') && settingsModalTsx.includes('Atmospheric Ambient') && settingsModalTsx.includes('Sound Effects') && settingsModalTsx.includes('Suspect Voice'), 'SettingsModal provides 4 distinct audio bus volume sliders');
+assert(settingsModalTsx.includes('Reduce Flashing') && settingsModalTsx.includes('Reduce Motion'), 'SettingsModal provides accessibility toggles');
+assert(settingsModalTsx.includes('RESTART CASE') || settingsModalTsx.includes('PURGE CURRENT CASE'), 'SettingsModal provides safe restart with double confirmation');
+
+const updatedAppTsx = fs.readFileSync(path.join(projectRoot, 'src', 'App.tsx'), 'utf-8');
+assert(updatedAppTsx.includes('<VFXOverlay />') || updatedAppTsx.includes('<VFXOverlay/>'), 'App.tsx mounts VFXOverlay');
+assert(updatedAppTsx.includes('<SettingsModal'), 'App.tsx mounts SettingsModal');
+assert(updatedAppTsx.includes('loadSavedGame'), 'App.tsx loads game state on initialization');
+assert(updatedAppTsx.includes('saveGame('), 'App.tsx automatically persists changes to localStorage');
+assert(updatedAppTsx.includes('clearSavedGame('), 'App.tsx cleans up localStorage upon investigation reset');
+
+const updatedHeaderTimerTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'HeaderTimer.tsx'), 'utf-8');
+assert(updatedHeaderTimerTsx.includes('onOpenSettingsModal'), 'HeaderTimer includes Settings gear button handler');
+assert(!updatedHeaderTimerTsx.includes('JUDGE / DEMO'), 'HeaderTimer removes any "DEMO" label in accordance with strict production guidelines');
+
+// ----------------------------------------------------------------------------
+// TEST 22: CLUE RE-EXAMINATION & CAUSAL REVELATIONS
+// ----------------------------------------------------------------------------
+console.log('\n--- TEST GROUP 22: CLUE RE-EXAMINATION & CAUSAL GRAPH ---');
+const updatedClueDossierTsx = fs.readFileSync(path.join(projectRoot, 'src', 'components', 'ClueDossier.tsx'), 'utf-8');
+assert(updatedClueDossierTsx.includes('CLUE_REVELATIONS'), 'ClueDossier defines CLUE_REVELATIONS dictionary');
+['ev-1', 'ev-2', 'ev-4', 'ev-9', 'ev-10'].forEach(clueId => {
+  assert(updatedClueDossierTsx.includes(`'${clueId}':`), `CLUE_REVELATIONS contains deep forensic audit for "${clueId}"`);
+});
+assert(updatedClueDossierTsx.includes('RUN ADVANCED RE-EXAMINATION') || updatedClueDossierTsx.includes('RE-EXAMINE FORENSICS'), 'ClueDossier provides late-game Re-Examine Forensics button');
+assert(updatedClueDossierTsx.includes('reExaminedClues') && updatedClueDossierTsx.includes('onReExamineClue'), 'ClueDossier supports reExaminedClues props');
+assert(updatedAppTsx.includes('reExaminedClues={reExaminedClues}'), 'App.tsx connects reExaminedClues state to ClueDossier');
+
+// ----------------------------------------------------------------------------
 // SUMMARY REPORT
 // ----------------------------------------------------------------------------
 console.log('\n================================================================');
@@ -358,3 +437,4 @@ if (passedTests === totalTests) {
   console.log(`⚠️ STATUS: ${totalTests - passedTests} ASSERTIONS FAILED`);
 }
 console.log('================================================================\n');
+

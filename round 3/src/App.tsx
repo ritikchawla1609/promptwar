@@ -38,23 +38,36 @@ import {
 
 import { House3D } from './components/House3D';
 import { BloodSplatterOverlay } from './components/BloodSplatterOverlay';
+import { VFXOverlay } from './components/VFXOverlay';
+import { SettingsModal } from './components/SettingsModal';
+import { vfx } from './utils/vfxEngine';
+import { GameSettings, DEFAULT_SETTINGS, loadSavedGame, saveGame, clearSavedGame } from './utils/gameStorage';
 
 export const App: React.FC = () => {
+  // Check if saved state exists in localStorage
+  const savedState = React.useMemo(() => loadSavedGame(), []);
+
   // Master Game State
-  const [currentRound, setCurrentRound] = useState<number>(0);
-  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(false);
-  const [crimeSceneObjectives, setCrimeSceneObjectives] = useState<CrimeSceneObjectives>({
-    clockInspected: false,
-    tapeFound: false,
-    bloodExamined: false,
-    doorInspected: false,
-    luminolRevealed: false
-  });
-  const [timeRemaining, setTimeRemaining] = useState<number>(55 * 60); // 55 mins
+  const [currentRound, setCurrentRound] = useState<number>(savedState?.currentRound ?? 0);
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(savedState?.hasSeenIntro ?? false);
+  const [crimeSceneObjectives, setCrimeSceneObjectives] = useState<CrimeSceneObjectives>(
+    savedState?.crimeSceneObjectives ?? {
+      clockInspected: false,
+      tapeFound: false,
+      bloodExamined: false,
+      doorInspected: false,
+      luminolRevealed: false
+    }
+  );
+  const [timeRemaining, setTimeRemaining] = useState<number>(savedState?.timeRemaining ?? 55 * 60); // 55 mins
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [audioMuted, setAudioMuted] = useState<boolean>(false);
   const [isHostModalOpen, setIsHostModalOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isClimaxTriggered, setIsClimaxTriggered] = useState<boolean>(false);
+
+  // Settings State
+  const [settings, setSettings] = useState<GameSettings>(savedState?.settings ?? DEFAULT_SETTINGS);
 
   // 3D Mansion vs Terminal vs Detective Wall Mode
   const [viewMode, setViewMode] = useState<'3d' | 'terminal' | 'board'>('terminal');
@@ -80,16 +93,21 @@ export const App: React.FC = () => {
 
   // Round 1 State
   const [audioSpeed, setAudioSpeed] = useState<number>(1.0);
-  const [audioRevealedSecret, setAudioRevealedSecret] = useState<boolean>(false);
+  const [audioRevealedSecret, setAudioRevealedSecret] = useState<boolean>(savedState?.audioRevealedSecret ?? false);
 
   // Round 2 State: Suspect Locks
-  const [suspectLocks, setSuspectLocks] = useState<Record<SuspectId, boolean>>({
-    aarav: false,
-    riya: false,
-    kabir: false,
-    meera: false,
-    dev: false
-  });
+  const [suspectLocks, setSuspectLocks] = useState<Record<SuspectId, boolean>>(
+    savedState?.suspectLocks ?? {
+      aarav: false,
+      riya: false,
+      kabir: false,
+      meera: false,
+      dev: false
+    }
+  );
+
+  // Clue Re-Examination State
+  const [reExaminedClues, setReExaminedClues] = useState<string[]>(savedState?.reExaminedClues ?? []);
 
   // Round 3 State: AI queries
   const [aiQueries, setAiQueries] = useState<Array<{
@@ -101,26 +119,28 @@ export const App: React.FC = () => {
   const [reasoningInspected, setReasoningInspected] = useState<boolean>(false);
 
   // Round 4 State: Videos & Time Distinctions
-  const [hiddenVideoUnlocked, setHiddenVideoUnlocked] = useState<boolean>(false);
+  const [hiddenVideoUnlocked, setHiddenVideoUnlocked] = useState<boolean>(savedState?.hiddenVideoUnlocked ?? false);
   const [sliderDistinction, setSliderDistinction] = useState<{
     attackTime: string;
     deathTime: string;
     discoveryTime: string;
-  }>({
+  }>(savedState?.sliderDistinction ?? {
     attackTime: '',
     deathTime: '',
     discoveryTime: ''
   });
 
   // Round 5 State: False Murderer
-  const [round5Choice, setRound5Choice] = useState<'pending' | 'accused_meera' | 'challenged'>('pending');
-  const [printerLogUnlocked, setPrinterLogUnlocked] = useState<boolean>(false);
+  const [round5Choice, setRound5Choice] = useState<'pending' | 'accused_meera' | 'challenged'>(
+    savedState?.round5Choice ?? 'pending'
+  );
+  const [printerLogUnlocked, setPrinterLogUnlocked] = useState<boolean>(savedState?.printerLogUnlocked ?? false);
 
   // Round 6 State: Final Boss
-  const [submission, setSubmission] = useState<Partial<FinalBossSubmission>>({});
-  const [finalEvaluated, setFinalEvaluated] = useState<boolean>(false);
-  const [finalScore, setFinalScore] = useState<number>(0);
-  const [finalFeedback, setFinalFeedback] = useState<string[]>([]);
+  const [submission, setSubmission] = useState<Partial<FinalBossSubmission>>(savedState?.submission ?? {});
+  const [finalEvaluated, setFinalEvaluated] = useState<boolean>(savedState?.finalEvaluated ?? false);
+  const [finalScore, setFinalScore] = useState<number>(savedState?.finalScore ?? 0);
+  const [finalFeedback, setFinalFeedback] = useState<string[]>(savedState?.finalFeedback ?? []);
 
   // 55-minute Timer Interval
   useEffect(() => {
@@ -165,6 +185,80 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handleUpdateSettings = (newSettings: GameSettings) => {
+    setSettings(newSettings);
+    sound.setMasterVolume(newSettings.masterVolume);
+    sound.setMusicVolume(newSettings.musicVolume);
+    sound.setSfxVolume(newSettings.sfxVolume);
+    sound.setVoiceVolume(newSettings.voiceVolume);
+    vfx.setReduceMotion(newSettings.reduceMotion);
+    vfx.setReduceFlashing(newSettings.reduceFlashing);
+  };
+
+  // Synchronize audio and vfx settings on startup
+  useEffect(() => {
+    sound.setMasterVolume(settings.masterVolume);
+    sound.setMusicVolume(settings.musicVolume);
+    sound.setSfxVolume(settings.sfxVolume);
+    sound.setVoiceVolume(settings.voiceVolume);
+    vfx.setReduceMotion(settings.reduceMotion);
+    vfx.setReduceFlashing(settings.reduceFlashing);
+  }, []);
+
+  // Save game state to localStorage
+  useEffect(() => {
+    saveGame({
+      currentRound,
+      hasSeenIntro,
+      timeRemaining,
+      crimeSceneObjectives,
+      suspectLocks,
+      audioRevealedSecret,
+      hiddenVideoUnlocked,
+      sliderDistinction,
+      round5Choice,
+      printerLogUnlocked,
+      submission,
+      finalEvaluated,
+      finalScore,
+      finalFeedback,
+      reExaminedClues,
+      settings
+    });
+  }, [
+    currentRound,
+    hasSeenIntro,
+    timeRemaining,
+    crimeSceneObjectives,
+    suspectLocks,
+    audioRevealedSecret,
+    hiddenVideoUnlocked,
+    sliderDistinction,
+    round5Choice,
+    printerLogUnlocked,
+    submission,
+    finalEvaluated,
+    finalScore,
+    finalFeedback,
+    reExaminedClues,
+    settings
+  ]);
+
+  // Phase atmosphere transitions
+  useEffect(() => {
+    if (!hasSeenIntro) return;
+    if (currentRound === 0 || currentRound === 1) {
+      sound.setMusicMood('exploration');
+    } else if (currentRound === 2 || currentRound === 3) {
+      sound.setMusicMood('suspicion');
+    } else if (currentRound === 4 || currentRound === 5) {
+      sound.setMusicMood('discovery');
+    } else if (currentRound === 6) {
+      sound.setMusicMood('revelation');
+    }
+    vfx.flicker(250);
+  }, [currentRound, hasSeenIntro]);
 
   const handleToggleTimer = () => {
     setIsTimerRunning(!isTimerRunning);
@@ -282,6 +376,7 @@ export const App: React.FC = () => {
   };
 
   const handleResetGame = () => {
+    clearSavedGame();
     setHasSeenIntro(false);
     setCurrentRound(0);
     setTimeRemaining(55 * 60);
@@ -297,6 +392,7 @@ export const App: React.FC = () => {
     setAudioRevealedSecret(false);
     setAudioSpeed(1.0);
     setSuspectLocks({ aarav: false, riya: false, kabir: false, meera: false, dev: false });
+    setReExaminedClues([]);
     setAiQueries([]);
     setReasoningInspected(false);
     setHiddenVideoUnlocked(false);
@@ -316,6 +412,8 @@ export const App: React.FC = () => {
       nextObjective: ''
     });
     setViewMode('terminal');
+    sound.stopAllSpeech();
+    sound.stopAmbient();
   };
 
   const handleAutoSolveAll = () => {
@@ -409,6 +507,9 @@ export const App: React.FC = () => {
       {/* Visceral Blood Splatters & Trauma Flashes */}
       <BloodSplatterOverlay activeDrips={true} intenseTrauma={intenseTrauma} />
 
+      {/* Cinematic & Environmental Horror VFX Overlay */}
+      <VFXOverlay />
+
       {/* Universal Navigation Bar & 55-min Countdown */}
       <HeaderTimer
         currentPhase={currentRound}
@@ -418,6 +519,7 @@ export const App: React.FC = () => {
         audioMuted={audioMuted}
         onToggleMute={handleToggleMute}
         onOpenHostModal={() => setIsHostModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         onSelectPhase={(phase) => {
           setCurrentRound(phase);
           sound.playTick(false);
@@ -816,6 +918,10 @@ export const App: React.FC = () => {
                     audioRevealedSecret={audioRevealedSecret}
                     onAudioRevealedSecret={handleAudioRevealedSecret}
                     compact={true}
+                    reExaminedClues={reExaminedClues}
+                    onReExamineClue={(id) => {
+                      setReExaminedClues((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                    }}
                   />
                 </div>
               </div>
@@ -964,6 +1070,10 @@ export const App: React.FC = () => {
                   audioRevealedSecret={audioRevealedSecret}
                   onAudioRevealedSecret={handleAudioRevealedSecret}
                   compact={false}
+                  reExaminedClues={reExaminedClues}
+                  onReExamineClue={(id) => {
+                    setReExaminedClues((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                  }}
                 />
               </div>
             )}
@@ -1006,6 +1116,15 @@ export const App: React.FC = () => {
         }}
         onResetGame={handleResetGame}
         onAutoSolveAll={handleAutoSolveAll}
+      />
+
+      {/* Settings & Accessibility Console Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        onResetGame={handleResetGame}
       />
 
       {/* Footer */}
