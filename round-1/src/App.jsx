@@ -11,6 +11,7 @@ import Screen5Parasite from './components/screens/Screen5Parasite';
 import Screen6Evolve from './components/screens/Screen6Evolve';
 import Screen7Complete from './components/screens/Screen7Complete';
 import TechTatvaAdminPortal from './components/admin/TechTatvaAdminPortal';
+import AudienceProjectorView from './components/projector/AudienceProjectorView';
 import TeamRegistrationModal from './components/TeamRegistrationModal';
 import { DEFAULT_CHALLENGE } from './data/parasiteChallenge';
 import {
@@ -77,11 +78,26 @@ export default function App() {
     );
   };
 
+  // Check URL route for Auditorium Projector: #/projector or ?projector=true
+  const checkIsProjectorRoute = () => {
+    const hash = window.location.hash.toLowerCase();
+    const path = window.location.pathname.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    return (
+      hash === '#/projector' ||
+      hash === '#projector' ||
+      path.startsWith('/projector') ||
+      search.includes('projector=true')
+    );
+  };
+
   const [isAdminRoute, setIsAdminRoute] = useState(checkIsAdminRoute);
+  const [isProjectorRoute, setIsProjectorRoute] = useState(checkIsProjectorRoute);
 
   useEffect(() => {
     const onRouteCheck = () => {
       setIsAdminRoute(checkIsAdminRoute());
+      setIsProjectorRoute(checkIsProjectorRoute());
     };
     window.addEventListener('hashchange', onRouteCheck);
     window.addEventListener('popstate', onRouteCheck);
@@ -365,6 +381,41 @@ export default function App() {
         }}
         challenge={challenge}
         onUpdateChallenge={setChallenge}
+      />
+    );
+  }
+
+  // If visiting audience projector route (ACCESSIBLE VIA ADMIN PANEL ONLY)
+  if (isProjectorRoute) {
+    const isHostAuth = sessionStorage.getItem('tatva_admin_auth') === 'true';
+    if (!isHostAuth) {
+      // Must authenticate through admin panel first!
+      window.location.hash = '#/admin';
+      return (
+        <TechTatvaAdminPortal
+          onClose={() => {
+            window.location.hash = '';
+            setIsProjectorRoute(false);
+            setIsAdminRoute(false);
+          }}
+          challenge={challenge}
+          onUpdateChallenge={setChallenge}
+        />
+      );
+    }
+
+    return (
+      <AudienceProjectorView
+        onClose={() => {
+          window.location.hash = '#/admin';
+          setIsProjectorRoute(false);
+          setIsAdminRoute(true);
+        }}
+        onGoToAdmin={() => {
+          window.location.hash = '#/admin';
+          setIsProjectorRoute(false);
+          setIsAdminRoute(true);
+        }}
       />
     );
   }

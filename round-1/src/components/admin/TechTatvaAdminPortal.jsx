@@ -676,6 +676,16 @@ export default function TechTatvaAdminPortal({
           </button>
 
           <button
+            onClick={() => {
+              window.location.hash = '#/projector';
+            }}
+            className="px-3.5 py-1.5 rounded border border-cyan/40 bg-cyan/15 hover:bg-cyan hover:text-charcoal-950 text-cyan font-mono text-xs font-bold uppercase transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.2)]"
+            title="Launch Fullscreen Audience Projector Broadcast"
+          >
+            <span>📽️ AUDIENCE PROJECTOR</span>
+          </button>
+
+          <button
             onClick={handleLogout}
             className="px-3 py-1.5 rounded border border-white/[0.1] bg-charcoal-900/60 hover:border-crimson hover:text-crimson text-bone-400 font-mono text-xs transition-colors"
             title="Lock console"
@@ -769,6 +779,16 @@ export default function TechTatvaAdminPortal({
                       <span>START ROUND 01 ARENA</span>
                     </button>
                   )}
+
+                  <button
+                    onClick={() => {
+                      window.location.hash = '#/projector';
+                    }}
+                    className="w-full sm:w-auto px-6 py-4 rounded-xl border-2 border-cyan/50 bg-cyan/15 hover:bg-cyan hover:text-charcoal-950 text-cyan font-mono text-xs font-black uppercase tracking-widest shadow-[0_0_25px_rgba(0,240,255,0.25)] transition-all flex items-center justify-center gap-2"
+                    title="Launch Fullscreen Audience Projector Broadcast"
+                  >
+                    <span>📽️ AUDIENCE PROJECTOR</span>
+                  </button>
 
                   <button
                     onClick={handleResetArena}
