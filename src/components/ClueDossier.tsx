@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { EvidenceItem } from '../types/game';
 import { sound } from '../utils/audioEngine';
+import { vfx } from '../utils/vfxEngine';
 import { 
   FileText, 
   Camera, 
@@ -16,8 +17,41 @@ import {
   Search,
   CheckCircle2,
   Sliders,
-  Filter
+  Filter,
+  Microscope
 } from 'lucide-react';
+
+export const CLUE_REVELATIONS: Record<string, {
+  title: string;
+  revelation: string;
+  keyDeduction: string;
+}> = {
+  'ev-1': {
+    title: 'MICROSCOPIC GEAR AUDIT: GRANDFATHER CLOCK',
+    revelation: 'Forensic microscopy shows the escapement pendulum broke from physical trauma at 11:47 PM. However, secondary acoustic resonance was captured on the frame at 12:13 AM when the circuit breaker tripped downstairs. The clock was stopped by Aarav during the assault, NOT during the blackout.',
+    keyDeduction: 'Proves Aarav’s confrontation occurred at 11:47 PM, 26 minutes prior to Sen’s actual death.'
+  },
+  'ev-2': {
+    title: 'NEWTONIAN THERMAL DECAY: SPILLED COFFEE',
+    revelation: 'Liquid temperature measured 38°C at 12:20 AM in a 19°C study. Backward calculation proves the cup was poured at 11:35 PM and dropped at 11:47 PM during violent cranial impact. The liquid was already room-temperature before Dev entered.',
+    keyDeduction: 'Eliminates any struggle taking place during the 12:13 AM blackout.'
+  },
+  'ev-4': {
+    title: 'SUB-BASS ISOLATION: CASSETTE REEL #4',
+    revelation: 'Digital bandpass filter below 80Hz isolates faint, rhythmic wheezing and a pulse through the study microphone at 12:03 AM, accompanied by distant footsteps heading to the kitchen. Sen was unconscious but alive when Kabir opened the door.',
+    keyDeduction: 'Kabir witnessed a breathing Sen, proving Aarav was not the killer.'
+  },
+  'ev-9': {
+    title: 'DIGITAL DRIFT CALIBRATION: KITCHEN MICROWAVE',
+    revelation: 'The digital clock in the kitchen runs exactly +16 minutes fast following a power surge 3 weeks prior. Meera’s log of Kabir at 12:19 AM was actually 12:03 AM atomic time.',
+    keyDeduction: 'Destroys Kabir’s murder window and confirms Kabir was in the kitchen while Sen was still breathing.'
+  },
+  'ev-10': {
+    title: 'HISTOPATHOLOGY AUDIT: AUTOPSY LUNG TISSUE',
+    revelation: 'Absence of pulmonary edema and carbon deposits reveals Sen suffered blunt force trauma to the occipital lobe at ~11:47 PM which caused a coma, but actual death occurred via mechanical velvet cushion smothering between 12:14 AM and 12:16 AM.',
+    keyDeduction: 'Definitive medical proof: Two perpetrators. One attacker (blunt trauma), one killer (suffocation).'
+  }
+};
 
 interface ClueDossierProps {
   evidenceList: EvidenceItem[];
@@ -27,6 +61,8 @@ interface ClueDossierProps {
   audioRevealedSecret: boolean;
   onAudioRevealedSecret: () => void;
   compact?: boolean;
+  reExaminedClues?: string[];
+  onReExamineClue?: (id: string) => void;
 }
 
 type EvidenceCategory = 'all' | 'audio' | 'cctv' | 'document' | 'photo';
@@ -38,13 +74,31 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
   onSetAudioSpeed,
   audioRevealedSecret,
   onAudioRevealedSecret,
-  compact = false
+  compact = false,
+  reExaminedClues = [],
+  onReExamineClue
 }) => {
   const [selectedItem, setSelectedItem] = useState<EvidenceItem | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [inspectingHidden, setInspectingHidden] = useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<EvidenceCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [localReExamined, setLocalReExamined] = useState<string[]>(reExaminedClues);
+
+  const activeReExamined = useMemo(() => {
+    return Array.from(new Set([...reExaminedClues, ...localReExamined]));
+  }, [reExaminedClues, localReExamined]);
+
+  const handleReExamine = (clueId: string) => {
+    if (activeReExamined.includes(clueId)) return;
+    setLocalReExamined(prev => [...prev, clueId]);
+    if (onReExamineClue) {
+      onReExamineClue(clueId);
+    }
+    sound.playHorrorStinger();
+    vfx.evidenceFocus(1800);
+    vfx.glitch(350);
+  };
 
   const getEvidenceIcon = (type: string) => {
     switch (type) {
@@ -119,26 +173,17 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
   }, [evidenceList]);
 
   return (
-    <div className="w-full tactical-frame tactical-corners rounded-lg p-4 sm:p-5 font-mono text-gray-200">
-      {/* Corner indicators */}
-      <span className="corner-tl text-red-500" />
-      <span className="corner-tr text-red-500" />
-      <span className="corner-bl text-red-500" />
-      <span className="corner-br text-red-500" />
-
+    <div className="w-full glass-panel rounded-lg p-4 sm:p-5 text-gray-200">
       {/* Frame Telemetry Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-800/80 mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-red-500 hud-pulse-red" />
+          <div className="w-2 h-2 rounded-full bg-red-500" />
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-red-500" />
             <h2 className="text-xs sm:text-sm font-bold text-gray-100 tracking-wider uppercase">
-              TACTICAL INTEL & EVIDENCE VAULT
+              Evidence Vault
             </h2>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-red-950/60 border border-red-900/60 text-red-300 font-bold">
-            CASE 17-B
-          </span>
         </div>
 
         <div className="flex items-center gap-2 text-[11px] text-gray-400">
@@ -343,11 +388,8 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
                       <span className="truncate font-bold text-xs">{item.title}</span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[9px] px-1 py-0.2 rounded bg-red-950/80 text-red-300 font-mono font-bold border border-red-900/50">
-                        #EV-{evidenceNum}
-                      </span>
-                      <span className="text-[9px] px-1 py-0.2 rounded bg-gray-900 text-gray-400 border border-gray-800">
-                        R{item.round}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-900/80 text-gray-400 border border-gray-800/50 font-mono">
+                        EV-{evidenceNum} · R{item.round}
                       </span>
                     </div>
                   </div>
@@ -366,14 +408,23 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
                 <div className="mt-2 pt-1.5 border-t border-gray-900/80 flex items-center justify-between text-[10px] text-gray-500 group-hover:text-gray-300">
                   <span className="flex items-center gap-1">
                     <Eye className="w-3 h-3 text-red-500" />
-                    <span>INSPECT FULL INTEL</span>
+                    <span>INSPECT</span>
                   </span>
-                  {item.hiddenDetails && (
-                    <span className="text-red-400 font-bold text-[9px] flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span>FORENSIC LOG AVAILABLE</span>
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {CLUE_REVELATIONS[item.id] && (
+                      activeReExamined.includes(item.id) ? (
+                        <span className="text-cyan-400 font-bold text-[9px] flex items-center gap-0.5">
+                          <Microscope className="w-2.5 h-2.5" />
+                          <span>AUDITED</span>
+                        </span>
+                      ) : (
+                        <span className="text-amber-400 font-bold text-[9px] flex items-center gap-0.5">
+                          <Microscope className="w-2.5 h-2.5" />
+                          <span>RE-EXAMINE</span>
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -384,11 +435,7 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
       {/* Selected Item Modal / Forensic Inspector */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-[#0a0a0f] border border-red-900/80 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.9)] max-h-[90vh] overflow-y-auto crt-overlay tactical-corners">
-            <span className="corner-tl text-red-500" />
-            <span className="corner-tr text-red-500" />
-            <span className="corner-bl text-red-500" />
-            <span className="corner-br text-red-500" />
+          <div className="w-full max-w-2xl bg-[#0a0a0f] border border-red-900/80 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.9)] max-h-[90vh] overflow-y-auto crt-overlay glass-panel">
 
             <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-4">
               <div className="flex items-center gap-2">
@@ -423,6 +470,104 @@ export const ClueDossier: React.FC<ClueDossierProps> = ({
             <div className="p-4 rounded border border-gray-800 bg-black/60 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed mb-4 font-mono">
               {selectedItem.content}
             </div>
+
+            {/* Forensic Significance */}
+            {selectedItem.significance && (
+              <div className="p-3 bg-red-950/30 border border-red-900/60 rounded mb-4 text-xs space-y-1 font-mono">
+                <div className="flex items-center gap-1.5 font-bold text-red-400 uppercase text-[10px]">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>FORENSIC SIGNIFICANCE & CAUSAL LINK:</span>
+                </div>
+                <p className="text-red-200/90 leading-relaxed">{selectedItem.significance}</p>
+              </div>
+            )}
+
+            {/* Connected Evidence Dependencies */}
+            {selectedItem.connectedClueIds && selectedItem.connectedClueIds.length > 0 && (
+              <div className="p-3 bg-black/60 border border-gray-800 rounded mb-4 text-xs space-y-1.5 font-mono">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
+                  INTERCONNECTED EVIDENCE THREADS:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedItem.connectedClueIds.map((cid) => {
+                    const targetClue = evidenceList.find(e => e.id === cid);
+                    return (
+                      <button
+                        key={cid}
+                        onClick={() => {
+                          if (targetClue) {
+                            setSelectedItem(targetClue);
+                            sound.playTick(false);
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded bg-black/90 border border-cyan-900 hover:border-cyan-500 text-[10px] text-cyan-300 hover:text-white transition cursor-pointer flex items-center gap-1"
+                      >
+                        <span>#{cid.toUpperCase()}</span>
+                        {targetClue && <span className="opacity-75 truncate max-w-[130px]">{targetClue.title.split(':')[1] || ''}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Contradicts Suspect Alibi Warning */}
+            {selectedItem.contradictsSuspect && (
+              <div className="p-3 bg-amber-950/30 border-l-4 border-amber-600 rounded mb-4 text-xs font-mono">
+                <span className="text-amber-400 font-bold uppercase text-[10px] block mb-0.5">
+                  ⚠️ CONTRADICTS SUSPECT ALIBI:
+                </span>
+                <span className="text-amber-200">
+                  This clue directly invalidates the sworn timeline statement of suspect: <strong>{selectedItem.contradictsSuspect.toUpperCase()}</strong>.
+                </span>
+              </div>
+            )}
+
+            {/* Clue Re-Examination / Late-Game Forensic Connection Section */}
+            {CLUE_REVELATIONS[selectedItem.id] && (
+              <div className="p-3.5 bg-gradient-to-br from-cyan-950/40 via-black/80 to-blue-950/30 border border-cyan-800/80 rounded mb-4 text-xs font-mono shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-cyan-900/60">
+                  <div className="flex items-center gap-1.5 text-cyan-300 font-bold uppercase text-[11px]">
+                    <Microscope className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>{CLUE_REVELATIONS[selectedItem.id].title}</span>
+                  </div>
+                  {activeReExamined.includes(selectedItem.id) ? (
+                    <span className="px-2 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-600 rounded text-[9px] font-bold">
+                      ✓ CONNECTION REVEALED
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-600 rounded text-[9px] font-bold animate-pulse">
+                      DEEP DEDUCTION UNLOCKED
+                    </span>
+                  )}
+                </div>
+
+                {activeReExamined.includes(selectedItem.id) ? (
+                  <div className="space-y-2">
+                    <p className="text-cyan-100/90 leading-relaxed text-[11px]">
+                      {CLUE_REVELATIONS[selectedItem.id].revelation}
+                    </p>
+                    <div className="p-2.5 bg-black/60 border-l-2 border-cyan-400 rounded text-cyan-300 text-[10px]">
+                      <strong className="text-cyan-200 uppercase block mb-0.5">CRITICAL DEDUCTIVE INFERENCE:</strong>
+                      {CLUE_REVELATIONS[selectedItem.id].keyDeduction}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+                    <p className="text-gray-300 text-[11px]">
+                      Advanced forensic spectrometry and acoustic drift analysis can extract hidden causal threads from this evidence.
+                    </p>
+                    <button
+                      onClick={() => handleReExamine(selectedItem.id)}
+                      className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.4)] hover:shadow-[0_0_20px_rgba(6,182,212,0.7)]"
+                    >
+                      <Microscope className="w-3.5 h-3.5" />
+                      <span>[🔬 RUN ADVANCED RE-EXAMINATION]</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Interactive Audio Tape Player for Evidence 04 */}
             {selectedItem.id === 'ev-4' && (

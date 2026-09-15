@@ -1,36 +1,51 @@
 import React from 'react';
-import { Clock, Play, Pause, Volume2, VolumeX, ShieldAlert, Sliders } from 'lucide-react';
+import { 
+  Clock, 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  ShieldAlert, 
+  Sliders, 
+  CheckCircle2, 
+  Lock, 
+  Settings
+} from 'lucide-react';
 
 interface HeaderTimerProps {
-  currentRound: number;
+  currentPhase: number;
   timeRemainingSeconds: number;
   isTimerRunning: boolean;
   onToggleTimer: () => void;
   audioMuted: boolean;
   onToggleMute: () => void;
   onOpenHostModal: () => void;
-  onSelectRound: (round: number) => void;
+  onOpenSettingsModal: () => void;
+  onSelectPhase: (phase: number) => void;
+  maxUnlockedPhase?: number;
 }
 
-const ROUND_NAMES = [
-  '0 — Arrival',
-  '1 — The First Lie',
-  '2 — Five Suspects',
-  '3 — Impossible Timeline',
-  '4 — Dead Man\'s Message',
-  '5 — False Murderer',
-  'Final — The House Remembers'
+export const PHASES = [
+  { id: 0, code: '00', shortTitle: 'BRIEFING', title: 'Phase 0: Case Briefing', desc: 'Victim Dossier & Location Telemetry' },
+  { id: 1, code: '01', shortTitle: 'CRIME SCENE', title: 'Phase 1: Crime Scene', desc: '3D Manor Walkthrough & Physical Clues' },
+  { id: 2, code: '02', shortTitle: 'SUSPECTS', title: 'Phase 2: Suspects', desc: '5 Profiles, Motives & Broken Alibis' },
+  { id: 3, code: '03', shortTitle: 'TIMELINE', title: 'Phase 3: The Impossible Timeline', desc: '12:03 CCTV vs 12:05 Audio & AI Trap' },
+  { id: 4, code: '04', shortTitle: 'FORENSICS', title: 'Phase 4: Forensics', desc: 'Dead Man Video & Chronology Triad' },
+  { id: 5, code: '05', shortTitle: 'CASE BOARD', title: 'Phase 5: Case Board', desc: 'Interactive Evidence & Red Threads' },
+  { id: 6, code: '06', shortTitle: 'ACCUSATION', title: 'Phase 6: Final Indictment', desc: 'Master Reconstruction & 60s Climax' }
 ];
 
 export const HeaderTimer: React.FC<HeaderTimerProps> = ({
-  currentRound,
+  currentPhase,
   timeRemainingSeconds,
   isTimerRunning,
   onToggleTimer,
   audioMuted,
   onToggleMute,
   onOpenHostModal,
-  onSelectRound
+  onOpenSettingsModal,
+  onSelectPhase,
+  maxUnlockedPhase = 6
 }) => {
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -38,115 +53,144 @@ export const HeaderTimer: React.FC<HeaderTimerProps> = ({
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
   };
 
-  const isLowTime = timeRemainingSeconds < 300; // < 5 mins
-  const isMedTime = timeRemainingSeconds < 600; // < 10 mins
+  const progressPercent = Math.min(100, Math.round(((currentPhase + 0.5) / PHASES.length) * 100));
+  const isLowTime = timeRemainingSeconds < 300;
+  const isMedTime = timeRemainingSeconds < 600;
 
   return (
-    <header className="w-full bg-[#0a0a0f] border-b border-red-950/80 px-4 py-3 select-none">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Left: Brand / Case Info */}
+    <header className="w-full bg-[#08080d] border-b border-gray-900 sticky top-0 z-40 select-none shadow-sm font-sans">
+      <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Left: Case ID & Agency Badge */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-red-950/60 border border-red-800 flex items-center justify-center text-red-500 shadow-[0_0_10px_rgba(229,9,20,0.3)]">
-            <ShieldAlert className="w-4 h-4 animate-pulse" />
+          <div className="w-8 h-8 rounded bg-red-950/20 border border-red-900/50 flex items-center justify-center text-red-500">
+            <ShieldAlert className="w-4 h-4 opacity-80" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold tracking-widest text-red-500">
-                PROMPT WAR 2.0
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-950/40 text-red-300 border border-red-900/60">
-                CASE 17-B
+              <span className="text-xs px-1.5 py-0.5 rounded bg-red-950/30 text-red-400 border border-red-900/40 font-mono font-medium">
+                CASE #17-B
               </span>
             </div>
-            <p className="text-[11px] text-gray-400 font-mono">
-              The House That Remembers
+            <p className="text-[10px] text-gray-500 mt-0.5">
+              The House That Remembers • Blackwood Manor
             </p>
           </div>
         </div>
 
-        {/* Center: Master 55-min Countdown */}
-        <div className="flex items-center gap-4">
-          <div
-            className={`flex items-center gap-2 px-4 py-1.5 rounded border font-mono tracking-wider transition ${
-              isLowTime
-                ? 'bg-red-950/70 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(255,0,0,0.5)]'
-                : isMedTime
-                ? 'bg-amber-950/40 border-amber-600 text-amber-300'
-                : 'bg-black/70 border-gray-800 text-gray-200'
-            }`}
-          >
-            <Clock className="w-4 h-4 opacity-75" />
-            <span className="text-xl font-bold font-mono tracking-widest">
-              {formatTime(timeRemainingSeconds)}
+        {/* Center: Investigation Progress Meter & Timer */}
+        <div className="flex flex-wrap items-center justify-center gap-6">
+          {/* Progress Bar */}
+          <div className="flex items-center gap-3">
+            <span className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+              PROGRESS
             </span>
+            <div className="w-24 sm:w-32 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-gray-800">
+              <div 
+                className="h-full bg-gray-400 transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
           </div>
 
-          {/* Facilitator Play/Pause */}
-          <button
-            onClick={onToggleTimer}
-            className="p-2 rounded border border-gray-800 bg-black/60 hover:border-gray-600 text-gray-300 hover:text-white transition"
-            title={isTimerRunning ? "Pause Timer" : "Start Timer"}
-          >
-            {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
+          {/* Master Countdown Display */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 px-3 py-1 rounded border transition ${
+                isLowTime
+                  ? 'bg-red-950/30 border-red-900/50 text-red-400'
+                  : isMedTime
+                  ? 'bg-amber-950/20 border-amber-900/40 text-amber-400'
+                  : 'bg-black/40 border-gray-800 text-gray-300'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 opacity-70" />
+              <span className="text-sm font-mono tracking-wider">
+                {formatTime(timeRemainingSeconds)}
+              </span>
+            </div>
+
+            <button
+              onClick={onToggleTimer}
+              className="p-1.5 rounded border border-gray-800 bg-black/40 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition cursor-pointer"
+              title={isTimerRunning ? "Pause Timer" : "Start Timer"}
+            >
+              {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
 
-        {/* Right: Sound, Judge Demo & Host Controls */}
+        {/* Right: GM Console, Settings, Mute */}
         <div className="flex items-center gap-2">
-          {/* Judge / Quick Demo Button */}
           <button
             onClick={onOpenHostModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-amber-500 bg-amber-950/40 hover:bg-amber-950/70 text-amber-300 text-xs font-mono font-bold transition shadow-[0_0_15px_rgba(245,158,11,0.3)] active:scale-95 cursor-pointer"
-            title="Judge / Quick Demo Controls & Speedrun Auto-Solve"
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            <span>⚡ JUDGE / DEMO</span>
-          </button>
-
-          <button
-            onClick={onToggleMute}
-            className="p-2 rounded border border-gray-800 bg-black/60 hover:border-red-600 text-gray-400 hover:text-red-400 transition cursor-pointer"
-            title={audioMuted ? "Unmute Audio" : "Mute Audio"}
-          >
-            {audioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={onOpenHostModal}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-red-900/60 bg-red-950/30 hover:bg-red-950/60 text-red-300 text-xs font-mono transition cursor-pointer"
-            title="Open Facilitator / Game Master HUD (Ctrl+Shift+H)"
+            className="p-1.5 rounded border border-transparent hover:border-gray-800 bg-transparent hover:bg-black/40 text-gray-600 hover:text-gray-300 transition cursor-pointer group flex items-center gap-2"
+            title="GM Console"
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">HOST HUD</span>
+            <span className="hidden sm:inline text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">GM Console</span>
+          </button>
+
+          <div className="w-px h-4 bg-gray-800 mx-1" />
+
+          <button
+            onClick={onOpenSettingsModal}
+            className="p-1.5 rounded border border-gray-800 bg-black/40 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition cursor-pointer"
+            title="Settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+          
+          <button
+            onClick={onToggleMute}
+            className="p-1.5 rounded border border-gray-800 bg-black/40 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition cursor-pointer"
+            title={audioMuted ? "Unmute Audio" : "Mute Audio"}
+          >
+            {audioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Round Progress Tracker Bar / Tactical Conduit */}
-      <div className="max-w-7xl mx-auto mt-2.5 pt-2 border-t border-gray-900/90 flex items-center justify-between overflow-x-auto gap-1 text-[11px] font-mono no-scrollbar">
-        {ROUND_NAMES.map((name, idx) => {
-          const isActive = currentRound === idx;
-          const isCompleted = currentRound > idx;
-          return (
-            <button
-              key={idx}
-              onClick={() => onSelectRound(idx)}
-              className={`px-2.5 py-1 rounded whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
-                isActive
-                  ? 'bg-red-950/80 border border-red-500 text-white font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)]'
-                  : isCompleted
-                  ? 'bg-black/60 border border-emerald-900/70 text-emerald-400 hover:border-emerald-600'
-                  : 'bg-black/30 border border-gray-900 text-gray-600 hover:text-gray-400'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-red-400 animate-ping' : isCompleted ? 'bg-emerald-500' : 'bg-gray-700'}`} />
-              <span className="text-[10px] opacity-75">[{idx}]</span>
-              <span>{name}</span>
-            </button>
-          );
-        })}
+      {/* Permanent Phase Navigation Ribbon */}
+      <div className="bg-[#0b0c12] border-t border-gray-900 px-4 py-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto gap-4 text-[11px] no-scrollbar">
+          {PHASES.map((phase) => {
+            const isActive = currentPhase === phase.id;
+            const isCompleted = currentPhase > phase.id;
+            const isLocked = phase.id > maxUnlockedPhase && !isCompleted && !isActive;
+
+            return (
+              <button
+                key={phase.id}
+                onClick={() => onSelectPhase(phase.id)}
+                className={`py-2.5 relative whitespace-nowrap transition flex items-center gap-2 cursor-pointer text-xs ${
+                  isActive
+                    ? 'text-gray-100 font-medium'
+                    : isCompleted
+                    ? 'text-gray-400 hover:text-gray-200'
+                    : isLocked
+                    ? 'text-gray-600 opacity-50'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+                title={phase.desc}
+              >
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-300 rounded-t-full" />
+                )}
+
+                {isCompleted ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                ) : isLocked ? (
+                  <Lock className="w-3 h-3 text-gray-600 shrink-0" />
+                ) : (
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-gray-300' : 'bg-gray-700'}`} />
+                )}
+
+                <span className="uppercase tracking-wider">{phase.shortTitle}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </header>
   );
 };
-

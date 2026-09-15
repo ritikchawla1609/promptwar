@@ -38,17 +38,17 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
   const TACTICAL_PROMPT_CHIPS = [
     {
       id: 'reconcile',
-      label: '⚡ RECONCILE 12:03 CCTV VS 12:05 AUDIO',
+      label: 'Reconcile 12:03 CCTV vs 12:05 Audio',
       prompt: "Reconcile Dr. Meera's 12:03 AM kitchen CCTV with Evidence 10 Study audio at 12:05 AM. Did she commit the crime?"
     },
     {
       id: 'drift',
-      label: '⚡ AUDIT KITCHEN CLOCK NTP SYNCHRONIZATION',
+      label: 'Audit Kitchen Clock NTP Sync',
       prompt: "Audit whether the kitchen analog/industrial clock matches server NTP telemetry or has physical time drift."
     },
     {
       id: 'kabir',
-      label: '⚡ TRACE KABIR SECURITY TERMINAL INTRUSION',
+      label: 'Trace Kabir Security Intrusion',
       prompt: "Determine if Kabir's 11:58 PM security console access could alter raw analog study audio recordings."
     }
   ];
@@ -79,37 +79,37 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
   };
 
   return (
-    <div className="w-full bg-[#08080c] border border-red-950/80 rounded-lg p-5 font-mono space-y-5 shadow-[0_0_30px_rgba(0,0,0,0.8)] relative overflow-hidden">
-      {/* Tactical HUD Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-red-950/90 gap-2">
+    <div className="w-full glass-panel p-5 sm:p-6 space-y-5 text-gray-200 font-sans shadow-xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-800/80 gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-3 h-3 bg-red-600 rounded-sm animate-pulse" />
-          <h2 className="text-sm md:text-base font-black text-gray-100 tracking-wider uppercase flex items-center gap-2">
-            <span>ROUND 3: THE IMPOSSIBLE TIMELINE // AI TRAP</span>
+          <div className="w-2.5 h-2.5 bg-red-500 rounded-full" />
+          <h2 className="text-sm md:text-base font-semibold text-gray-100 tracking-wider uppercase">
+            Phase 3: The Impossible Timeline // AI Trap
           </h2>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-red-400 font-bold bg-red-950/40 px-2.5 py-1 rounded border border-red-900/60">
-          <Activity className="w-3 h-3 animate-spin" />
-          <span>TACTICAL RECON STATUS: ANOMALY DETECTED</span>
+        <div className="flex items-center gap-2 text-[10px] text-red-400 font-mono bg-red-950/30 px-2.5 py-1 rounded border border-red-900/40">
+          <Activity className="w-3 h-3" />
+          <span>ANOMALY DETECTED</span>
         </div>
       </div>
 
-      {/* High-Impact 3D Visual Radar Feeds (Contradiction) */}
+      {/* High-Impact Visual Feeds (Contradiction) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Radar Feed A */}
-        <div className="relative p-4 rounded bg-gradient-to-b from-black/90 to-[#0e0e14] border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.1)] group">
-          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-800 font-bold">
+        <div className="relative p-4 rounded-lg bg-black/40 border border-amber-500/30">
+          <div className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-400 border border-amber-800/60 font-mono">
             CAM_KITCHEN_04
           </div>
-          <span className="text-[10px] text-amber-400 font-black tracking-widest block mb-1">
+          <span className="text-[10px] text-amber-400 font-semibold tracking-wider font-mono block mb-1">
             [FEED A] VISUAL CCTV RECORD
           </span>
-          <div className="text-sm font-black text-amber-300 mb-1 tracking-tight">
+          <div className="text-sm font-semibold text-amber-300 mb-1 tracking-tight font-mono">
             12:03:00 AM // DR. MEERA PATEL
           </div>
-          <div className="text-xs text-gray-300 bg-black/60 p-2.5 rounded border border-amber-950/60 flex items-center justify-between">
-            <span>LOC: Kitchen Service Hallway</span>
-            <span className="text-emerald-400 font-bold">VERIFIED PIXELS</span>
+          <div className="text-xs text-gray-300 bg-black/50 p-2 rounded border border-gray-800 flex items-center justify-between font-mono">
+            <span>LOC: Kitchen Corridor</span>
+            <span className="text-emerald-400 font-medium">VERIFIED PIXELS</span>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">
             Meera holds research notes. Claims she stayed until 12:10 AM.
@@ -117,50 +117,50 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
         </div>
 
         {/* Radar Feed B */}
-        <div className="relative p-4 rounded bg-gradient-to-b from-black/90 to-[#140b0e] border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)] group">
-          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-700 font-bold animate-pulse">
+        <div className="relative p-4 rounded-lg bg-black/40 border border-red-500/30">
+          <div className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 rounded bg-red-950/60 text-red-300 border border-red-800/60 font-mono">
             ACOUSTIC_SENS_10
           </div>
-          <span className="text-[10px] text-red-400 font-black tracking-widest block mb-1">
+          <span className="text-[10px] text-red-400 font-semibold tracking-wider font-mono block mb-1">
             [FEED B] STUDY AUDIO SENSOR
           </span>
-          <div className="text-sm font-black text-red-400 mb-1 tracking-tight">
+          <div className="text-sm font-semibold text-red-400 mb-1 tracking-tight font-mono">
             12:05:14 AM // PROFESSOR SEN
           </div>
-          <div className="text-xs text-red-200 bg-red-950/40 p-2.5 rounded border border-red-900/60">
+          <div className="text-xs text-red-200 bg-red-950/30 p-2 rounded border border-red-900/40 font-serif italic">
             "Meera... you shouldn't have come... what did you do..."
           </div>
-          <p className="text-[11px] text-red-300 mt-2 font-semibold">
-            Study sensor logs Sen's dying voice addressing Meera 134 seconds later!
+          <p className="text-[11px] text-red-300/90 mt-2">
+            Study sensor logs Sen's dying voice addressing Meera 134 seconds later.
           </p>
         </div>
       </div>
 
-      {/* Lethal Anomaly Callout Banner */}
-      <div className="p-3 bg-red-950/30 border-l-4 border-red-600 rounded flex items-center justify-between text-xs text-red-300">
-        <div className="flex items-center gap-2 font-bold">
-          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-          <span>COGNITIVE DILEMMA: Can one person be in two locations simultaneously?</span>
+      {/* Anomaly Callout Banner */}
+      <div className="p-3 bg-red-950/15 border-l-2 border-red-700 rounded-r flex items-center justify-between text-xs text-red-300">
+        <div className="flex items-center gap-2 font-medium">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>Paradox: Can one individual exist in two separate locations simultaneously?</span>
         </div>
-        <span className="text-[10px] text-gray-400 hidden sm:inline">USE 1-CLICK TACTICAL CHIPS BELOW</span>
+        <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">Use prompt chips below</span>
       </div>
 
       {/* Interactive AI Terminal */}
-      <div className="p-4 rounded border border-cyan-950/80 bg-black/90 space-y-3">
+      <div className="p-4 rounded-lg border border-gray-800/80 bg-black/40 space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-cyan-400 font-black uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs text-cyan-400 font-semibold uppercase tracking-wider font-mono">
             <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>INVESTIGATIVE AI ASSISTANT // TACTICAL TERMINAL</span>
+            <span>Investigative AI Assistant // Terminal</span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800 font-bold">
+          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-800/60 font-mono">
             CONFIDENCE: 94.2%
           </span>
         </div>
 
         {/* 1-Click Tactical Chips */}
         <div className="space-y-1.5">
-          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-            ⚡ 1-CLICK TACTICAL PROMPT OVERRIDES:
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold font-mono">
+            TACTICAL PROMPT OVERRIDES:
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {TACTICAL_PROMPT_CHIPS.map((chip) => (
@@ -172,7 +172,7 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
                   executePrompt(chip.prompt);
                 }}
                 disabled={isProcessing}
-                className="p-2 bg-[#0c121e] hover:bg-[#132238] border border-cyan-800/80 hover:border-cyan-400 rounded text-cyan-200 text-left text-[11px] font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="p-2.5 bg-black/50 hover:bg-gray-900 border border-gray-800 hover:border-cyan-700/80 rounded-md text-cyan-200 text-left text-[11px] font-medium transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span className="truncate">{chip.label}</span>
@@ -181,78 +181,78 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
           </div>
         </div>
 
-        {/* Manual Prompt Input (Optional) */}
+        {/* Manual Prompt Input */}
         <form onSubmit={handleQueryAi} className="flex gap-2 pt-1">
           <input
             type="text"
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
-            placeholder="Type custom prompt or select 1-click chip above..."
-            className="flex-1 bg-[#06080e] border border-gray-800 focus:border-cyan-500 rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-700 outline-none"
+            placeholder="Type custom inquiry or click a chip above..."
+            className="flex-1 bg-[#0a0a0f] border border-gray-800 focus:border-cyan-700 rounded-md px-3 py-1.5 text-xs text-gray-200 placeholder-gray-700 outline-none font-mono"
           />
           <button
             type="submit"
             disabled={isProcessing || !promptInput.trim()}
-            className="px-4 py-2 bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-xs font-black rounded transition flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="px-3.5 py-1.5 bg-cyan-900 hover:bg-cyan-800 border border-cyan-700/60 disabled:opacity-50 text-white text-xs font-medium rounded-md transition flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Radio className="w-3.5 h-3.5" />
-            <span>{isProcessing ? 'COMPUTING...' : 'DISPATCH'}</span>
+            <span>{isProcessing ? 'Computing...' : 'Dispatch'}</span>
           </button>
         </form>
 
         {/* AI Query Logs & Flawed Traps */}
         <div className="space-y-3 pt-2">
           {queries.map((q, idx) => (
-            <div key={idx} className="p-3.5 rounded border border-gray-800 bg-[#090b12] space-y-2.5">
-              <div className="text-[11px] text-gray-400 flex items-center justify-between border-b border-gray-800 pb-1.5">
-                <span className="font-bold text-gray-300 truncate">PROMPT: "{q.prompt}"</span>
+            <div key={idx} className="p-3.5 rounded-lg border border-gray-800/80 bg-black/50 space-y-2.5">
+              <div className="text-[11px] text-gray-400 flex items-center justify-between border-b border-gray-800/80 pb-1.5 font-mono">
+                <span className="text-gray-300 truncate font-sans">Prompt: "{q.prompt}"</span>
                 <span className="text-[9px] text-gray-500 shrink-0">{q.timestamp}</span>
               </div>
 
-              {/* Confident Flawed Response */}
-              <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
+              {/* Response */}
+              <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed font-mono">
                 {q.response}
               </div>
 
-              {/* COD-Style Override Button */}
-              <div className="pt-2 border-t border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              {/* Override Button */}
+              <div className="pt-2 border-t border-gray-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <button
                   onClick={() => {
                     sound.playHitmarker();
                     sound.playRadioChirp();
                     onInspectReasoning();
                   }}
-                  className="px-3 py-1.5 rounded bg-red-950/80 hover:bg-red-900 border border-red-600 text-red-200 text-xs font-black transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(239,68,68,0.3)] active:scale-95 cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-red-950/60 hover:bg-red-900/80 border border-red-700/70 text-red-200 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer font-mono"
                 >
                   <Bug className="w-3.5 h-3.5 text-red-400" />
-                  <span>{reasoningInspected ? 'COLLAPSE MODEL TRACE' : '⚠ OVERRIDE: EXPOSE 94.2% AI BIAS'}</span>
+                  <span>{reasoningInspected ? 'Collapse Model Trace' : 'Expose AI Cognitive Flaw'}</span>
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-amber-400 font-bold">MODEL CONFIDENCE: 94.2%</span>
+                <div className="flex items-center gap-2 font-mono">
+                  <span className="text-[10px] text-amber-400/90">CONFIDENCE: 94.2%</span>
                   {reasoningInspected && (
-                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800 animate-pulse">
-                      +150 XP TRAP EVADED
+                    <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
+                      Trap Evaded
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Revealed Flawed Reasoning in 3D-styled Diff Card */}
+              {/* Revealed Flawed Reasoning */}
               {reasoningInspected && (
-                <div className="p-3.5 bg-red-950/30 border border-red-700/80 rounded space-y-2.5 text-xs text-red-200 animate-fade-in">
-                  <div className="flex items-center gap-1 text-red-400 font-black uppercase text-[11px]">
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                    <span>COGNITIVE TRAP EXPOSED // WHY THE AI FAILED:</span>
+                <div className="p-3.5 bg-red-950/20 border border-red-800/50 rounded-lg space-y-2 text-xs text-red-200 animate-fade-in font-sans">
+                  <div className="flex items-center gap-1.5 text-red-400 font-semibold uppercase text-[11px] font-mono">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Cognitive Flaw Exposed:</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
-                    <div className="p-2.5 rounded bg-red-950/60 border border-red-900 text-red-300">
-                      <span className="font-bold text-red-400 block mb-0.5">❌ AI FALSE ASSUMPTION:</span>
+                    <div className="p-2.5 rounded-md bg-red-950/40 border border-red-900/60 text-red-300">
+                      <span className="font-semibold text-red-400 block mb-0.5 font-mono">AI False Assumption:</span>
                       "Assumed all hardware clocks were perfectly synced and Kabir edited historical CCTV footage."
                     </div>
-                    <div className="p-2.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300">
-                      <span className="font-bold text-emerald-400 block mb-0.5">🎯 PHYSICAL REALITY:</span>
+                    <div className="p-2.5 rounded-md bg-emerald-950/40 border border-emerald-900/60 text-emerald-300">
+                      <span className="font-semibold text-emerald-400 block mb-0.5 font-mono">Physical Reality:</span>
                       "Kitchen clock ran 9 minutes slow! Meera was in the Study at 11:47 PM, not 12:03 AM."
                     </div>
                   </div>
@@ -262,8 +262,8 @@ export const Round3AiTrap: React.FC<Round3AiTrapProps> = ({
           ))}
 
           {queries.length === 0 && (
-            <div className="text-center py-5 text-xs text-gray-500 italic bg-black/40 rounded border border-gray-900">
-              Click any 1-Click Tactical Chip above to trigger the AI analysis.
+            <div className="text-center py-5 text-xs text-gray-500 italic bg-black/30 rounded-lg border border-gray-900">
+              Click a prompt chip above to run AI timeline reconciliation.
             </div>
           )}
         </div>

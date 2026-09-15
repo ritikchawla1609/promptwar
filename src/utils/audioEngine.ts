@@ -2,10 +2,44 @@ class HorrorAudioEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
 
+  // Volume channels (0.0 to 1.0)
+  private masterVol: number = 0.85;
+  private musicVol: number = 0.65;
+  private sfxVol: number = 0.80;
+  private voiceVol: number = 0.90;
+
+  // Audio Node Busses
+  private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+
+  // Ambient soundscape nodes
+  private isAmbientRunning: boolean = false;
+  private ambientOsc1: OscillatorNode | null = null;
+  private ambientNoise: AudioBufferSourceNode | null = null;
+  private ambientHum: OscillatorNode | null = null;
+  private ambientFilter: BiquadFilterNode | null = null;
+  private ambientSubGain: GainNode | null = null;
+  private creakInterval: ReturnType<typeof setInterval> | null = null;
+  private currentMood: 'exploration' | 'suspicion' | 'discovery' | 'revelation' | 'silence' = 'exploration';
+
   private getContext(): AudioContext {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
+
+      // Setup master audio graph
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVol, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
+
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+      this.musicGain.connect(this.masterGain);
+
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.setValueAtTime(this.sfxVol, this.ctx.currentTime);
+      this.sfxGain.connect(this.masterGain);
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
@@ -13,8 +47,21 @@ class HorrorAudioEngine {
     return this.ctx;
   }
 
+  public getSfxDestination(): AudioNode {
+    this.getContext();
+    return this.sfxGain || this.ctx!.destination;
+  }
+
+  public getMusicDestination(): AudioNode {
+    this.getContext();
+    return this.musicGain || this.ctx!.destination;
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(muted ? 0 : this.masterVol, this.ctx.currentTime);
+    }
     if (muted && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -22,6 +69,231 @@ class HorrorAudioEngine {
 
   public getMuted(): boolean {
     return this.isMuted;
+  }
+
+  // Volume getters & setters
+  public setMasterVolume(val: number) {
+    this.masterVol = Math.max(0, Math.min(1, val));
+    if (this.masterGain && this.ctx && !this.isMuted) {
+      this.masterGain.gain.setValueAtTime(this.masterVol, this.ctx.currentTime);
+    }
+  }
+
+  public setMusicVolume(val: number) {
+    this.musicVol = Math.max(0, Math.min(1, val));
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+    }
+  }
+
+  public setSfxVolume(val: number) {
+    this.sfxVol = Math.max(0, Math.min(1, val));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVol, this.ctx.currentTime);
+    }
+  }
+
+  public setVoiceVolume(val: number) {
+    this.voiceVol = Math.max(0, Math.min(1, val));
+  }
+
+  public getMasterVolume(): number { return this.masterVol; }
+  public getMusicVolume(): number { return this.musicVol; }
+  public getSfxVolume(): number { return this.sfxVol; }
+  public getVoiceVolume(): number { return this.voiceVol; }
+
+  // Procedural Atmospheric Ambient Loop (Wind, Room Tone, Electrical Hum)
+  public startAmbient() {
+    if (this.isMuted || this.isAmbientRunning) return;
+    try {
+      const ctx = this.getContext();
+      const dest = this.getMusicDestination();
+      const now = ctx.currentTime;
+
+      this.ambientSubGain = ctx.createGain();
+      this.ambientSubGain.gain.setValueAtTime(0.001, now);
+      this.ambientSubGain.gain.linearRampToValueAtTime(0.22, now + 2.5);
+      this.ambientSubGain.connect(dest);
+
+      // Low 55Hz Manor Resonance Drone
+      this.ambientOsc1 = ctx.createOscillator();
+      this.ambientOsc1.type = 'sine';
+      this.ambientOsc1.frequency.setValueAtTime(55, now);
+
+      // Slow Breathing LFO
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.setValueAtTime(0.08, now);
+      lfoGain.gain.setValueAtTime(4, now);
+      lfo.connect(this.ambientOsc1.frequency);
+      lfo.start(now);
+
+      // Distant 60Hz Electrical Line Hum
+      this.ambientHum = ctx.createOscillator();
+      this.ambientHum.type = 'sawtooth';
+      this.ambientHum.frequency.setValueAtTime(60, now);
+      const humFilter = ctx.createBiquadFilter();
+      humFilter.type = 'lowpass';
+      humFilter.frequency.setValueAtTime(140, now);
+      const humGain = ctx.createGain();
+      humGain.gain.setValueAtTime(0.035, now);
+      this.ambientHum.connect(humFilter);
+      humFilter.connect(humGain);
+      humGain.connect(this.ambientSubGain);
+
+      // Filtered Wind Noise
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      this.ambientNoise = ctx.createBufferSource();
+      this.ambientNoise.buffer = buffer;
+      this.ambientNoise.loop = true;
+
+      this.ambientFilter = ctx.createBiquadFilter();
+      this.ambientFilter.type = 'bandpass';
+      this.ambientFilter.frequency.setValueAtTime(180, now);
+      this.ambientFilter.Q.setValueAtTime(3.5, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.06, now);
+
+      this.ambientNoise.connect(this.ambientFilter);
+      this.ambientFilter.connect(noiseGain);
+      noiseGain.connect(this.ambientSubGain);
+
+      this.ambientOsc1.connect(this.ambientSubGain);
+      this.ambientOsc1.start(now);
+      this.ambientHum.start(now);
+      this.ambientNoise.start(now);
+
+      this.isAmbientRunning = true;
+
+      // Occasional random distant creak
+      if (this.creakInterval) clearInterval(this.creakInterval);
+      this.creakInterval = setInterval(() => {
+        if (Math.random() > 0.65 && this.isAmbientRunning && !this.isMuted) {
+          this.playFootstep();
+        }
+      }, 15000);
+    } catch {
+      // ignore
+    }
+  }
+
+  public stopAmbient() {
+    if (!this.isAmbientRunning) return;
+    try {
+      if (this.ambientSubGain && this.ctx) {
+        const now = this.ctx.currentTime;
+        this.ambientSubGain.gain.linearRampToValueAtTime(0.001, now + 1);
+        setTimeout(() => {
+          try {
+            this.ambientOsc1?.stop();
+            this.ambientHum?.stop();
+            this.ambientNoise?.stop();
+            this.ambientOsc1?.disconnect();
+            this.ambientHum?.disconnect();
+            this.ambientNoise?.disconnect();
+          } catch {}
+          this.isAmbientRunning = false;
+        }, 1100);
+      } else {
+        this.isAmbientRunning = false;
+      }
+      if (this.creakInterval) {
+        clearInterval(this.creakInterval);
+        this.creakInterval = null;
+      }
+    } catch {
+      this.isAmbientRunning = false;
+    }
+  }
+
+  // Dynamic Music & Atmospheric Mood States
+  public setMusicMood(mood: 'exploration' | 'suspicion' | 'discovery' | 'revelation' | 'silence') {
+    this.currentMood = mood;
+    if (this.isMuted) return;
+
+    if (mood === 'silence') {
+      this.fadeToSilence(1200);
+      return;
+    }
+
+    if (!this.isAmbientRunning) {
+      this.startAmbient();
+    }
+
+    try {
+      const ctx = this.getContext();
+      const dest = this.getMusicDestination();
+      const now = ctx.currentTime;
+
+      if (mood === 'discovery') {
+        // Hollow high chime + sub drop
+        const chime = ctx.createOscillator();
+        const cGain = ctx.createGain();
+        chime.type = 'sine';
+        chime.frequency.setValueAtTime(880, now);
+        chime.frequency.exponentialRampToValueAtTime(1760, now + 0.3);
+        cGain.gain.setValueAtTime(0.18, now);
+        cGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        chime.connect(cGain);
+        cGain.connect(dest);
+        chime.start(now);
+        chime.stop(now + 0.85);
+      } else if (mood === 'suspicion') {
+        // Dissonant interval drone (55Hz + 58.27Hz minor second)
+        const susOsc = ctx.createOscillator();
+        const susGain = ctx.createGain();
+        susOsc.type = 'triangle';
+        susOsc.frequency.setValueAtTime(58.27, now);
+        susGain.gain.setValueAtTime(0.001, now);
+        susGain.gain.linearRampToValueAtTime(0.08, now + 1);
+        susGain.gain.linearRampToValueAtTime(0.001, now + 6);
+        susOsc.connect(susGain);
+        susGain.connect(dest);
+        susOsc.start(now);
+        susOsc.stop(now + 6.2);
+      } else if (mood === 'revelation') {
+        this.playHorrorStinger();
+      }
+    } catch {}
+  }
+
+  public getMusicMood() {
+    return this.currentMood;
+  }
+
+  // Strategic Silence before major revelations
+  public fadeToSilence(durationMs = 1500) {
+    if (!this.ambientSubGain || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.ambientSubGain.gain.setValueAtTime(this.ambientSubGain.gain.value, now);
+      this.ambientSubGain.gain.linearRampToValueAtTime(0.001, now + durationMs / 1000);
+    } catch {}
+  }
+
+  // Audio Ducking when dialogue plays
+  public duckAudio(factor = 0.25, durationMs = 250) {
+    if (!this.musicGain || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
+      this.musicGain.gain.linearRampToValueAtTime(this.musicVol * factor, now + durationMs / 1000);
+    } catch {}
+  }
+
+  public restoreAudio(durationMs = 350) {
+    if (!this.musicGain || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
+      this.musicGain.gain.linearRampToValueAtTime(this.musicVol, now + durationMs / 1000);
+    } catch {}
   }
 
   // Vintage mechanical clock tick
@@ -759,6 +1031,109 @@ class HorrorAudioEngine {
     } catch {
       setTimeout(safeEnd, 1500);
     }
+  }
+
+  // Natural Character-Specific Human-like Voice Presentation with Audio Ducking
+  public speakSuspect(
+    character: 'aarav' | 'riya' | 'kabir' | 'meera' | 'dev' | 'sen' | 'system' | string,
+    text: string,
+    onEnd?: () => void
+  ) {
+    let hasEnded = false;
+    const safeEnd = () => {
+      if (!hasEnded) {
+        hasEnded = true;
+        this.restoreAudio(350);
+        if (onEnd) onEnd();
+      }
+    };
+
+    if (this.isMuted || !('speechSynthesis' in window)) {
+      setTimeout(safeEnd, 1500);
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      this.duckAudio(0.2, 300);
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.volume = this.voiceVol;
+
+      // Character-specific acoustic parameters
+      switch (character.toLowerCase()) {
+        case 'aarav':
+          utterance.pitch = 1.12;
+          utterance.rate = 1.06;
+          break;
+        case 'riya':
+          utterance.pitch = 0.98;
+          utterance.rate = 0.96;
+          break;
+        case 'kabir':
+          utterance.pitch = 0.78;
+          utterance.rate = 1.10;
+          break;
+        case 'meera':
+          utterance.pitch = 1.20;
+          utterance.rate = 0.88;
+          break;
+        case 'dev':
+          utterance.pitch = 0.58;
+          utterance.rate = 0.76;
+          break;
+        case 'sen':
+          utterance.pitch = 0.85;
+          utterance.rate = 0.90;
+          break;
+        default:
+          utterance.pitch = 1.0;
+          utterance.rate = 1.0;
+          break;
+      }
+
+      // Voice selection
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const isFemale = ['riya', 'meera'].includes(character.toLowerCase());
+        const matchedVoice = voices.find((v) => {
+          if (!v.lang.startsWith('en')) return false;
+          if (isFemale) {
+            return v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Victoria');
+          } else {
+            return v.name.includes('Male') || v.name.includes('David') || v.name.includes('Daniel') || v.name.includes('George');
+          }
+        }) || voices.find((v) => v.lang.startsWith('en'));
+
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        }
+      }
+
+      const wordsCount = text.split(/\s+/).length;
+      const estimatedDurationMs = Math.max(3000, (wordsCount / 1.5) * 1000 + 2000);
+      const fallbackTimer = setTimeout(safeEnd, estimatedDurationMs);
+
+      utterance.onend = () => {
+        clearTimeout(fallbackTimer);
+        safeEnd();
+      };
+      utterance.onerror = () => {
+        clearTimeout(fallbackTimer);
+        safeEnd();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setTimeout(safeEnd, 1500);
+    }
+  }
+
+  public stopAllSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    this.restoreAudio(200);
   }
 }
 

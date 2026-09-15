@@ -119,17 +119,17 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 3: Meera */}
       {phase === 3 && (
-        <div className="text-center space-y-6 animate-glitch">
-          <div className="w-32 h-32 mx-auto rounded-full border-4 border-red-700 bg-red-950/40 flex items-center justify-center text-4xl font-bold text-red-300">
+        <div className="text-center space-y-5 animate-fade-in max-w-md">
+          <div className="w-24 h-24 mx-auto rounded-2xl border border-red-500/40 bg-red-950/30 flex items-center justify-center text-3xl font-semibold text-red-300">
             M
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-100">
-            DR. MEERA PATEL
+          <h2 className="text-2xl md:text-3xl font-semibold text-gray-100 font-sans">
+            Dr. Meera Patel
           </h2>
-          <div className="text-2xl md:text-3xl font-black text-red-500 tracking-widest uppercase">
-            SHE ATTACKED HIM.
+          <div className="text-xl md:text-2xl font-bold text-red-400 tracking-wider uppercase font-mono">
+            She Attacked Him.
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 font-sans">
             Confronted Sen at 11:47 PM. Believed she killed him. Fled the room.
           </p>
         </div>
@@ -137,17 +137,17 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 4: Kabir */}
       {phase === 4 && (
-        <div className="text-center space-y-6 animate-glitch">
-          <div className="w-32 h-32 mx-auto rounded-full border-4 border-amber-600 bg-amber-950/40 flex items-center justify-center text-4xl font-bold text-amber-300">
+        <div className="text-center space-y-5 animate-fade-in max-w-md">
+          <div className="w-24 h-24 mx-auto rounded-2xl border border-amber-500/40 bg-amber-950/30 flex items-center justify-center text-3xl font-semibold text-amber-300">
             K
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-100">
-            KABIR VARMA
+          <h2 className="text-2xl md:text-3xl font-semibold text-gray-100 font-sans">
+            Kabir Varma
           </h2>
-          <div className="text-2xl md:text-3xl font-black text-amber-400 tracking-widest uppercase">
-            HE CAUSED THE BLACKOUT.
+          <div className="text-xl md:text-2xl font-bold text-amber-400 tracking-wider uppercase font-mono">
+            He Caused the Blackout.
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 font-sans">
             Overloaded the transformer at 12:13 AM to wipe security telemetry.
           </p>
         </div>
@@ -155,17 +155,17 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 5: Riya */}
       {phase === 5 && (
-        <div className="text-center space-y-6 animate-glitch">
-          <div className="w-32 h-32 mx-auto rounded-full border-4 border-cyan-600 bg-cyan-950/40 flex items-center justify-center text-4xl font-bold text-cyan-300">
+        <div className="text-center space-y-5 animate-fade-in max-w-md">
+          <div className="w-24 h-24 mx-auto rounded-2xl border border-cyan-500/40 bg-cyan-950/30 flex items-center justify-center text-3xl font-semibold text-cyan-300">
             R
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-100">
-            RIYA SHARMA
+          <h2 className="text-2xl md:text-3xl font-semibold text-gray-100 font-sans">
+            Riya Sharma
           </h2>
-          <div className="text-2xl md:text-3xl font-black text-cyan-400 tracking-widest uppercase">
-            SHE KNEW THE TRUTH.
+          <div className="text-xl md:text-2xl font-bold text-cyan-400 tracking-wider uppercase font-mono">
+            She Knew the Truth.
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 font-sans">
             Planted wiretaps to extort Sen over the historic cover-up.
           </p>
         </div>
@@ -173,17 +173,17 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 6: Aarav */}
       {phase === 6 && (
-        <div className="text-center space-y-6 animate-glitch">
-          <div className="w-32 h-32 mx-auto rounded-full border-4 border-purple-600 bg-purple-950/40 flex items-center justify-center text-4xl font-bold text-purple-300">
+        <div className="text-center space-y-5 animate-fade-in max-w-md">
+          <div className="w-24 h-24 mx-auto rounded-2xl border border-purple-500/40 bg-purple-950/30 flex items-center justify-center text-3xl font-semibold text-purple-300">
             A
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-100">
-            AARAV MEHTA
+          <h2 className="text-2xl md:text-3xl font-semibold text-gray-100 font-sans">
+            Aarav Mehta
           </h2>
-          <div className="text-2xl md:text-3xl font-black text-purple-400 tracking-widest uppercase">
-            HE STOLE THE EVIDENCE.
+          <div className="text-xl md:text-2xl font-bold text-purple-400 tracking-wider uppercase font-mono">
+            He Stole the Evidence.
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 font-sans">
             Slipped into the East Wing at 11:47 PM to steal Blackwood's research journals.
           </p>
         </div>
@@ -191,17 +191,17 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 7: Dev */}
       {phase === 7 && (
-        <div className="text-center space-y-8 animate-fade-in">
-          <div className="w-36 h-36 mx-auto rounded-full border-4 border-red-500 bg-black flex items-center justify-center text-5xl font-black text-red-500 shadow-[0_0_50px_rgba(255,0,0,0.8)]">
+        <div className="text-center space-y-6 animate-fade-in max-w-lg">
+          <div className="w-28 h-28 mx-auto rounded-2xl border border-red-500 bg-red-950/40 flex items-center justify-center text-4xl font-bold text-red-400 shadow-xl shadow-red-950/50">
             DEV
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-gray-100 tracking-tight">
-            DEVRAJ NEGI
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-100 font-sans tracking-tight">
+            Devraj Negi
           </h2>
-          <div className="text-3xl md:text-5xl font-black text-red-600 tracking-widest uppercase glitch-text" data-text="HE WAITED.">
+          <div className="text-2xl md:text-4xl font-black text-red-500 tracking-widest uppercase font-mono">
             HE WAITED.
           </div>
-          <p className="text-xs md:text-sm text-gray-400 max-w-lg mx-auto leading-relaxed">
+          <p className="text-xs md:text-sm text-gray-300 font-sans max-w-lg mx-auto leading-relaxed">
             Twenty years ago, Professor Sen covered up the experiment that killed Dev's child. Dev didn't plan to kill Sen that night—until he found Sen wounded. During the blackout, Dev used the servant passage to end his life at 12:15 AM.
           </p>
         </div>
@@ -209,11 +209,11 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
 
       {/* Phase 8: You Solved The Murder */}
       {phase === 8 && (
-        <div className="text-center space-y-4 animate-fade-in">
-          <h1 className="text-3xl md:text-5xl font-bold text-gray-100 tracking-widest uppercase">
-            YOU SOLVED THE MURDER.
+        <div className="text-center space-y-3 animate-fade-in">
+          <h1 className="text-2xl md:text-4xl font-semibold text-gray-100 tracking-wider uppercase font-sans">
+            You Solved The Murder.
           </h1>
-          <p className="text-xs text-gray-500 uppercase tracking-wider">
+          <p className="text-xs text-gray-400 uppercase tracking-wider font-mono">
             All layers decrypted. All cognitive traps dismantled.
           </p>
         </div>
@@ -222,34 +222,34 @@ export const GlitchClimax: React.FC<GlitchClimaxProps> = ({ onResetGame }) => {
       {/* Phase 9: But who killed the first victim? */}
       {phase === 9 && (
         <div className="text-center space-y-6 animate-pulse">
-          <h2 className="text-3xl md:text-5xl font-black text-red-500 tracking-widest uppercase">
-            BUT WHO KILLED THE FIRST VICTIM?
+          <h2 className="text-2xl md:text-4xl font-bold text-red-400 tracking-wider uppercase font-sans">
+            But who killed the first victim?
           </h2>
         </div>
       )}
 
       {/* Phase 10: Professor Blackwood Hook */}
       {phase === 10 && (
-        <div className="max-w-2xl text-center space-y-6 p-8 border border-red-900/80 bg-black/90 rounded-lg shadow-[0_0_50px_rgba(139,0,0,0.5)]">
-          <div className="text-xs text-red-500 font-bold tracking-widest uppercase">
-            BLACKWOOD ARCHIVES • CASE FILE 01-A
+        <div className="max-w-2xl text-center space-y-5 p-8 glass-panel border border-red-500/30 rounded-xl shadow-2xl">
+          <div className="text-[11px] text-red-400 font-semibold tracking-wider uppercase font-mono">
+            Blackwood Archives • Case File 01-A
           </div>
-          <div className="text-4xl md:text-5xl font-black text-gray-100 font-serif">
-            PROFESSOR BLACKWOOD
+          <div className="text-3xl md:text-4xl font-bold text-gray-100 font-serif">
+            Professor Blackwood
           </div>
-          <p className="text-lg md:text-xl font-bold text-red-400 uppercase tracking-wider">
-            THE MURDER YOU JUST SOLVED WAS NOT THE FIRST ONE.
+          <p className="text-base md:text-lg font-semibold text-red-400 uppercase tracking-wider font-sans">
+            The murder you just solved was not the first one.
           </p>
-          <div className="p-4 bg-red-950/30 border border-red-900/60 rounded text-xs text-gray-300 leading-relaxed font-mono">
+          <div className="p-4 bg-white/[0.02] border border-gray-800/60 rounded-lg text-xs text-gray-300 leading-relaxed font-sans text-left">
             Twenty years ago, Professor Blackwood discovered the truth about the forbidden experiments. He vanished into the foundation walls of this very house. Some say the clocks didn't stop ticking when Sen died—they stopped when Blackwood was buried.
           </div>
-          <div className="pt-4">
+          <div className="pt-3">
             <button
               onClick={onResetGame}
-              className="px-6 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-200 font-bold text-xs uppercase tracking-wider rounded transition flex items-center gap-2 mx-auto"
+              className="px-6 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-700/60 text-gray-200 font-medium text-xs uppercase tracking-wider rounded-lg transition flex items-center gap-2 mx-auto cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
-              RESET INVESTIGATION TERMINAL
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Investigation Terminal
             </button>
           </div>
         </div>
