@@ -1,264 +1,705 @@
-import React, { useState } from 'react';
-import { Shield, CheckCircle2, Lock, Terminal, Zap, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { EVIDENCE_ITEMS } from './data/evidence';
+import { SUSPECTS } from './data/suspects';
+import { EvidenceItem, SuspectId, FinalBossSubmission } from './types/game';
+import { sound } from './utils/audioEngine';
+import { HorrorIntro } from './components/HorrorIntro';
+import { HeaderTimer } from './components/HeaderTimer';
+import { ClueDossier } from './components/ClueDossier';
+import { Round2Locks } from './components/Round2Locks';
+import { Round3AiTrap } from './components/Round3AiTrap';
+import { Round4DeadMan } from './components/Round4DeadMan';
+import { Round5FalseMurderer } from './components/Round5FalseMurderer';
+import { FinalBossPrompt } from './components/FinalBossPrompt';
+import { GlitchClimax } from './components/GlitchClimax';
+import { HostControlModal } from './components/HostControlModal';
+import { NarrativeBridgeModal } from './components/NarrativeBridgeModal';
+import { EvidenceBoard } from './components/EvidenceBoard';
+import { Phase0Briefing } from './components/Phase0Briefing';
+import { Phase1CrimeScene } from './components/Phase1CrimeScene';
+import { CrimeSceneObjectives } from './types/game';
+import { 
+  ShieldAlert, 
+  ArrowRight, 
+  ChevronRight, 
+  AlertTriangle,
+  Volume2,
+  Clock,
+  CheckCircle2,
+  } from 'lucide-react';
 
-type SubPromptState = 'locked' | 'active' | 'completed';
-
-interface SubPrompt {
-  id: string;
-  title: string;
-  description: string;
-  state: SubPromptState;
-  expectedAnswer: string; // Mock validation
-  userAnswer: string;
-}
+import { House3D } from './components/House3D';
+import { BloodSplatterOverlay } from './components/BloodSplatterOverlay';
+import { VFXOverlay } from './components/VFXOverlay';
+import { SettingsModal } from './components/SettingsModal';
+import { vfx } from './utils/vfxEngine';
+import { GameSettings, DEFAULT_SETTINGS, loadSavedGame, saveGame, clearSavedGame } from './utils/gameStorage';
 
 export const App: React.FC = () => {
-  const [subPrompts, setSubPrompts] = useState<SubPrompt[]>([
-    {
-      id: 'sp1',
-      title: 'Context Extraction',
-      description: 'Write a prompt to extract the hidden context variable from the dataset. (Hint: type "context_var")',
-      state: 'active',
-      expectedAnswer: 'context_var',
-      userAnswer: ''
-    },
-    {
-      id: 'sp2',
-      title: 'Persona Bypass',
-      description: 'Draft a prompt that bypasses the strict AI persona guardrails. (Hint: type "ignore_rules")',
-      state: 'locked',
-      expectedAnswer: 'ignore_rules',
-      userAnswer: ''
-    },
-    {
-      id: 'sp3',
-      title: 'Logic Constraint',
-      description: 'Provide the logic constraint parameter required to unbind the model. (Hint: type "unbind=true")',
-      state: 'locked',
-      expectedAnswer: 'unbind=true',
-      userAnswer: ''
+  // Check if saved state exists in localStorage
+  const savedState = React.useMemo(() => loadSavedGame(), []);
+
+  // Master Game State
+  const [currentRound, setCurrentRound] = useState<number>(savedState?.currentRound ?? 0);
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(savedState?.hasSeenIntro ?? false);
+  const [crimeSceneObjectives, setCrimeSceneObjectives] = useState<CrimeSceneObjectives>(
+    savedState?.crimeSceneObjectives ?? {
+      clockInspected: false,
+      tapeFound: false,
+      bloodExamined: false,
+      doorInspected: false,
+      luminolRevealed: false
     }
-  ]);
+  );
+  const [timeRemaining, setTimeRemaining] = useState<number>(savedState?.timeRemaining ?? 55 * 60); // 55 mins
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [audioMuted, setAudioMuted] = useState<boolean>(false);
+  const [isHostModalOpen, setIsHostModalOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isClimaxTriggered, setIsClimaxTriggered] = useState<boolean>(false);
 
-  const [masterPrompt, setMasterPrompt] = useState('');
-  const [isVictory, setIsVictory] = useState(false);
+  // Settings State
+  const [settings, setSettings] = useState<GameSettings>(savedState?.settings ?? DEFAULT_SETTINGS);
 
-  const activeIndex = subPrompts.findIndex(sp => sp.state === 'active');
-  const allCompleted = subPrompts.every(sp => sp.state === 'completed');
+  // 3D Mansion vs Terminal vs Detective Wall Mode
+      
+  // Subround Narrative Milestone Bridge Modal
+  const [bridgeModal, setBridgeModal] = useState<{
+    isOpen: boolean;
+    fromRound: number;
+    toRound: number;
+    title: string;
+    discovery: string;
+    nextObjective: string;
+  }>({
+    isOpen: false,
+    fromRound: 1,
+    toRound: 2,
+    title: '',
+    discovery: '',
+    nextObjective: ''
+  });
 
-  const handleSubPromptChange = (id: string, value: string) => {
-    setSubPrompts(prev => prev.map(sp => sp.id === id ? { ...sp, userAnswer: value } : sp));
+  // Round 1 State
+  const [audioSpeed, setAudioSpeed] = useState<number>(1.0);
+  const [audioRevealedSecret, setAudioRevealedSecret] = useState<boolean>(savedState?.audioRevealedSecret ?? false);
+
+  // Round 2 State: Suspect Locks
+  const [suspectLocks, setSuspectLocks] = useState<Record<SuspectId, boolean>>(
+    savedState?.suspectLocks ?? {
+      aarav: false,
+      riya: false,
+      kabir: false,
+      meera: false,
+      dev: false
+    }
+  );
+
+  // Clue Re-Examination State
+  const [reExaminedClues, setReExaminedClues] = useState<string[]>(savedState?.reExaminedClues ?? []);
+
+  // Round 3 State: AI queries
+  const [aiQueries, setAiQueries] = useState<Array<{
+    prompt: string;
+    response: string;
+    reasoning: string;
+    timestamp: string;
+  }>>([]);
+  const [reasoningInspected, setReasoningInspected] = useState<boolean>(false);
+
+  // Round 4 State: Videos & Time Distinctions
+  const [hiddenVideoUnlocked, setHiddenVideoUnlocked] = useState<boolean>(savedState?.hiddenVideoUnlocked ?? false);
+  const [sliderDistinction, setSliderDistinction] = useState<{
+    attackTime: string;
+    deathTime: string;
+    discoveryTime: string;
+  }>(savedState?.sliderDistinction ?? {
+    attackTime: '',
+    deathTime: '',
+    discoveryTime: ''
+  });
+
+  // Round 5 State: False Murderer
+  const [round5Choice, setRound5Choice] = useState<'pending' | 'accused_meera' | 'challenged'>(
+    savedState?.round5Choice ?? 'pending'
+  );
+  const [printerLogUnlocked, setPrinterLogUnlocked] = useState<boolean>(savedState?.printerLogUnlocked ?? false);
+
+  // Round 6 State: Final Boss
+  const [submission, setSubmission] = useState<Partial<FinalBossSubmission>>(savedState?.submission ?? {});
+  const [finalEvaluated, setFinalEvaluated] = useState<boolean>(savedState?.finalEvaluated ?? false);
+  const [finalScore, setFinalScore] = useState<number>(savedState?.finalScore ?? 0);
+  const [finalFeedback, setFinalFeedback] = useState<string[]>(savedState?.finalFeedback ?? []);
+
+  // 55-minute Timer Interval
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isTimerRunning && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setIsTimerRunning(false);
+            sound.playHorrorStinger();
+            return 0;
+          }
+          // Subtle ticking every minute or low time
+          if (prev < 180 && prev % 5 === 0) {
+            sound.playHeartbeat();
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timeRemaining]);
+
+  // Global Key Listener: Ctrl+Shift+H for Host HUD, Tab for View Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        setIsHostModalOpen((prev) => !prev);
+      }
+
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleUpdateSettings = (newSettings: GameSettings) => {
+    setSettings(newSettings);
+    sound.setMasterVolume(newSettings.masterVolume);
+    sound.setMusicVolume(newSettings.musicVolume);
+    sound.setSfxVolume(newSettings.sfxVolume);
+    sound.setVoiceVolume(newSettings.voiceVolume);
+    vfx.setReduceMotion(newSettings.reduceMotion);
+    vfx.setReduceFlashing(newSettings.reduceFlashing);
   };
 
-  const handleSubPromptSubmit = (id: string) => {
-    setSubPrompts(prev => {
-      const updated = [...prev];
-      const currentIndex = updated.findIndex(sp => sp.id === id);
-      
-      if (updated[currentIndex].userAnswer.toLowerCase().trim() === updated[currentIndex].expectedAnswer) {
-        updated[currentIndex].state = 'completed';
-        // Unlock next
-        if (currentIndex + 1 < updated.length) {
-          updated[currentIndex + 1].state = 'active';
-        }
-      } else {
-        alert("Incorrect sub-prompt. Try again.");
+  // Synchronize audio and vfx settings on startup
+  useEffect(() => {
+    sound.setMasterVolume(settings.masterVolume);
+    sound.setMusicVolume(settings.musicVolume);
+    sound.setSfxVolume(settings.sfxVolume);
+    sound.setVoiceVolume(settings.voiceVolume);
+    vfx.setReduceMotion(settings.reduceMotion);
+    vfx.setReduceFlashing(settings.reduceFlashing);
+  }, []);
+
+  // Save game state to localStorage
+  useEffect(() => {
+    saveGame({
+      currentRound,
+      hasSeenIntro,
+      timeRemaining,
+      crimeSceneObjectives,
+      suspectLocks,
+      audioRevealedSecret,
+      hiddenVideoUnlocked,
+      sliderDistinction,
+      round5Choice,
+      printerLogUnlocked,
+      submission,
+      finalEvaluated,
+      finalScore,
+      finalFeedback,
+      reExaminedClues,
+      settings
+    });
+  }, [
+    currentRound,
+    hasSeenIntro,
+    timeRemaining,
+    crimeSceneObjectives,
+    suspectLocks,
+    audioRevealedSecret,
+    hiddenVideoUnlocked,
+    sliderDistinction,
+    round5Choice,
+    printerLogUnlocked,
+    submission,
+    finalEvaluated,
+    finalScore,
+    finalFeedback,
+    reExaminedClues,
+    settings
+  ]);
+
+  // Phase atmosphere transitions
+  useEffect(() => {
+    if (!hasSeenIntro) return;
+    if (currentRound === 0 || currentRound === 1) {
+      sound.setMusicMood('exploration');
+    } else if (currentRound === 2 || currentRound === 3) {
+      sound.setMusicMood('suspicion');
+    } else if (currentRound === 4 || currentRound === 5) {
+      sound.setMusicMood('discovery');
+    } else if (currentRound === 6) {
+      sound.setMusicMood('revelation');
+    }
+    vfx.flicker(250);
+  }, [currentRound, hasSeenIntro]);
+
+  const handleToggleTimer = () => {
+    setIsTimerRunning(!isTimerRunning);
+    sound.playTick(false);
+  };
+
+  const handleToggleMute = () => {
+    const nextMute = !audioMuted;
+    setAudioMuted(nextMute);
+    sound.setMuted(nextMute);
+  };
+
+  // Milestone Progression Triggers
+  const handleAudioRevealedSecret = () => {
+    setAudioRevealedSecret(true);
+    if (currentRound === 1) {
+      setTimeout(() => {
+        setBridgeModal({
+          isOpen: true,
+          fromRound: 1,
+          toRound: 2,
+          title: 'CHRONOLOGY ANOMALY CONFIRMED: PRE-CRIME RECORDING',
+          discovery: 'The 0.5x sub-bass layer on Dictaphone Tape #4 reveals: "Someone started before the house stopped." The 11:47 clock was deliberately arrested with graphite to manufacture a false time of death.',
+          nextObjective: 'Audit all 5 suspects in Round 2. Each had opportunity, but 4 committed different secondary crimes. Disarm their locks to expose non-murder motives.'
+        });
+      }, 500);
+    }
+  };
+
+  const handleSolveLock = (suspectId: SuspectId) => {
+    setSuspectLocks((prev) => {
+      const next = { ...prev, [suspectId]: true };
+      const allSolved = Object.values(next).every(Boolean);
+      if (allSolved && currentRound === 2) {
+        setTimeout(() => {
+          setBridgeModal({
+            isOpen: true,
+            fromRound: 2,
+            toRound: 3,
+            title: 'FIVE CONSPIRACIES UNRAVELED: ONLY ONE KILLER REMAINS',
+            discovery: "Aarav stole research, Kabir blew the transformer, Riya bugged the rooms, and Meera struck Sen at 11:47 PM. But Devraj Negi's alibi collapsed—he knows the secret service passages.",
+            nextObjective: 'The House AI has formulated its own accusation in Round 3. Probe its logic and expose the core algorithmic bias.'
+          });
+        }, 500);
       }
-      return updated;
+      return next;
     });
   };
 
-  const handleMasterSubmit = () => {
-    if (masterPrompt.length > 10) {
-      setIsVictory(true);
-    } else {
-      alert("Master prompt is too short.");
+  const handleInspectReasoning = () => {
+    const nextVal = !reasoningInspected;
+    setReasoningInspected(nextVal);
+    if (nextVal && currentRound === 3) {
+      setTimeout(() => {
+        setBridgeModal({
+          isOpen: true,
+          fromRound: 3,
+          toRound: 4,
+          title: 'ALGORITHMIC TRAP DETECTED: THE AI DISCARDED SURVIVAL DATA',
+          discovery: 'The House AI assumed the 11:47 assault was immediately fatal. It completely discarded telemetry from 12:03 AM showing Professor Sen alive and typing at his terminal.',
+          nextObjective: 'Enter Round 4: Establish the definitive forensic distinction between Attack Time (11:47), Death Time (12:15), and Discovery Time (12:18).'
+        });
+      }, 500);
     }
   };
 
-  if (isVictory) {
+  const handleUnlockHiddenVideo = () => {
+    setHiddenVideoUnlocked(true);
+    if (currentRound === 4) {
+      setTimeout(() => {
+        setBridgeModal({
+          isOpen: true,
+          fromRound: 4,
+          toRound: 5,
+          title: 'THE DEAD MAN SPEAKS: SEN WAS ALIVE UNTIL 12:15',
+          discovery: "Professor Sen's encrypted 12:03 webcam feed proves Meera did not kill him! The true fatal smothering occurred at 12:15 AM during Kabir's electrical blackout.",
+          nextObjective: 'The House AI is 97.8% confident Meera is the murderer. Challenge its false indictment in Round 5 to retrieve the printer spool logs.'
+        });
+      }, 500);
+    }
+  };
+
+  const handleChallengeAi = () => {
+    setRound5Choice('challenged');
+    setPrinterLogUnlocked(true);
+    if (currentRound === 5) {
+      setTimeout(() => {
+        setBridgeModal({
+          isOpen: true,
+          fromRound: 5,
+          toRound: 6,
+          title: 'SMOKING GUN: THE PRE-CRIME FABRICATION',
+          discovery: 'Evidence Spool 12 proves the indictment against Dr. Meera was sent to the network printer at 11:41 PM—six minutes BEFORE she entered Study 17-B! The House and Dev staged the entire crime.',
+          nextObjective: 'Enter Round 6: Construct the Master Forensic Indictment prompt to dismantle the House AI and convict Devraj Negi.'
+        });
+      }, 500);
+    }
+  };
+
+  const handleProceedFromBridge = () => {
+    setCurrentRound(bridgeModal.toRound);
+    setBridgeModal((prev) => ({ ...prev, isOpen: false }));
+        sound.playHorrorStinger();
+  };
+
+  const handleAddAiQuery = (prompt: string, response: string, reasoning: string) => {
+    const newQuery = {
+      prompt,
+      response,
+      reasoning,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setAiQueries((prev) => [newQuery, ...prev]);
+  };
+
+  const handleResetGame = () => {
+    clearSavedGame();
+    setHasSeenIntro(false);
+    setCurrentRound(0);
+    setTimeRemaining(55 * 60);
+    setIsTimerRunning(false);
+    setIsClimaxTriggered(false);
+    setCrimeSceneObjectives({
+      clockInspected: false,
+      tapeFound: false,
+      bloodExamined: false,
+      doorInspected: false,
+      luminolRevealed: false
+    });
+    setAudioRevealedSecret(false);
+    setAudioSpeed(1.0);
+    setSuspectLocks({ aarav: false, riya: false, kabir: false, meera: false, dev: false });
+    setReExaminedClues([]);
+    setAiQueries([]);
+    setReasoningInspected(false);
+    setHiddenVideoUnlocked(false);
+    setSliderDistinction({ attackTime: '', deathTime: '', discoveryTime: '' });
+    setRound5Choice('pending');
+    setPrinterLogUnlocked(false);
+    setSubmission({});
+    setFinalEvaluated(false);
+    setFinalScore(0);
+    setFinalFeedback([]);
+    setBridgeModal({
+      isOpen: false,
+      fromRound: 1,
+      toRound: 2,
+      title: '',
+      discovery: '',
+      nextObjective: ''
+    });
+        sound.stopAllSpeech();
+    sound.stopAmbient();
+  };
+
+  const handleAutoSolveAll = () => {
+    sound.playObjectiveComplete();
+    sound.playRadioChirp();
+    setHasSeenIntro(true);
+    setCrimeSceneObjectives({
+      clockInspected: true,
+      tapeFound: true,
+      bloodExamined: true,
+      doorInspected: true,
+      luminolRevealed: true
+    });
+    setSuspectLocks({ aarav: true, riya: true, kabir: true, meera: true, dev: true });
+    setAudioRevealedSecret(true);
+    setHiddenVideoUnlocked(true);
+    setPrinterLogUnlocked(true);
+    setSliderDistinction({
+      attackTime: '11:47 PM',
+      deathTime: '12:15 AM (Blackout)',
+      discoveryTime: '12:18 AM'
+    });
+    setRound5Choice('challenged');
+    const winningSub: FinalBossSubmission = {
+      attacker: 'Dr. Meera Patel',
+      murderer: 'Devraj "Dev" Negi',
+      blackoutCauser: 'Kabir Varma',
+      attackTime: '11:47 PM',
+      trueDeathTime: '12:15 AM (During Blackout)',
+      finalRecordingTime: '12:03 AM',
+      discoveryTime: '12:18 AM',
+      falseEvidenceTime: '11:41 PM (HP Laser Spool)',
+      aiBiggestError: 'The AI assumed all CCTV hardware clocks were synchronized, ignored the 9-minute kitchen clock drift, and falsely equated Meera\'s 11:47 PM assault with the fatal 12:15 AM smothering.'
+    };
+    setSubmission(winningSub);
+    setFinalEvaluated(true);
+    setFinalScore(100);
+    setFinalFeedback([
+      '✓ Correctly identified physical attacker: Dr. Meera Patel (+20 pts)',
+      '✓ Correctly identified true murderer: Devraj Negi (+25 pts)',
+      '✓ Correctly identified blackout operator: Kabir Varma (+15 pts)',
+      '✓ Perfect chronology triad (+15 pts)',
+      '✓ Pre-crime evidence timestamp accounted for (+5 pts)',
+      '✓ Correctly identified AI cognitive flaw (+20 pts)'
+    ]);
+    setCurrentRound(6);
+      };
+
+  // If Climax is active
+  if (isClimaxTriggered) {
+    return <GlitchClimax onResetGame={handleResetGame} />;
+  }
+
+  // If Horror Intro has not been seen yet, play it first!
+  if (!hasSeenIntro) {
     return (
-      <div className="min-h-screen bg-admin-bg flex flex-col items-center justify-center text-white p-8">
-        <div className="bg-admin-panel p-12 rounded-2xl border border-admin-green/50 text-center max-w-2xl shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-          <CheckCircle2 className="w-24 h-24 text-admin-green mx-auto mb-6" />
-          <h1 className="text-4xl font-bold mb-4">ROUND COMPLETE</h1>
-          <p className="text-gray-400 text-lg mb-8">You have successfully constructed the Master Prompt and dominated the arena.</p>
-          <div className="bg-admin-bg p-6 rounded-lg font-mono text-sm text-admin-blue border border-gray-800 text-left overflow-hidden">
-            {masterPrompt}
-          </div>
-        </div>
-      </div>
+      <HorrorIntro
+        onComplete={() => {
+          setHasSeenIntro(true);
+          setCurrentRound(0);
+          setIsTimerRunning(true);
+        }}
+        audioMuted={audioMuted}
+        onToggleMute={handleToggleMute}
+      />
     );
   }
 
+  // Active Evidence items (unlocked by round or special events)
+  const accessibleEvidence = EVIDENCE_ITEMS.filter((item) => {
+    if (item.id === 'ev-12') {
+      return printerLogUnlocked;
+    }
+    return item.round <= currentRound;
+  });
+
+
   return (
-    <div className="min-h-screen bg-admin-bg text-gray-100 flex flex-col font-sans">
-      {/* Header */}
-      <header className="bg-admin-panel border-b border-gray-800 p-4 flex justify-between items-center z-10 relative shadow-md">
-        <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-admin-red" />
-          <div>
-            <h1 className="font-bold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-admin-blue to-admin-uv">
-              PROMPT WAR
-            </h1>
-            <div className="text-xs text-gray-500 uppercase tracking-widest">The Prompt Forge</div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#07070a] text-gray-200 flex flex-col font-mono selection:bg-red-900 selection:text-white analog-grain relative">
+      
+
+      {/* Cinematic & Environmental Horror VFX Overlay */}
+      <VFXOverlay />
+
+      {/* Universal Navigation Bar & 55-min Countdown */}
+      <HeaderTimer
+        currentPhase={currentRound}
+        timeRemainingSeconds={timeRemaining}
+        isTimerRunning={isTimerRunning}
+        onToggleTimer={handleToggleTimer}
+        audioMuted={audioMuted}
+        onToggleMute={handleToggleMute}
+        onOpenHostModal={() => setIsHostModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+        onSelectPhase={(phase) => {
+          setCurrentRound(phase);
+          sound.playTick(false);
+        }}
+      />
+
+      {/* Main Investigation Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
         
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">STATUS:</span>
-            <span className="px-3 py-1 bg-admin-blue/10 text-admin-blue rounded-full text-xs font-bold border border-admin-blue/20 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-admin-blue animate-pulse-glow"></span>
-              LIVE
-            </span>
-          </div>
-          <div className="text-2xl font-mono font-bold text-admin-blue px-4 py-1 bg-admin-bg rounded-lg border border-gray-800">
-            45:00
-          </div>
-        </div>
-      </header>
+            {/* Phase 0: Initial Case Briefing */}
+            {currentRound === 0 && (
+              <Phase0Briefing
+                onStartInvestigation={() => {
+                  setCurrentRound(1);
+                  sound.playHorrorStinger();
+                }}
+              />
+            )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden relative">
-        {/* Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-admin-blue/[0.02] blur-[120px]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-admin-uv/[0.02] blur-[150px]" />
-        </div>
+            {/* Phase 1: First-Person Crime Scene Recon & 5 Structured Objectives */}
+            {currentRound === 1 && (
+              <Phase1CrimeScene
+                objectives={crimeSceneObjectives}
+                onUpdateObjective={(key, val) => {
+                  setCrimeSceneObjectives((prev) => ({ ...prev, [key]: val }));
+                }}
+                onAutoDiscoverAll={() => {
+                  setCrimeSceneObjectives({
+                    clockInspected: true,
+                    tapeFound: true,
+                    bloodExamined: true,
+                    doorInspected: true,
+                    luminolRevealed: true
+                  });
+                  sound.playObjectiveComplete();
+                }}
+                onProceedToPhase2={() => {
+                  setCurrentRound(2);
+                  sound.playHorrorStinger();
+                }}
+                onTriggerTrauma={() => {}}
+              />
+            )}
 
-        {/* Left Panel: Sub-Prompts (35% width) */}
-        <div className="w-[35%] border-r border-gray-800 bg-admin-bg/50 p-6 overflow-y-auto z-10 flex flex-col gap-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Terminal className="w-5 h-5 text-admin-blue" />
-            <h2 className="text-lg font-bold uppercase tracking-wider">Sub-Prompts</h2>
-          </div>
-          
-          <div className="flex flex-col gap-4">
-            {subPrompts.map((sp, index) => (
-              <div 
-                key={sp.id} 
-                className={`rounded-xl border transition-all duration-300 ${
-                  sp.state === 'completed' 
-                    ? 'bg-admin-panel border-admin-green/30' 
-                    : sp.state === 'active'
-                      ? 'bg-admin-panel border-admin-blue/50 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                      : 'bg-admin-bg border-gray-800 opacity-60'
-                }`}
-              >
-                <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      sp.state === 'completed' ? 'bg-admin-green/20 text-admin-green' : 
-                      sp.state === 'active' ? 'bg-admin-blue/20 text-admin-blue' : 
-                      'bg-gray-800 text-gray-500'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <h3 className={`font-bold ${sp.state === 'locked' ? 'text-gray-500' : 'text-gray-200'}`}>
-                      {sp.title}
-                    </h3>
-                  </div>
-                  {sp.state === 'completed' && <CheckCircle2 className="w-5 h-5 text-admin-green" />}
-                  {sp.state === 'locked' && <Lock className="w-4 h-4 text-gray-600" />}
-                </div>
-                
-                {sp.state !== 'locked' && (
-                  <div className="p-4 flex flex-col gap-4">
-                    <p className="text-sm text-gray-400 leading-relaxed">{sp.description}</p>
-                    {sp.state === 'active' && (
-                      <div className="flex flex-col gap-2">
-                        <input
-                          type="text"
-                          className="w-full bg-admin-bg border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-admin-blue transition-colors font-mono"
-                          placeholder="Enter your sub-prompt..."
-                          value={sp.userAnswer}
-                          onChange={(e) => handleSubPromptChange(sp.id, e.target.value)}
-                        />
+            {/* Phases 2-6: Unified Investigation Layout */}
+            {currentRound >= 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+                {/* Left: Active Investigation (3 cols = 60%) */}
+                <div className="lg:col-span-3 space-y-4">
+                  {/* Phase Objective Header */}
+                  <div className="glass-panel p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] text-red-400 font-semibold uppercase tracking-widest mb-1">
+                          Phase {String(currentRound).padStart(2, '0')} — Active
+                        </p>
+                        <h2 className="text-base font-semibold text-gray-100">
+                          {currentRound === 2 && 'Interrogate Suspects & Break Alibis'}
+                          {currentRound === 3 && 'The Impossible Timeline — AI Trap'}
+                          {currentRound === 4 && "Dead Man's Message & Forensic Chronology"}
+                          {currentRound === 5 && 'Challenge the False Accusation'}
+                          {currentRound === 6 && 'Final Indictment & Verdict'}
+                        </h2>
+                      </div>
+                      {currentRound < 6 && (
                         <button
-                          onClick={() => handleSubPromptSubmit(sp.id)}
-                          disabled={!sp.userAnswer.trim()}
-                          className="self-end px-4 py-2 bg-admin-blue/20 text-admin-blue border border-admin-blue/50 rounded-lg text-xs font-bold hover:bg-admin-blue/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          onClick={() => { setCurrentRound((prev) => prev + 1); sound.playTick(true); }}
+                          className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-800/60 text-red-200 text-xs font-medium rounded flex items-center gap-1.5 shrink-0 transition cursor-pointer"
                         >
-                          VERIFY <ArrowRight className="w-4 h-4" />
+                          Next Phase
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                    )}
-                    {sp.state === 'completed' && (
-                      <div className="bg-admin-bg border border-admin-green/20 rounded-lg px-4 py-3 text-sm text-admin-green font-mono flex items-center gap-3">
-                        <Zap className="w-4 h-4" />
-                        {sp.userAnswer}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Right Panel: Master Forge (65% width) */}
-        <div className="flex-1 bg-admin-panel p-8 z-10 flex flex-col">
-          <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
-            <div className="flex items-center gap-3 mb-6">
-              <Zap className={`w-6 h-6 ${allCompleted ? 'text-admin-uv animate-pulse' : 'text-gray-500'}`} />
-              <div>
-                <h2 className="text-2xl font-bold tracking-wide">THE MASTER FORGE</h2>
-                <p className="text-gray-400 text-sm mt-1">Combine your solved sub-prompts into the ultimate payload.</p>
-              </div>
-            </div>
-
-            <div className={`flex-1 rounded-2xl border transition-all duration-500 flex flex-col ${
-              allCompleted 
-                ? 'bg-admin-bg border-admin-uv/50 shadow-[0_0_30px_rgba(168,85,247,0.1)]' 
-                : 'bg-admin-bg border-gray-800 opacity-50 relative'
-            }`}>
-              
-              {!allCompleted && (
-                <div className="absolute inset-0 z-20 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
-                  <Lock className="w-12 h-12 text-gray-600 mb-4" />
-                  <p className="text-gray-400 font-medium">Solve all Sub-Prompts to unlock the Forge</p>
+                  {/* Phase-specific content */}
+                  {currentRound === 2 && (
+                    <Round2Locks
+                      suspectLocks={suspectLocks}
+                      onSolveLock={handleSolveLock}
+                    />
+                  )}
+                  {currentRound === 3 && (
+                    <Round3AiTrap
+                      queries={aiQueries}
+                      onAddQuery={handleAddAiQuery}
+                      reasoningInspected={reasoningInspected}
+                      onInspectReasoning={handleInspectReasoning}
+                    />
+                  )}
+                  {currentRound === 4 && (
+                    <Round4DeadMan
+                      hiddenVideoUnlocked={hiddenVideoUnlocked}
+                      onUnlockHiddenVideo={handleUnlockHiddenVideo}
+                      sliderDistinction={sliderDistinction}
+                      onChangeDistinction={(field, val) => {
+                        setSliderDistinction((prev) => ({ ...prev, [field]: val }));
+                      }}
+                    />
+                  )}
+                  {currentRound === 5 && (
+                    <div className="space-y-6">
+                      <Round5FalseMurderer
+                        round5Choice={round5Choice}
+                        onAccuseMeera={() => setRound5Choice('accused_meera')}
+                        onChallengeAi={handleChallengeAi}
+                        printerLogUnlocked={printerLogUnlocked}
+                      />
+                      <EvidenceBoard
+                        currentRound={currentRound}
+                        suspectLocks={suspectLocks}
+                        audioRevealedSecret={audioRevealedSecret}
+                        reasoningInspected={reasoningInspected}
+                        hiddenVideoUnlocked={hiddenVideoUnlocked}
+                        printerLogUnlocked={printerLogUnlocked}
+                        finalEvaluated={finalEvaluated}
+                        onNavigateToPhase={(phase) => {
+                          setCurrentRound(phase);
+                          sound.playTick(false);
+                        }}
+                      />
+                    </div>
+                  )}
+                  {currentRound === 6 && (
+                    <FinalBossPrompt
+                      submission={submission}
+                      onChangeSubmission={(field, val) => {
+                        setSubmission((prev) => ({ ...prev, [field]: val }));
+                      }}
+                      evaluated={finalEvaluated}
+                      score={finalScore}
+                      feedback={finalFeedback}
+                      onSetEvaluation={(evaluated, score, feedback) => {
+                        setFinalEvaluated(evaluated);
+                        setFinalScore(score);
+                        setFinalFeedback(feedback);
+                      }}
+                      onTriggerClimax={() => setIsClimaxTriggered(true)}
+                    />
+                  )}
                 </div>
-              )}
 
-              <div className="p-6 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center rounded-t-2xl">
-                <div className="text-sm font-mono text-gray-400">PAYLOAD_INJECTION_TERMINAL</div>
-                <div className="flex gap-2">
-                  <span className="w-3 h-3 rounded-full bg-admin-red/50"></span>
-                  <span className="w-3 h-3 rounded-full bg-admin-orange/50"></span>
-                  <span className="w-3 h-3 rounded-full bg-admin-green/50"></span>
+                {/* Right: Evidence Drawer (2 cols = 40%) */}
+                <div className="lg:col-span-2 lg:sticky lg:top-28 space-y-4">
+                  <ClueDossier
+                    evidenceList={accessibleEvidence}
+                    currentRound={currentRound}
+                    audioSpeed={audioSpeed}
+                    onSetAudioSpeed={setAudioSpeed}
+                    audioRevealedSecret={audioRevealedSecret}
+                    onAudioRevealedSecret={handleAudioRevealedSecret}
+                    compact={true}
+                    reExaminedClues={reExaminedClues}
+                    onReExamineClue={(id) => {
+                      setReExaminedClues((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                    }}
+                  />
                 </div>
               </div>
+            )}
+          </main>
 
-              <textarea
-                className="flex-1 w-full bg-transparent p-6 text-gray-200 font-mono resize-none focus:outline-none disabled:cursor-not-allowed"
-                placeholder={allCompleted ? "Construct your Master Prompt here using elements from your successful sub-prompts..." : ""}
-                value={masterPrompt}
-                onChange={(e) => setMasterPrompt(e.target.value)}
-                disabled={!allCompleted}
-              ></textarea>
+      {/* Subround Narrative Milestone Bridge Modal */}
+      <NarrativeBridgeModal
+        isOpen={bridgeModal.isOpen}
+        fromRound={bridgeModal.fromRound}
+        toRound={bridgeModal.toRound}
+        title={bridgeModal.title}
+        discovery={bridgeModal.discovery}
+        nextObjective={bridgeModal.nextObjective}
+        onProceed={handleProceedFromBridge}
+      />
 
-              <div className="p-6 border-t border-gray-800 bg-gray-900/30 rounded-b-2xl flex justify-between items-center">
-                <div className="text-xs text-gray-500 font-mono">
-                  Characters: {masterPrompt.length}
-                </div>
-                <button
-                  onClick={handleMasterSubmit}
-                  disabled={!allCompleted || masterPrompt.length === 0}
-                  className={`px-8 py-3 rounded-lg font-bold tracking-wider transition-all duration-300 ${
-                    allCompleted && masterPrompt.length > 0
-                      ? 'bg-admin-uv text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:bg-admin-uv/90'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  EXECUTE MASTER PROMPT
-                </button>
-              </div>
+      {/* Host / Facilitator Modal HUD */}
+      <HostControlModal
+        isOpen={isHostModalOpen}
+        onClose={() => setIsHostModalOpen(false)}
+        currentRound={currentRound}
+        onSelectRound={(r) => {
+          setCurrentRound(r);
+          setIsHostModalOpen(false);
+        }}
+        timeRemaining={timeRemaining}
+        onAdjustTime={(delta) => setTimeRemaining((prev) => Math.max(0, prev + delta))}
+        onUnlockAllLocks={() => {
+          setSuspectLocks({ aarav: true, riya: true, kabir: true, meera: true, dev: true });
+        }}
+        onUnlockPrinterLog={() => setPrinterLogUnlocked(true)}
+        onUnlockHiddenVideo={() => setHiddenVideoUnlocked(true)}
+        onTriggerBlackout={() => {
+          sound.playBlackout();
+        }}
+        onTriggerClimax={() => {
+          setIsClimaxTriggered(true);
+        }}
+        onResetGame={handleResetGame}
+        onAutoSolveAll={handleAutoSolveAll}
+      />
 
-            </div>
-          </div>
-        </div>
-      </main>
+      {/* Settings & Accessibility Console Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        onResetGame={handleResetGame}
+      />
+
+      {/* Footer */}
+      <footer className="border-t border-gray-900/50 py-3 text-center text-[10px] text-gray-600">
+  PROMPT WAR 2.0 • Case #17-B • Ctrl+Shift+H for GM Console
+</footer>
     </div>
   );
 };
