@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { sound } from '../utils/audioEngine';
-import { Zap, Terminal } from 'lucide-react';
+import { Zap, Terminal, LogOut, Play } from 'lucide-react';
 
 interface House3DProps {
   shards: { id: string; title: string; score: number | null }[];
@@ -11,6 +11,7 @@ interface House3DProps {
 export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [nearbyShard, setNearbyShard] = useState<{ id: string; title: string } | null>(null);
+  const [isPaused, setIsPaused] = useState<boolean>(true); // Starts paused until they click
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -76,8 +77,8 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
     shards.forEach((shardData, index) => {
       const pos = positions[index];
       const mat = new THREE.MeshStandardMaterial({ 
-        color: shardData.score && shardData.score > 50 ? '#10b981' : '#a855f7', 
-        emissive: shardData.score && shardData.score > 50 ? '#10b981' : '#a855f7',
+        color: shardData.score && shardData.score >= 50 ? '#10b981' : '#a855f7', 
+        emissive: shardData.score && shardData.score >= 50 ? '#10b981' : '#a855f7',
         emissiveIntensity: 0.5,
         wireframe: true
       });
@@ -85,7 +86,6 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
       mesh.position.set(pos.x, 1.5, pos.z);
       scene.add(mesh);
 
-      // Add a point light to each shard
       const light = new THREE.PointLight(mat.color, 2, 10);
       mesh.add(light);
 
@@ -97,7 +97,7 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
     const onKeyDown = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (keys.hasOwnProperty(k)) keys[k as keyof typeof keys] = true;
-      if (k === 'e' && nearbyShardRef.current) {
+      if (k === 'e' && nearbyShardRef.current && document.pointerLockElement === mountRef.current) {
         onInspectClue(nearbyShardRef.current.id);
       }
     };
@@ -119,16 +119,23 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
         camera.quaternion.setFromEuler(euler);
       }
     };
-    const onClick = () => mountRef.current?.requestPointerLock();
+    
+    const onPointerLockChange = () => {
+      setIsPaused(document.pointerLockElement !== mountRef.current);
+      if (document.pointerLockElement !== mountRef.current) {
+        // Reset keys when paused
+        keys.w = false; keys.a = false; keys.s = false; keys.d = false;
+      }
+    };
+
     document.addEventListener('mousemove', onMouseMove);
-    mountRef.current.addEventListener('click', onClick);
+    document.addEventListener('pointerlockchange', onPointerLockChange);
 
     // ANIMATION LOOP
     let animationFrameId: number;
     let clock = new THREE.Clock();
-    const speed = 5.0;
+    const speed = 6.0;
 
-    // Use a ref for the nearby shard so the keydown listener gets the latest value
     const nearbyShardRef = { current: null as { id: string; title: string } | null };
 
     const animate = () => {
@@ -143,24 +150,23 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
         s.mesh.position.y = s.originalY + Math.sin(time * 2 + i) * 0.2;
       });
 
-      // Movement
+      // Perfect FPS Movement relative to camera yaw
       if (document.pointerLockElement === mountRef.current) {
-        const direction = new THREE.Vector3();
-        if (keys.w) direction.z -= 1;
-        if (keys.s) direction.z += 1;
-        if (keys.a) direction.x -= 1;
-        if (keys.d) direction.x += 1;
+        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.y);
+        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.y);
         
-        direction.normalize();
-        direction.applyQuaternion(camera.quaternion);
-        // Keep movement flat on xz plane
-        direction.y = 0;
+        const direction = new THREE.Vector3();
+        if (keys.w) direction.add(forward);
+        if (keys.s) direction.sub(forward);
+        if (keys.a) direction.sub(right);
+        if (keys.d) direction.add(right);
+        
         direction.normalize();
 
         if (direction.lengthSq() > 0) {
           camera.position.addScaledVector(direction, speed * delta);
           // Walk bob
-          camera.position.y = 1.6 + Math.sin(time * 10) * 0.05;
+          camera.position.y = 1.6 + Math.sin(time * 12) * 0.06;
         }
       }
 
@@ -198,41 +204,77 @@ export const House3D: React.FC<House3DProps> = ({ shards, onInspectClue }) => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       document.removeEventListener('mousemove', onMouseMove);
-      mountRef.current?.removeEventListener('click', onClick);
+      document.removeEventListener('pointerlockchange', onPointerLockChange);
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
       mountRef.current?.removeChild(renderer.domElement);
     };
   }, [shards]);
 
+  const requestLock = () => {
+    mountRef.current?.requestPointerLock();
+  };
+
   return (
-    <div className="relative w-full h-screen bg-admin-bg overflow-hidden">
+    <div className="relative w-full h-screen bg-admin-bg overflow-hidden font-sans">
       {/* 3D Canvas */}
       <div ref={mountRef} className="w-full h-full cursor-crosshair" />
 
-      {/* UI Overlay */}
-      <div className="absolute top-6 left-6 text-admin-blue font-sans pointer-events-none">
-        <h1 className="text-2xl font-bold tracking-widest uppercase">The Corrupted Shrine</h1>
-        <p className="text-sm text-admin-cyan mt-1">Locate the 5 Yokai Data Shards. Click to look around. WASD to move.</p>
+      {/* Crosshair (only visible when playing) */}
+      {!isPaused && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+          <div className="w-1.5 h-1.5 bg-white/70 rounded-full" />
+        </div>
+      )}
+
+      {/* UI Overlay - Game Title */}
+      <div className="absolute top-6 left-6 text-admin-blue font-sans pointer-events-none z-10">
+        <h1 className="text-2xl font-bold tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-admin-blue to-admin-uv">The Corrupted Shrine</h1>
+        <p className="text-sm text-admin-cyan mt-1 opacity-80">Locate the 5 Yokai Data Shards.</p>
       </div>
 
-      {/* Interaction Prompt */}
-      {nearbyShard && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-center pointer-events-none">
-          <div className="bg-admin-panel/80 backdrop-blur-md border border-admin-uv/50 rounded-xl px-8 py-4 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+      {/* Interaction Prompt (only when playing) */}
+      {!isPaused && nearbyShard && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 text-center pointer-events-none z-10">
+          <div className="bg-admin-panel/90 backdrop-blur-md border border-admin-uv/50 rounded-xl px-8 py-4 shadow-[0_0_30px_rgba(168,85,247,0.3)] transform transition-transform animate-bounce">
             <h2 className="text-xl font-bold text-admin-uv mb-2">{nearbyShard.title}</h2>
             <div className="flex items-center justify-center gap-2 text-white font-mono">
-              <span className="px-2 py-1 bg-white/10 rounded">E</span> 
+              <span className="px-3 py-1 bg-white/20 rounded font-bold">E</span> 
               <span>TO INTERFACE</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Crosshair */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div className="w-1 h-1 bg-white/50 rounded-full" />
-      </div>
+      {/* Escape / Pause Menu */}
+      {isPaused && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+          <div className="bg-admin-panel border border-admin-blue/30 p-10 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.15)] flex flex-col items-center max-w-md w-full text-center">
+            <Zap className="w-12 h-12 text-admin-blue mb-4 animate-pulse" />
+            <h2 className="text-3xl font-bold text-white mb-2 uppercase tracking-widest">SYSTEM PAUSED</h2>
+            <p className="text-gray-400 mb-8">Navigation suspended. Use WASD to move and Mouse to look when active.</p>
+            
+            <div className="flex flex-col gap-4 w-full">
+              <button 
+                onClick={requestLock}
+                className="w-full py-4 bg-admin-blue/20 hover:bg-admin-blue/30 border border-admin-blue/50 text-admin-blue rounded-xl font-bold tracking-wider transition-colors flex justify-center items-center gap-2"
+              >
+                <Play className="w-5 h-5" />
+                RESUME SIMULATION
+              </button>
+              
+              <button 
+                onClick={() => window.location.href = '/'} // Change this URL to wherever the "other website" is
+                className="w-full py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-gray-300 rounded-xl font-bold tracking-wider transition-colors flex justify-center items-center gap-2"
+              >
+                <LogOut className="w-5 h-5" />
+                RETURN TO LOBBY
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
