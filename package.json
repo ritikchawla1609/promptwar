@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "./build.sh",
+    "preview": "vite preview",
+    "build:vite": "tsc && vite build"
   },
   "dependencies": {
     "@types/three": "^0.186.0",
