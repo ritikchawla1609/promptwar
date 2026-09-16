@@ -32,6 +32,7 @@ import { House3D } from './components/House3D';
 import { BloodSplatterOverlay } from './components/BloodSplatterOverlay';
 import { VFXOverlay } from './components/VFXOverlay';
 import { SettingsModal } from './components/SettingsModal';
+import { PromptForge } from './components/PromptForge';
 import { vfx } from './utils/vfxEngine';
 import { GameSettings, DEFAULT_SETTINGS, loadSavedGame, saveGame, clearSavedGame } from './utils/gameStorage';
 
@@ -540,94 +541,18 @@ export const App: React.FC = () => {
                   <div className="glass-panel p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] text-red-400 font-semibold uppercase tracking-widest mb-1">
-                          Phase {String(currentRound).padStart(2, '0')} — Active
+                        <p className="text-[10px] text-admin-uv font-semibold uppercase tracking-widest mb-1">
+                          Phase {String(currentRound).padStart(2, '0')} — The Master Forge
                         </p>
                         <h2 className="text-base font-semibold text-gray-100">
-                          {currentRound === 2 && 'Interrogate Suspects & Break Alibis'}
-                          {currentRound === 3 && 'The Impossible Timeline — AI Trap'}
-                          {currentRound === 4 && "Dead Man's Message & Forensic Chronology"}
-                          {currentRound === 5 && 'Challenge the False Accusation'}
-                          {currentRound === 6 && 'Final Indictment & Verdict'}
+                          Construct the Ultimate Prompt
                         </h2>
                       </div>
-                      {currentRound < 6 && (
-                        <button
-                          onClick={() => { setCurrentRound((prev) => prev + 1); sound.playTick(true); }}
-                          className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-800/60 text-red-200 text-xs font-medium rounded flex items-center gap-1.5 shrink-0 transition cursor-pointer"
-                        >
-                          Next Phase
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
                   </div>
 
                   {/* Phase-specific content */}
-                  {currentRound === 2 && (
-                    <Round2Locks
-                      suspectLocks={suspectLocks}
-                      onSolveLock={handleSolveLock}
-                    />
-                  )}
-                  {currentRound === 3 && (
-                    <Round3AiTrap
-                      queries={aiQueries}
-                      onAddQuery={handleAddAiQuery}
-                      reasoningInspected={reasoningInspected}
-                      onInspectReasoning={handleInspectReasoning}
-                    />
-                  )}
-                  {currentRound === 4 && (
-                    <Round4DeadMan
-                      hiddenVideoUnlocked={hiddenVideoUnlocked}
-                      onUnlockHiddenVideo={handleUnlockHiddenVideo}
-                      sliderDistinction={sliderDistinction}
-                      onChangeDistinction={(field, val) => {
-                        setSliderDistinction((prev) => ({ ...prev, [field]: val }));
-                      }}
-                    />
-                  )}
-                  {currentRound === 5 && (
-                    <div className="space-y-6">
-                      <Round5FalseMurderer
-                        round5Choice={round5Choice}
-                        onAccuseMeera={() => setRound5Choice('accused_meera')}
-                        onChallengeAi={handleChallengeAi}
-                        printerLogUnlocked={printerLogUnlocked}
-                      />
-                      <EvidenceBoard
-                        currentRound={currentRound}
-                        suspectLocks={suspectLocks}
-                        audioRevealedSecret={audioRevealedSecret}
-                        reasoningInspected={reasoningInspected}
-                        hiddenVideoUnlocked={hiddenVideoUnlocked}
-                        printerLogUnlocked={printerLogUnlocked}
-                        finalEvaluated={finalEvaluated}
-                        onNavigateToPhase={(phase) => {
-                          setCurrentRound(phase);
-                          sound.playTick(false);
-                        }}
-                      />
-                    </div>
-                  )}
-                  {currentRound === 6 && (
-                    <FinalBossPrompt
-                      submission={submission}
-                      onChangeSubmission={(field, val) => {
-                        setSubmission((prev) => ({ ...prev, [field]: val }));
-                      }}
-                      evaluated={finalEvaluated}
-                      score={finalScore}
-                      feedback={finalFeedback}
-                      onSetEvaluation={(evaluated, score, feedback) => {
-                        setFinalEvaluated(evaluated);
-                        setFinalScore(score);
-                        setFinalFeedback(feedback);
-                      }}
-                      onTriggerClimax={() => setIsClimaxTriggered(true)}
-                    />
-                  )}
+                  <PromptForge onTriggerClimax={() => setIsClimaxTriggered(true)} />
                 </div>
 
                 {/* Right: Evidence Drawer (2 cols = 40%) */}
