@@ -180,6 +180,15 @@ export default function RoundsPage() {
                 <div className="font-bold text-emerald-400 text-sm">CREATE (Prompting)</div>
               </div>
 
+              {/* Start Round 1 Button */}
+              <button
+                onClick={() => startRound('ROUND_1', 10, 0)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Start Round 1</span>
+              </button>
+
               {activeRound === 'ROUND_1' && (
                 timerRunning ? (
                   <button
@@ -192,7 +201,7 @@ export default function RoundsPage() {
                 ) : (
                   <button
                     onClick={() => resumeRound('ROUND_1')}
-                    className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
+                    className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Resume</span>
@@ -353,6 +362,36 @@ export default function RoundsPage() {
               <span className="text-xs font-mono text-slate-400">
                 15 Mins · 4 Investigation Phases
               </span>
+
+              {/* Start Round 2 Button */}
+              <button
+                onClick={() => startRound('ROUND_2', 15, 0)}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-indigo-600/20 transition-all active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Start Round 2</span>
+              </button>
+
+              {activeRound === 'ROUND_2' && (
+                timerRunning ? (
+                  <button
+                    onClick={() => pauseRound('ROUND_2')}
+                    className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
+                  >
+                    <Pause className="w-3.5 h-3.5" />
+                    <span>Pause</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => resumeRound('ROUND_2')}
+                    className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    <span>Resume</span>
+                  </button>
+                )
+              )}
+
               <button
                 onClick={() => {
                   setResetModalRound('ROUND_2');
@@ -468,6 +507,36 @@ export default function RoundsPage() {
               <span className="text-xs font-mono text-slate-400">
                 12 Mins · Max 5 Takes
               </span>
+
+              {/* Start Round 3 Button */}
+              <button
+                onClick={() => startRound('ROUND_3', 12, 0)}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-rose-600/20 transition-all active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Start Round 3</span>
+              </button>
+
+              {activeRound === 'ROUND_3' && (
+                timerRunning ? (
+                  <button
+                    onClick={() => pauseRound('ROUND_3')}
+                    className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
+                  >
+                    <Pause className="w-3.5 h-3.5" />
+                    <span>Pause</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => resumeRound('ROUND_3')}
+                    className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold flex items-center space-x-1.5"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    <span>Resume</span>
+                  </button>
+                )
+              )}
+
               <button
                 onClick={() => {
                   setResetModalRound('ROUND_3');

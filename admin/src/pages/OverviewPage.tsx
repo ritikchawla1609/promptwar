@@ -250,9 +250,22 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs font-mono text-blue-400 group-hover:translate-x-1 transition-transform">
-              <span>Open Round 1 Controls</span>
-              <span>→</span>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startRound('ROUND_1', 10, 0);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Start R1</span>
+              </button>
+
+              <div className="flex items-center space-x-1 text-xs font-mono text-blue-400 group-hover:translate-x-1 transition-transform">
+                <span>Open Controls</span>
+                <span>→</span>
+              </div>
             </div>
           </div>
 
@@ -292,9 +305,22 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs font-mono text-indigo-400 group-hover:translate-x-1 transition-transform">
-              <span>Open Round 2 Controls</span>
-              <span>→</span>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startRound('ROUND_2', 15, 0);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Start R2</span>
+              </button>
+
+              <div className="flex items-center space-x-1 text-xs font-mono text-indigo-400 group-hover:translate-x-1 transition-transform">
+                <span>Open Controls</span>
+                <span>→</span>
+              </div>
             </div>
           </div>
 
@@ -334,9 +360,22 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs font-mono text-rose-400 group-hover:translate-x-1 transition-transform">
-              <span>Open Round 3 Controls</span>
-              <span>→</span>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startRound('ROUND_3', 12, 0);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Start R3</span>
+              </button>
+
+              <div className="flex items-center space-x-1 text-xs font-mono text-rose-400 group-hover:translate-x-1 transition-transform">
+                <span>Open Controls</span>
+                <span>→</span>
+              </div>
             </div>
           </div>
         </div>

@@ -27,6 +27,7 @@ export const Navbar: React.FC = () => {
     lastSyncTime,
     isSyncing,
     refreshData,
+    startRound,
     pauseEvent,
     resumeEvent,
     emergencyStop,
@@ -145,6 +146,18 @@ export const Navbar: React.FC = () => {
             </span>
           </button>
 
+          {/* Quick Start Round */}
+          {eventStatus !== 'LIVE' && (
+            <button
+              onClick={() => startRound(activeRound !== 'NONE' ? activeRound : 'ROUND_1', undefined, 0)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+              title="Start Current Round Immediately"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>START ROUND</span>
+            </button>
+          )}
+
           {/* Quick Pause / Resume */}
           {eventStatus === 'LIVE' ? (
             <button
@@ -157,7 +170,7 @@ export const Navbar: React.FC = () => {
           ) : (
             <button
               onClick={() => resumeEvent()}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition-colors"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-mono font-medium transition-colors"
             >
               <Play className="w-3.5 h-3.5" />
               <span>RESUME</span>
