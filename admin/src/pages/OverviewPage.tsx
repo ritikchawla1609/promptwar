@@ -1,199 +1,382 @@
 import React from 'react';
+import { useAdmin } from '../context/AdminContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Activity,
-  Pause,
-  WifiOff,
-  CheckCircle,
-  Zap,
-  ShieldAlert,
-  AlertTriangle,
+  CheckCircle2,
+  Clock,
   Play,
-  Trophy,
-  Activity as ActivityIcon
+  Pause,
+  ArrowRight,
+  Radio,
+  Layers,
+  Award,
+  Zap,
+  HelpCircle,
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 
-const OverviewPage: React.FC = () => {
+export default function OverviewPage() {
+  const {
+    eventStatus,
+    activeRound,
+    roundSummaries,
+    remainingSeconds,
+    timerRunning,
+    teams,
+    auditLogs,
+    startRound,
+    pauseRound,
+    resumeRound,
+    advanceRound
+  } = useAdmin();
+
+  const navigate = useNavigate();
+
+  const registeredCount = teams.length;
+  const activeCount = teams.filter(t => t.status === 'ACTIVE').length;
+  const pausedCount = teams.filter(t => t.status === 'PAUSED' || t.status === 'OFFLINE').length;
+  const completedCount = teams.filter(t => t.status === 'COMPLETED' || t.progressPercentage >= 80).length;
+
+  const totalScoreSum = teams.reduce((acc, t) => acc + (t.roundScores.round1 || 0) + (t.roundScores.round2 || 0) + (t.roundScores.round3 || 0), 0);
+  const averageTournamentScore = teams.length > 0 ? (totalScoreSum / teams.length).toFixed(1) : '0';
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const getNextRecommendedAction = () => {
+    if (eventStatus === 'PAUSED') {
+      return {
+        title: 'Resume Arena Competition',
+        description: 'The global arena is paused. Resume to restart participant countdown clocks.',
+        buttonLabel: 'Resume Event',
+        action: () => navigate('/control')
+      };
+    }
+    if (activeRound === 'ROUND_1') {
+      if (remainingSeconds < 60) {
+        return {
+          title: 'Advance to Round 2 (Operation Blackbox)',
+          description: 'Round 1 time limit is expiring. Conclude Dalgona Prompt and advance qualified teams.',
+          buttonLabel: 'Advance to Round 2',
+          action: () => advanceRound()
+        };
+      }
+      return {
+        title: 'Monitor Round 1 Submissions',
+        description: 'Teams are submitting Dalgona prompt shape incisions. Review active takes reel.',
+        buttonLabel: 'Inspect Round 1',
+        action: () => navigate('/rounds')
+      };
+    }
+    if (activeRound === 'ROUND_2') {
+      return {
+        title: 'Review Evidence Interrogations',
+        description: 'Teams are analyzing the research facility breach in Operation Blackbox.',
+        buttonLabel: 'Inspect Round 2',
+        action: () => navigate('/rounds')
+      };
+    }
+    if (activeRound === 'ROUND_3') {
+      return {
+        title: 'Judge Director Cut Submissions',
+        description: 'Teams are submitting Frame Zero directorial prompts. Audit scores on leaderboard.',
+        buttonLabel: 'Open Leaderboard',
+        action: () => navigate('/leaderboard')
+      };
+    }
+    return {
+      title: 'Prepare Round 1 Start',
+      description: 'Check team check-in and launch Round 1 when ready.',
+      buttonLabel: 'Start Round 1',
+      action: () => startRound('ROUND_1')
+    };
+  };
+
+  const nextAction = getNextRecommendedAction();
+
   return (
-    <div className="flex flex-col gap-6 p-6 h-full overflow-y-auto bg-[#0a0f18] text-gray-100 font-sans">
-      {/* 1. EVENT STATUS HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-4 mb-2">
-            <h1 className="text-2xl font-bold tracking-wider">PROMPT WAR 2026</h1>
-            <div className="flex items-center gap-2 px-3 py-1 bg-[#10b981]/10 text-[#10b981] rounded-full text-xs font-bold border border-[#10b981]/20">
-              <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
-              LIVE
-            </div>
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8 select-none">
+      {/* 1. OPERATIONAL HERO HEADER */}
+      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-slate-900 via-[#0e1424] to-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-blue-400">
+            <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+            <span>LIVE OPERATIONAL COMMAND · PROMPT WAR 2026</span>
           </div>
-          <div className="text-gray-400 font-medium tracking-wide">
-            ROUND 3: THE HOUSE THAT REMEMBERS
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Arena Master Overview
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl font-light">
+            Real-time status across Dalgona Prompt (R1), Operation Blackbox (R2), and Frame Zero (R3).
+          </p>
         </div>
 
-        <div className="bg-[#111827] rounded-2xl border border-[#3b82f6]/30 px-8 py-4 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-          <div className="text-5xl font-mono font-bold text-[#3b82f6] tracking-wider text-center">
-            27:42
+        {/* Global Timer Card */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-blue-500/30 flex items-center space-x-4 shadow-lg shadow-blue-500/5 self-start md:self-auto min-w-[220px]">
+          <div className="p-3 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20">
+            <Clock className="w-6 h-6" />
           </div>
-          <div className="text-xs text-[#3b82f6]/70 uppercase tracking-widest text-center mt-1">
-            Global Timer
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
+              ACTIVE ROUND TIMER
+            </div>
+            <div className="text-3xl font-mono font-black text-amber-400 tracking-wider">
+              {formatTime(remainingSeconds)}
+            </div>
+            <div className="text-[10px] font-mono text-slate-400">
+              {timerRunning ? 'Auto-Advancing' : 'Clock Paused'}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 2. STAT CARDS ROW */}
-      <div className="grid grid-cols-5 gap-4">
-        {/* Registered */}
-        <div className="bg-[#111827] rounded-xl border border-gray-800 border-t-2 border-t-[#3b82f6] p-5 relative overflow-hidden flex flex-col justify-between h-28">
-          <Users className="absolute top-4 right-4 w-12 h-12 text-[#3b82f6] opacity-20" />
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-wider">Registered Teams</div>
-          <div className="text-3xl font-bold text-white">48</div>
+      {/* 2. THE 5 KEY OPERATIONAL QUESTIONS ANSWERED AT A GLANCE */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Metric 1 */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span className="font-mono uppercase tracking-wider text-[11px]">REGISTERED</span>
+            <Users className="w-4 h-4 text-blue-400" />
+          </div>
+          <div className="text-3xl font-bold font-mono text-white">{registeredCount}</div>
+          <div className="text-[11px] text-slate-400">Confirmed teams in arena</div>
         </div>
 
-        {/* Active Now */}
-        <div className="bg-[#111827] rounded-xl border border-gray-800 border-t-2 border-t-[#10b981] p-5 relative overflow-hidden flex flex-col justify-between h-28">
-          <Activity className="absolute top-4 right-4 w-12 h-12 text-[#10b981] opacity-20" />
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-wider">Active Now</div>
-          <div className="text-3xl font-bold text-white">42</div>
+        {/* Metric 2 */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span className="font-mono uppercase tracking-wider text-[11px]">ACTIVE NOW</span>
+            <Activity className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div className="text-3xl font-bold font-mono text-emerald-400">{activeCount}</div>
+          <div className="text-[11px] text-slate-400">{pausedCount} paused / offline</div>
         </div>
 
-        {/* Paused */}
-        <div className="bg-[#111827] rounded-xl border border-gray-800 border-t-2 border-t-[#f97316] p-5 relative overflow-hidden flex flex-col justify-between h-28">
-          <Pause className="absolute top-4 right-4 w-12 h-12 text-[#f97316] opacity-20" />
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-wider">Paused</div>
-          <div className="text-3xl font-bold text-[#f97316]">4</div>
+        {/* Metric 3 */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span className="font-mono uppercase tracking-wider text-[11px]">COMPLETED</span>
+            <CheckCircle2 className="w-4 h-4 text-purple-400" />
+          </div>
+          <div className="text-3xl font-bold font-mono text-purple-400">{completedCount}</div>
+          <div className="text-[11px] text-slate-400">Progressing normally</div>
         </div>
 
-        {/* Offline */}
-        <div className="bg-[#111827] rounded-xl border border-gray-800 border-t-2 border-t-[#ef4444] p-5 relative overflow-hidden flex flex-col justify-between h-28">
-          <WifiOff className="absolute top-4 right-4 w-12 h-12 text-[#ef4444] opacity-20" />
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-wider">Offline</div>
-          <div className="text-3xl font-bold text-[#ef4444]">2</div>
-        </div>
-
-        {/* Completed */}
-        <div className="bg-[#111827] rounded-xl border border-gray-800 border-t-2 border-t-[#a855f7] p-5 relative overflow-hidden flex flex-col justify-between h-28">
-          <CheckCircle className="absolute top-4 right-4 w-12 h-12 text-[#a855f7] opacity-20" />
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-wider">Completed</div>
-          <div className="text-3xl font-bold text-[#a855f7]">0</div>
+        {/* Metric 4 */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span className="font-mono uppercase tracking-wider text-[11px]">AVG SCORE</span>
+            <Award className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="text-3xl font-bold font-mono text-amber-400">{averageTournamentScore}</div>
+          <div className="text-[11px] text-slate-400">Across 3 rounds</div>
         </div>
       </div>
 
-      {/* 3. TWO COLUMN LAYOUT */}
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
-        {/* LEFT COLUMN */}
-        <div className="col-span-7 flex flex-col gap-6">
-          {/* QUICK ACTIONS */}
-          <div className="bg-[#111827] rounded-xl border border-gray-800 p-6 flex flex-col gap-5">
-            <div className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-[#f97316]" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-300">Quick Actions</h2>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-3">
-                <button className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-[#f97316]/20 text-[#f97316] border border-[#f97316]/50 hover:bg-[#f97316]/30 transition-colors">
-                  <Pause className="w-4 h-4" />
-                  PAUSE EVENT
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/50 hover:bg-[#10b981]/30 transition-colors">
-                  <Play className="w-4 h-4" />
-                  RESUME EVENT
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/50 hover:bg-[#3b82f6]/30 transition-colors">
-                  <Trophy className="w-4 h-4" />
-                  OPEN LEADERBOARD
-                </button>
-              </div>
-              
-              <div className="flex gap-3">
-                <button className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/50 hover:bg-[#ef4444]/30 transition-colors">
-                  <ShieldAlert className="w-4 h-4" />
-                  END ROUND
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/50 hover:bg-[#ef4444]/30 transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse"></div>
-                  EMERGENCY STOP
-                </button>
-              </div>
-            </div>
+      {/* 3. RECOMMENDED NEXT ACTION PANEL */}
+      <div className="p-5 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start space-x-3.5">
+          <div className="p-2.5 rounded-xl bg-blue-600/20 text-blue-400 flex-shrink-0 mt-0.5">
+            <Zap className="w-5 h-5" />
           </div>
-
-          {/* CURRENT PHASE */}
-          <div className="bg-[#111827] rounded-xl border border-gray-800 p-6 flex flex-col justify-center h-full">
-            <h2 className="text-3xl font-bold tracking-wide text-white mb-6 text-center">
-              PHASE 4: FORENSICS
-            </h2>
-            
-            <div className="w-full bg-gray-800 rounded-full h-4 mb-3 border border-gray-700 overflow-hidden relative">
-              <div 
-                className="h-full rounded-full bg-gradient-to-r from-[#3b82f6] to-[#a855f7]"
-                style={{ width: '64%' }}
-              ></div>
-              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">
-                64%
-              </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-blue-300 font-bold">
+              ORGANIZER RECOMMENDED NEXT ACTION
             </div>
-            
-            <div className="text-xs text-gray-500 text-center mb-8">
-              Average team progress across all active teams
-            </div>
-            
-            <div className="flex justify-between items-center px-4 py-3 bg-[#0a0f18] rounded-lg border border-gray-800 text-xs font-mono text-gray-400">
-              <div className="flex flex-col items-center">
-                <span className="text-gray-500 mb-1">Phase Started</span>
-                <span className="text-gray-200">14:22:00</span>
-              </div>
-              <div className="w-px h-8 bg-gray-800"></div>
-              <div className="flex flex-col items-center">
-                <span className="text-gray-500 mb-1">Teams in Phase</span>
-                <span className="text-gray-200">31</span>
-              </div>
-              <div className="w-px h-8 bg-gray-800"></div>
-              <div className="flex flex-col items-center">
-                <span className="text-gray-500 mb-1">Avg Time in Phase</span>
-                <span className="text-gray-200">8m 42s</span>
-              </div>
-            </div>
+            <h3 className="text-sm font-bold text-white mt-0.5">{nextAction.title}</h3>
+            <p className="text-xs text-slate-400 font-light mt-0.5">{nextAction.description}</p>
           </div>
         </div>
 
-        {/* RIGHT COLUMN - LIVE ACTIVITY FEED */}
-        <div className="col-span-5 bg-[#111827] rounded-xl border border-gray-800 flex flex-col overflow-hidden h-full">
-          <div className="p-4 border-b border-gray-800 flex items-center gap-2 bg-[#0a0f18]/50">
-            <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#a855f7]">Live Activity</h2>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-            {[
-              { time: '16:49:10', text: '⚡ PW-1042 discovered Evidence #17', color: 'text-gray-300' },
-              { time: '16:48:55', text: '✨ PW-2081 entered Phase 5', color: 'text-gray-300' },
-              { time: '16:48:42', text: '🔥 PW-3190 submitted indictment', color: 'text-gray-300' },
-              { time: '16:48:11', text: '⚠ PW-4412 exited fullscreen', color: 'text-[#ef4444]' },
-              { time: '16:47:50', text: '⚡ PW-5128 unlocked Suspect Lock: Kabir', color: 'text-gray-300' },
-              { time: '16:47:33', text: '✨ PW-3042 entered Phase 4', color: 'text-gray-300' },
-              { time: '16:47:15', text: '🔥 PW-1821 completed Round 1', color: 'text-gray-300' },
-              { time: '16:46:58', text: '⚡ PW-4201 queried House AI', color: 'text-gray-300' },
-              { time: '16:46:40', text: '⚠ PW-2390 connection lost', color: 'text-[#ef4444]' },
-              { time: '16:46:22', text: '✨ PW-6712 entered Phase 3', color: 'text-gray-300' },
-              { time: '16:45:55', text: '⚡ PW-1042 found Printer Log', color: 'text-gray-300' },
-              { time: '16:45:30', text: '🔥 PW-8401 locked first submission', color: 'text-gray-300' }
-            ].map((event, i) => (
-              <div key={i} className="py-3 border-b border-gray-800/50 last:border-0 flex items-start gap-3 hover:bg-gray-800/20 px-2 rounded transition-colors">
-                <span className="text-[#3b82f6] font-mono text-xs whitespace-nowrap pt-1">
-                  {event.time}
-                </span>
-                <span className={`text-sm ${event.color} leading-snug`}>
-                  {event.text}
-                </span>
+        <button
+          onClick={nextAction.action}
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-semibold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center space-x-2 active:scale-95 shrink-0"
+        >
+          <span>{nextAction.buttonLabel}</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* 4. THREE-ROUND OPERATIONAL OVERVIEW CARDS */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center space-x-2">
+            <Layers className="w-4 h-4 text-amber-400" />
+            <span>Three-Round Operational Pipeline</span>
+          </h2>
+          <span className="text-xs font-mono text-slate-400">Click card to manage round</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card: Round 1 */}
+          <div
+            onClick={() => navigate('/rounds')}
+            className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer space-y-5 hover:shadow-xl group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-amber-400">ROUND 01</span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                activeRound === 'ROUND_1'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}>
+                {activeRound === 'ROUND_1' ? 'ACTIVE NOW' : 'PENDING'}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-serif font-bold text-white group-hover:text-blue-400 transition-colors">
+                Dalgona Prompt
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                Cookie shape incision prompt writing, parasite mutation, and prompt evolution.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-800">
+              <div>
+                <span className="text-slate-400 text-[10px]">DURATION</span>
+                <div className="text-slate-200 font-semibold">10 Mins (7 Phases)</div>
               </div>
-            ))}
+              <div>
+                <span className="text-slate-400 text-[10px]">AVG SCORE</span>
+                <div className="text-amber-400 font-semibold">84.2 / 100</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono text-blue-400 group-hover:translate-x-1 transition-transform">
+              <span>Open Round 1 Controls</span>
+              <span>→</span>
+            </div>
           </div>
+
+          {/* Card: Round 2 */}
+          <div
+            onClick={() => navigate('/rounds')}
+            className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer space-y-5 hover:shadow-xl group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-indigo-400">ROUND 02</span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                activeRound === 'ROUND_2'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}>
+                {activeRound === 'ROUND_2' ? 'ACTIVE NOW' : 'READY'}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-serif font-bold text-white group-hover:text-indigo-400 transition-colors">
+                Operation Blackbox
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                Facility data breach investigation, prompt interrogation, and evidence cross-referencing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-800">
+              <div>
+                <span className="text-slate-400 text-[10px]">DURATION</span>
+                <div className="text-slate-200 font-semibold">15 Mins</div>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px]">AVG SCORE</span>
+                <div className="text-indigo-400 font-semibold">81.5 / 100</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono text-indigo-400 group-hover:translate-x-1 transition-transform">
+              <span>Open Round 2 Controls</span>
+              <span>→</span>
+            </div>
+          </div>
+
+          {/* Card: Round 3 */}
+          <div
+            onClick={() => navigate('/rounds')}
+            className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer space-y-5 hover:shadow-xl group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-rose-400">ROUND 03</span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                activeRound === 'ROUND_3'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}>
+                {activeRound === 'ROUND_3' ? 'ACTIVE NOW' : 'STANDBY'}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-serif font-bold text-white group-hover:text-rose-400 transition-colors">
+                Frame Zero
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                The Director's Trial. Anime cinematic scene brief prompt direction across 5 aesthetic pillars.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-800">
+              <div>
+                <span className="text-slate-400 text-[10px]">DURATION</span>
+                <div className="text-slate-200 font-semibold">12 Mins (5 Takes)</div>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px]">AVG SCORE</span>
+                <div className="text-rose-400 font-semibold">88.0 / 100</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono text-rose-400 group-hover:translate-x-1 transition-transform">
+              <span>Open Round 3 Controls</span>
+              <span>→</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. RECENT ACTIVITY FEED */}
+      <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center space-x-2">
+            <FileText className="w-4 h-4 text-blue-400" />
+            <span>Recent Administrative & Competition Activity</span>
+          </h2>
+          <button
+            onClick={() => navigate('/audit')}
+            className="text-xs font-mono text-blue-400 hover:underline"
+          >
+            View Full Audit Trail →
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {auditLogs.slice(0, 5).map((log) => (
+            <div
+              key={log.id}
+              className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs"
+            >
+              <div className="flex items-center space-x-3">
+                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                <div>
+                  <div className="font-semibold text-slate-200">{log.action} · {log.target}</div>
+                  <div className="text-[11px] text-slate-400">{log.details}</div>
+                </div>
+              </div>
+              <div className="text-[10px] font-mono text-slate-400 whitespace-nowrap ml-4">
+                {log.timestamp}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
-};
-
-export default OverviewPage;
+}

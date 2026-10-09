@@ -1,134 +1,127 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Shield,
-  Activity,
-  Target,
-  Users,
-  Monitor,
+  LayoutDashboard,
+  Radio,
   Layers,
+  Users,
   Trophy,
-  BarChart2,
-  ChevronDown,
-  Database,
-  MessageSquare,
-  History,
-  FileText,
-  HeartPulse,
+  BarChart3,
   Settings,
+  FileText,
+  Shield,
+  CircleDot
 } from 'lucide-react';
+import { useAdmin } from '../../context/AdminContext';
 
-const Sidebar = () => {
-  const [isMoreExpanded, setIsMoreExpanded] = useState(false);
+export const Sidebar: React.FC = () => {
+  const { eventStatus, activeRound } = useAdmin();
 
   const navItemClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+    `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
       isActive
-        ? 'bg-gradient-to-r from-admin-blue/10 to-transparent border-l-2 border-l-admin-blue text-white'
-        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border-l-2 border-transparent'
-    }`;
-
-  const subItemClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-4 pl-11 py-2 text-xs font-medium transition-colors ${
-      isActive
-        ? 'bg-gradient-to-r from-admin-blue/10 to-transparent border-l-2 border-l-admin-blue text-white'
-        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border-l-2 border-transparent'
+        ? 'bg-blue-600/15 text-blue-400 font-semibold border border-blue-500/20 shadow-sm'
+        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
     }`;
 
   return (
-    <aside className="w-64 h-full bg-admin-panel border-r border-gray-800 flex flex-col">
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Shield className="w-6 h-6 text-admin-red" />
-          <h1 className="text-xl font-bold bg-gradient-to-r from-admin-blue to-admin-uv bg-clip-text text-transparent">
-            PROMPT WAR
-          </h1>
+    <aside className="w-64 h-full bg-[#0b0f19] border-r border-slate-800/80 flex flex-col justify-between select-none">
+      <div className="p-5 space-y-6">
+        {/* Brand Header */}
+        <div className="flex items-center space-x-3 pb-2 border-b border-slate-800/60">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-serif font-black text-lg">
+            PW
+          </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-wider text-white">PROMPT WAR</h1>
+            <p className="text-[10px] uppercase font-mono tracking-widest text-slate-400">
+              Unified Admin Portal
+            </p>
+          </div>
         </div>
-        <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-mono">
-          Command Center
-        </p>
+
+        {/* Navigation Sections */}
+        <nav className="space-y-6">
+          {/* Section: EVENT */}
+          <div className="space-y-1.5">
+            <div className="px-3 text-[10px] uppercase font-mono tracking-widest text-slate-400 font-semibold">
+              EVENT OPERATIONS
+            </div>
+
+            <NavLink to="/" className={navItemClasses} end>
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Overview</span>
+            </NavLink>
+
+            <NavLink to="/control" className={navItemClasses}>
+              <Radio className="w-4 h-4 text-emerald-400" />
+              <span>Live Control</span>
+            </NavLink>
+
+            <NavLink to="/rounds" className={navItemClasses}>
+              <Layers className="w-4 h-4 text-amber-400" />
+              <span>Rounds</span>
+            </NavLink>
+
+            <NavLink to="/teams" className={navItemClasses}>
+              <Users className="w-4 h-4 text-blue-400" />
+              <span>Teams</span>
+            </NavLink>
+
+            <NavLink to="/leaderboard" className={navItemClasses}>
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span>Leaderboard</span>
+            </NavLink>
+          </div>
+
+          {/* Section: OPERATIONS */}
+          <div className="space-y-1.5">
+            <div className="px-3 text-[10px] uppercase font-mono tracking-widest text-slate-400 font-semibold">
+              MANAGEMENT & AUDIT
+            </div>
+
+            <NavLink to="/analytics" className={navItemClasses}>
+              <BarChart3 className="w-4 h-4 text-purple-400" />
+              <span>Analytics</span>
+            </NavLink>
+
+            <NavLink to="/settings" className={navItemClasses}>
+              <Settings className="w-4 h-4 text-slate-400" />
+              <span>Event Settings</span>
+            </NavLink>
+
+            <NavLink to="/audit" className={navItemClasses}>
+              <FileText className="w-4 h-4 text-sky-400" />
+              <span>Activity Log</span>
+            </NavLink>
+          </div>
+        </nav>
       </div>
 
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 flex flex-col">
-        <NavLink to="/" className={navItemClasses} end>
-          <Activity className="w-4 h-4" />
-          OVERVIEW
-        </NavLink>
-        <NavLink to="/event" className={navItemClasses}>
-          <Target className="w-4 h-4" />
-          EVENT
-        </NavLink>
-        <NavLink to="/teams" className={navItemClasses}>
-          <Users className="w-4 h-4" />
-          TEAMS
-        </NavLink>
-        <NavLink to="/control" className={navItemClasses}>
-          <Monitor className="w-4 h-4" />
-          CONTROL
-        </NavLink>
-        <NavLink to="/rounds" className={navItemClasses}>
-          <Layers className="w-4 h-4" />
-          ROUNDS
-        </NavLink>
-        <NavLink to="/leaderboard" className={navItemClasses}>
-          <Trophy className="w-4 h-4" />
-          LEADERBOARD
-        </NavLink>
-        <NavLink to="/analytics" className={navItemClasses}>
-          <BarChart2 className="w-4 h-4" />
-          ANALYTICS
-        </NavLink>
+      {/* Footer Info Pill */}
+      <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
+        <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono">
+            <span className="text-slate-400">STATUS:</span>
+            <span className={`font-bold ${
+              eventStatus === 'LIVE' ? 'text-emerald-400' : 'text-amber-400'
+            }`}>
+              {eventStatus}
+            </span>
+          </div>
 
-        <div className="mt-auto pt-4 border-t border-gray-800 flex flex-col">
-          <button
-            onClick={() => setIsMoreExpanded(!isMoreExpanded)}
-            className="flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 transition-colors w-full border-l-2 border-transparent"
-          >
-            <div className="flex items-center gap-3">
-              <Settings className="w-4 h-4 invisible" />
-              MORE
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                isMoreExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-          
-          {isMoreExpanded && (
-            <div className="flex flex-col pb-4">
-              <NavLink to="/more/hud" className={subItemClasses}>
-                <Monitor className="w-4 h-4" />
-                HUD / GUI
-              </NavLink>
-              <NavLink to="/more/data" className={subItemClasses}>
-                <Database className="w-4 h-4" />
-                DATA CENTER
-              </NavLink>
-              <NavLink to="/more/reviews" className={subItemClasses}>
-                <MessageSquare className="w-4 h-4" />
-                REVIEWS
-              </NavLink>
-              <NavLink to="/more/history" className={subItemClasses}>
-                <History className="w-4 h-4" />
-                EVENT HISTORY
-              </NavLink>
-              <NavLink to="/more/audit" className={subItemClasses}>
-                <FileText className="w-4 h-4" />
-                AUDIT LOG
-              </NavLink>
-              <NavLink to="/more/health" className={subItemClasses}>
-                <HeartPulse className="w-4 h-4" />
-                SYSTEM HEALTH
-              </NavLink>
-              <NavLink to="/more/settings" className={subItemClasses}>
-                <Settings className="w-4 h-4" />
-                SETTINGS
-              </NavLink>
-            </div>
-          )}
+          <div className="flex items-center justify-between text-[11px] font-mono">
+            <span className="text-slate-400">ACTIVE ROUND:</span>
+            <span className="text-slate-200 font-medium truncate max-w-[90px]">
+              {activeRound.replace('_', ' ')}
+            </span>
+          </div>
         </div>
-      </nav>
+
+        <div className="text-center text-[10px] text-slate-400 font-mono mt-3">
+          Prompt War v2.0 · Three-Round System
+        </div>
+      </div>
     </aside>
   );
 };
