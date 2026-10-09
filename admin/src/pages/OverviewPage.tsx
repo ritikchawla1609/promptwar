@@ -94,7 +94,7 @@ export default function OverviewPage() {
       title: 'Prepare Round 1 Start',
       description: 'Check team check-in and launch Round 1 when ready.',
       buttonLabel: 'Start Round 1',
-      action: () => startRound('ROUND_1')
+      action: () => startRound('ROUND_1', 10, 120)
     };
   };
 
@@ -254,7 +254,7 @@ export default function OverviewPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  startRound('ROUND_1', 10, 0);
+                  startRound('ROUND_1', 10, 120);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
               >
@@ -309,7 +309,7 @@ export default function OverviewPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  startRound('ROUND_2', 15, 0);
+                  startRound('ROUND_2', 15, 120);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
               >
@@ -364,7 +364,7 @@ export default function OverviewPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  startRound('ROUND_3', 12, 0);
+                  startRound('ROUND_3', 12, 120);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
               >

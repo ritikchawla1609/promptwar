@@ -112,30 +112,56 @@ export default function App() {
           : Boolean(state?.isRoundStarted);
         const currentSession = sessionRef.current;
 
-        // If team is logged in, synchronize screen based on server activePhase
+        // If team is logged in, reconcile submission integrity and synchronize screen based on server activePhase
         if (currentSession.teamCode) {
+          // Authoritative Server Submission Reconciliation:
+          // A team is submitted IF AND ONLY IF recorded in server database (tms or subs).
+          if (tms && tms.length > 0) {
+            const sTeam = tms.find(
+              (t) => (t.teamCode || '').toUpperCase() === currentSession.teamCode.toUpperCase()
+            );
+            const hasServerFirst =
+              Boolean(sTeam?.round1?.firstOutput && sTeam.round1.firstOutput.trim().length > 0) ||
+              (subs &&
+                subs.some(
+                  (s) =>
+                    (s.teamCode || '').toUpperCase() === currentSession.teamCode.toUpperCase() &&
+                    Boolean(s.firstOutput && s.firstOutput.trim())
+                ));
+
+            // If server confirms NO first submission exists, but local state has FIRST_LOCKED or timestamp:
+            // Dissolve the false lock immediately!
+            if (!hasServerFirst && (currentSession.status === 'FIRST_LOCKED' || currentSession.firstSubmittedAt)) {
+              console.warn('[Integrity Reconcile] Server confirms NO first submission. Dissolving false lock for', currentSession.teamCode);
+              handleUpdateSession({
+                status: 'REGISTERED',
+                firstSubmittedAt: null,
+              });
+            } else if (hasServerFirst && (!currentSession.firstSubmittedAt || currentSession.status === 'REGISTERED')) {
+              // Server has confirmed submission: ensure local session reflects locked status
+              handleUpdateSession({
+                status: 'FIRST_LOCKED',
+                firstSubmittedAt: sTeam?.round1?.firstSubmittedAt || new Date().toISOString(),
+                firstOutput: sTeam?.round1?.firstOutput || currentSession.firstOutput,
+                firstPrompt: sTeam?.round1?.firstPrompt || currentSession.firstPrompt,
+              });
+            }
+          }
+
           // Detect phase transition from server
           if (activePhase !== prevServerPhaseRef.current) {
             const prevPhase = prevServerPhaseRef.current;
             console.log(`[Phase Sync] Transition detected: ${prevPhase} -> ${activePhase}`);
             prevServerPhaseRef.current = activePhase;
 
-            // 1. If transitioning AWAY from CREATE, auto-lock first form ONLY if substantive output exists
+            // Log honest status when window expires — DO NOT auto-submit without user action
             if (prevPhase === 'CREATE') {
-              const hasDraftOutput = Boolean(currentSession.firstOutput && currentSession.firstOutput.trim().length > 0);
-              if (hasDraftOutput && currentSession.status !== 'FIRST_LOCKED' && !currentSession.firstSubmittedAt) {
-                console.log('[Auto-Save] CREATE timer expired — auto-locking valid draft');
-                const autoSubmitData = {
-                  firstPrompt: currentSession.firstPrompt?.trim() || '',
-                  firstOutput: currentSession.firstOutput.trim(),
-                };
-                handleLockFirstForm(autoSubmitData);
-              } else if (!hasDraftOutput && !currentSession.firstSubmittedAt) {
-                console.log('[Phase Sync] CREATE phase expired with NO submission recorded.');
+              if (!currentSession.firstSubmittedAt) {
+                console.log('[Phase Sync] CREATE phase expired without confirmed submission.');
               }
             }
 
-            // 2. If entering MATCH or PARASITE, fetch server-assigned opponents
+            // If entering MATCH or PARASITE, fetch server-assigned opponents
             if (activePhase === 'MATCH' || activePhase === 'PARASITE') {
               try {
                 const matchData = await fetchMatchAssignmentsAPI(currentSession.teamCode);
@@ -158,18 +184,9 @@ export default function App() {
               }
             }
 
-            // 3. If transitioning AWAY from EVOLVE, auto-lock final form ONLY if substantive output exists
             if (prevPhase === 'EVOLVE') {
-              const hasDraftFinal = Boolean(currentSession.finalOutput && currentSession.finalOutput.trim().length > 0);
-              if (hasDraftFinal && currentSession.status !== 'FINAL_LOCKED' && !currentSession.finalSubmittedAt) {
-                console.log('[Auto-Save] EVOLVE timer expired — auto-locking final draft');
-                const autoFinalData = {
-                  finalPrompt: currentSession.finalPrompt?.trim() || '',
-                  finalOutput: currentSession.finalOutput.trim(),
-                };
-                handleLockFinalForm(autoFinalData);
-              } else if (!hasDraftFinal && !currentSession.finalSubmittedAt) {
-                console.log('[Phase Sync] EVOLVE phase expired with NO submission recorded.');
+              if (!currentSession.finalSubmittedAt) {
+                console.log('[Phase Sync] EVOLVE phase expired without final submission.');
               }
             }
           }
@@ -178,8 +195,8 @@ export default function App() {
           if (!isRoundStarted || activePhase === 'LOBBY') {
             setCurrentStage('HOLDING_LOBBY');
           } else if (activePhase === 'BRIEFING') {
-            // Only force to HOW_IT_WORKS if currently in lobby
-            setCurrentStage((prev) => (prev === 'HOLDING_LOBBY' || prev === 'ENTRY' ? 'HOW_IT_WORKS' : prev));
+            // Keep participants in briefing and challenge during 2-minute briefing; never allow premature CREATE
+            setCurrentStage((prev) => (prev === 'CREATE' || prev === 'HOLDING_LOBBY' || prev === 'ENTRY' ? 'HOW_IT_WORKS' : prev));
           } else if (activePhase === 'CREATE') {
             setCurrentStage('CREATE');
           } else if (activePhase === 'MATCH') {
@@ -242,27 +259,36 @@ export default function App() {
 
   const handleTeamAuthenticated = (teamData) => {
     if (!teamData) return;
+    const hasServerFirst = Boolean(teamData.round1?.firstOutput && teamData.round1.firstOutput.trim().length > 0);
+    const hasServerFinal = Boolean(teamData.round1?.finalOutput && teamData.round1.finalOutput.trim().length > 0);
+
     const updated = {
-      ...session,
+      participantId: session.participantId || generateId('part'),
       teamCode: teamData.teamCode,
       teamName: teamData.teamName,
       leaderName: teamData.leaderName,
       leaderContact: teamData.leaderContact,
-      college: teamData.college,
-      members: teamData.members,
+      college: teamData.college || 'Chandigarh University',
+      members: teamData.members || [],
       memberCount: teamData.memberCount || (teamData.members ? teamData.members.length : 1),
       anonymousId: teamData.teamName ? teamData.teamName.toUpperCase() : session.anonymousId,
-      status: 'REGISTERED',
-      ...(teamData.round1?.firstOutput ? { firstOutput: teamData.round1.firstOutput } : {}),
-      ...(teamData.round1?.firstPrompt ? { firstPrompt: teamData.round1.firstPrompt } : {}),
-      ...(teamData.round1?.finalOutput ? { finalOutput: teamData.round1.finalOutput } : {}),
-      ...(teamData.round1?.finalPrompt ? { finalPrompt: teamData.round1.finalPrompt } : {}),
+      status: hasServerFinal ? 'FINAL_LOCKED' : (hasServerFirst ? 'FIRST_LOCKED' : 'REGISTERED'),
+      firstPrompt: teamData.round1?.firstPrompt || '',
+      firstOutput: teamData.round1?.firstOutput || '',
+      firstSubmittedAt: hasServerFirst ? (teamData.round1?.firstSubmittedAt || new Date().toISOString()) : null,
+      finalPrompt: teamData.round1?.finalPrompt || '',
+      finalOutput: teamData.round1?.finalOutput || '',
+      finalSubmittedAt: hasServerFinal ? (teamData.round1?.finalSubmittedAt || new Date().toISOString()) : null,
+      matchedOpponents: teamData.round1?.matchedOpponents || [],
+      mutationNotes: teamData.round1?.mutationNotes || '',
     };
     handleUpdateSession(updated);
 
     // If host hasn't started round 1, advance to Holding Lobby; if already started, go to active phase stage
     if (!arenaState.isRoundStarted || arenaState.activePhase === 'LOBBY') {
       setCurrentStage('HOLDING_LOBBY');
+    } else if (arenaState.activePhase === 'BRIEFING') {
+      setCurrentStage('HOW_IT_WORKS');
     } else if (arenaState.activePhase === 'CREATE') {
       setCurrentStage('CREATE');
     } else if (arenaState.activePhase === 'MATCH') {
@@ -286,6 +312,14 @@ export default function App() {
       leaderContact: '',
       college: 'Chandigarh University',
       members: [],
+      firstPrompt: '',
+      firstOutput: '',
+      firstSubmittedAt: null,
+      finalPrompt: '',
+      finalOutput: '',
+      finalSubmittedAt: null,
+      matchedOpponents: [],
+      mutationNotes: '',
       status: 'NOT_REGISTERED',
     });
     setCurrentStage('ENTRY');
@@ -425,7 +459,13 @@ export default function App() {
         {currentStage === 'CHALLENGE' && (
           <Screen2Challenge
             challenge={challenge}
-            onStartCreating={() => setCurrentStage('CREATE')}
+            isBriefing={phaseClock?.activePhase === 'BRIEFING' || arenaState.activePhase === 'BRIEFING'}
+            remainingSeconds={currentRemaining}
+            onStartCreating={() => {
+              if (phaseClock?.activePhase !== 'BRIEFING' && arenaState.activePhase !== 'BRIEFING') {
+                setCurrentStage('CREATE');
+              }
+            }}
           />
         )}
 

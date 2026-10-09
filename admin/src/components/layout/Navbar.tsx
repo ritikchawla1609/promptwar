@@ -149,9 +149,9 @@ export const Navbar: React.FC = () => {
           {/* Quick Start Round */}
           {eventStatus !== 'LIVE' && (
             <button
-              onClick={() => startRound(activeRound !== 'NONE' ? activeRound : 'ROUND_1', undefined, 0)}
+              onClick={() => startRound(activeRound !== 'NONE' ? activeRound : 'ROUND_1', undefined, 120)}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-95"
-              title="Start Current Round Immediately"
+              title="Start Current Round with 2-Minute Briefing"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>START ROUND</span>

@@ -31,10 +31,10 @@ export default function UnifiedBriefingModal({
 
   if (!isOpen && isModal) return null;
 
-  const isBriefing = serverClock?.status === 'BRIEFING' || serverClock?.status === 'SCHEDULED' || activePhase === 'BRIEFING' || activePhase === 'LOBBY';
-  const isPaused = serverClock?.status === 'PAUSED';
-  const isCompleted = serverClock?.status === 'COMPLETED' || activePhase === 'COMPLETE';
-  const isLive = serverClock?.status === 'LIVE' || (!isBriefing && !isPaused && !isCompleted);
+  const isBriefing = serverClock?.status === 'BRIEFING' || serverClock?.scheduleStatus === 'BRIEFING' || serverClock?.activePhase === 'BRIEFING' || activePhase === 'BRIEFING' || activePhase === 'LOBBY';
+  const isPaused = serverClock?.status === 'PAUSED' || serverClock?.scheduleStatus === 'PAUSED';
+  const isCompleted = serverClock?.status === 'COMPLETED' || serverClock?.scheduleStatus === 'COMPLETED' || activePhase === 'COMPLETE';
+  const isLive = serverClock?.status === 'LIVE' || serverClock?.scheduleStatus === 'LIVE' || (!isBriefing && !isPaused && !isCompleted);
 
   const formatMMSS = (sec) => {
     const s = Math.max(0, Math.floor(sec || 0));
@@ -123,7 +123,7 @@ export default function UnifiedBriefingModal({
                 {isBriefing ? 'BRIEFING COUNTDOWN' : isPaused ? 'ROUND PAUSED' : isCompleted ? 'ROUND ENDED' : 'AUTHORITATIVE CLOCK'}
               </div>
               <div className="text-base sm:text-lg font-bold text-bone-100">
-                {isBriefing ? `${serverClock?.secondsUntilStart || 0}s` : formatMMSS(remainingSeconds)}
+                {isBriefing ? formatMMSS(serverClock?.secondsUntilStart || serverClock?.remainingSeconds || remainingSeconds) : formatMMSS(remainingSeconds)}
               </div>
             </div>
           </div>
@@ -389,7 +389,7 @@ export default function UnifiedBriefingModal({
             {isBriefing ? (
               <>
                 <Clock className="w-4 h-4 animate-spin" />
-                <span>WAITING FOR OFFICIAL START ({serverClock?.secondsUntilStart || 0}s)</span>
+                <span>WAITING FOR OFFICIAL START ({formatMMSS(serverClock?.secondsUntilStart || serverClock?.remainingSeconds || remainingSeconds)})</span>
               </>
             ) : isPaused ? (
               <span>ROUND PAUSED BY HOST</span>

@@ -50,7 +50,7 @@ export default function LiveControlPage() {
 
   // Selected round for inspection (independent of active round)
   const [inspectedRound, setInspectedRound] = useState<ActiveRoundId>(activeRound);
-  const [briefingSecOption, setBriefingSecOption] = useState<number>(60);
+  const [briefingSecOption, setBriefingSecOption] = useState<number>(120);
   const [roundDurationMinOption, setRoundDurationMinOption] = useState<number>(10);
 
   // Start Round modal state
@@ -64,7 +64,7 @@ export default function LiveControlPage() {
     isOpen: false,
     roundId: activeRound !== 'NONE' ? activeRound : 'ROUND_1',
     durationMin: 10,
-    briefingSec: 0,
+    briefingSec: 120,
     isStarting: false
   });
 
@@ -182,7 +182,7 @@ export default function LiveControlPage() {
                     isOpen: true,
                     roundId: activeRound !== 'NONE' ? activeRound : 'ROUND_1',
                     durationMin: roundDurationMinOption,
-                    briefingSec: 0,
+                    briefingSec: 120,
                     isStarting: false
                   });
                 }}
@@ -376,7 +376,7 @@ export default function LiveControlPage() {
                   isOpen: true,
                   roundId: inspectedRound,
                   durationMin: roundDurationMinOption,
-                  briefingSec: 0,
+                  briefingSec: 120,
                   isStarting: false
                 });
               }}
@@ -434,10 +434,10 @@ export default function LiveControlPage() {
                 <div className="flex items-center space-x-1.5 p-1 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono">
                   <span className="text-slate-400 px-2">BRIEFING:</span>
                   {[
+                    { label: '2 Min (Official)', val: 120 },
+                    { label: '3 Min', val: 180 },
+                    { label: '1 Min', val: 60 },
                     { label: 'None (0s)', val: 0 },
-                    { label: '30s', val: 30 },
-                    { label: '60s', val: 60 },
-                    { label: '120s', val: 120 },
                   ].map(b => (
                     <button
                       key={b.val}
@@ -694,11 +694,12 @@ export default function LiveControlPage() {
               <label className="text-xs font-mono text-slate-300 font-bold uppercase tracking-wider block">
                 Rules & Briefing Countdown:
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { label: 'Instant Start (0s)', val: 0 },
-                  { label: '30s Briefing', val: 30 },
-                  { label: '60s Briefing', val: 60 }
+                  { label: '2 Min (Official)', val: 120 },
+                  { label: '3 Min', val: 180 },
+                  { label: '1 Min', val: 60 },
+                  { label: 'Instant (0s)', val: 0 },
                 ].map(b => (
                   <button
                     key={b.val}

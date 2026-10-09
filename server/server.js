@@ -25,7 +25,7 @@ let isMongoConnected = false;
 // -------------------------------------------------------------
 const PHASE_SEQUENCE = ['LOBBY', 'BRIEFING', 'CREATE', 'MATCH', 'PARASITE', 'EVOLVE', 'COMPLETE'];
 const TIMED_PHASES = {
-  BRIEFING: 60,    // 1 min briefing
+  BRIEFING: 120,   // 2 min official briefing phase
   CREATE: 600,     // 10 min
   MATCH: 30,       // 30s transition
   PARASITE: 600,   // 10 min
@@ -863,6 +863,8 @@ app.get('/api/arena/phase-clock', async (req, res) => {
       roundId: state.roundId || 'ROUND_1',
       sessionId: state.sessionId || 'pw_sess_default',
       scheduleStatus: state.scheduleStatus || 'LOBBY',
+      status: state.scheduleStatus || 'LOBBY',
+      secondsUntilStart: (state.scheduleStatus === 'BRIEFING' || state.scheduleStatus === 'SCHEDULED') ? remainingSeconds : 0,
       scheduledStartAt: state.scheduledStartAt || null,
       scheduledEndAt: state.scheduledEndAt || null,
       actualStartedAt: state.actualStartedAt || null,
@@ -933,7 +935,7 @@ app.post('/api/arena/schedule', async (req, res) => {
     const {
       roundId = 'ROUND_1',
       durationSeconds = 600,
-      briefingSeconds = 60,
+      briefingSeconds = 120, // 2 minutes default briefing phase
       scheduledStartAt = null,
       autoAdvance = true,
     } = req.body;

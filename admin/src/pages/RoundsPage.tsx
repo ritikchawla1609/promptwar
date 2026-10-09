@@ -182,7 +182,7 @@ export default function RoundsPage() {
 
               {/* Start Round 1 Button */}
               <button
-                onClick={() => startRound('ROUND_1', 10, 0)}
+                onClick={() => startRound('ROUND_1', 10, 120)}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -365,7 +365,7 @@ export default function RoundsPage() {
 
               {/* Start Round 2 Button */}
               <button
-                onClick={() => startRound('ROUND_2', 15, 0)}
+                onClick={() => startRound('ROUND_2', 15, 120)}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-indigo-600/20 transition-all active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -510,7 +510,7 @@ export default function RoundsPage() {
 
               {/* Start Round 3 Button */}
               <button
-                onClick={() => startRound('ROUND_3', 12, 0)}
+                onClick={() => startRound('ROUND_3', 12, 120)}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400/40 text-xs font-mono font-bold flex items-center space-x-1.5 shadow-md shadow-rose-600/20 transition-all active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />

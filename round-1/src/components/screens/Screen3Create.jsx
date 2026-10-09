@@ -29,25 +29,13 @@ export default function Screen3Create({
   const hasOutput = outputInput.trim().length > 0;
   const isReady = hasPrompt && hasOutput;
 
-  // A team has submitted IF AND ONLY IF they have recorded submission timestamp AND non-empty output
+  // A team has submitted IF AND ONLY IF they have explicitly locked their form with confirmed status, timestamp, and non-empty output
   const hasSubmitted = Boolean(
+    session.status === 'FIRST_LOCKED' &&
     session.firstSubmittedAt &&
     session.firstOutput &&
     session.firstOutput.trim().length > 0
   );
-
-  // Auto-lock when phase timer hits 0 ONLY IF user has actually generated content
-  useEffect(() => {
-    if (timer === 0 && !hasSubmitted && !isSubmitting) {
-      if (promptInput.trim() && outputInput.trim()) {
-        parasiteAudio.playLock();
-        onLockFirstForm({
-          firstPrompt: promptInput.trim(),
-          firstOutput: outputInput.trim(),
-        });
-      }
-    }
-  }, [timer, hasSubmitted, isSubmitting, promptInput, outputInput]);
 
   const handleLock = () => {
     if (!isReady) return;

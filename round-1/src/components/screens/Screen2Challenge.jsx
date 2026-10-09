@@ -2,8 +2,20 @@ import React from 'react';
 import { parasiteAudio } from '../../utils/parasiteAudio';
 import { Clock, ArrowRight, CheckCircle2, ShieldCheck, Terminal } from 'lucide-react';
 
-export default function Screen2Challenge({ challenge, onStartCreating }) {
+export default function Screen2Challenge({
+  challenge,
+  onStartCreating,
+  isBriefing = false,
+  remainingSeconds = 600,
+}) {
+  const formatTimer = (secs) => {
+    const mins = Math.floor(Math.max(0, secs) / 60);
+    const s = Math.max(0, secs) % 60;
+    return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const handleStart = () => {
+    if (isBriefing) return;
     parasiteAudio.playSubDrop();
     onStartCreating();
   };
@@ -24,12 +36,20 @@ export default function Screen2Challenge({ challenge, onStartCreating }) {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-charcoal-900 border border-white/[0.08] text-bone-300">
-            <span className="text-[10px] text-bone-500 uppercase">PHASE 01:</span>
-            <span className="font-bold text-bone-100">CREATE</span>
+            <span className="text-[10px] text-bone-500 uppercase">
+              {isBriefing ? 'PHASE 00:' : 'PHASE 01:'}
+            </span>
+            <span className="font-bold text-bone-100">
+              {isBriefing ? 'BRIEFING' : 'CREATE'}
+            </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-acid-lime/10 border border-acid-lime/30 text-acid-lime">
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 border ${
+            isBriefing
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+              : 'bg-acid-lime/10 border-acid-lime/30 text-acid-lime'
+          }`}>
             <Clock className="w-3.5 h-3.5" />
-            <span className="font-bold">10:00</span>
+            <span className="font-bold">{formatTimer(remainingSeconds)}</span>
           </div>
         </div>
       </div>
@@ -96,17 +116,30 @@ export default function Screen2Challenge({ challenge, onStartCreating }) {
         </div>
 
         {/* Action Button */}
-        <div className="mt-8 flex items-center justify-between">
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="text-bone-400 text-xs font-mono">
-            Clicking will initiate your 10:00 Create Phase timer immediately.
+            {isBriefing
+              ? '⚡ Official 2-minute briefing in progress. The Create Phase unlocks automatically when countdown reaches 00:00.'
+              : 'Clicking will advance your squad to the 10:00 Create Phase workspace.'}
           </div>
 
           <button
             onClick={handleStart}
-            className="editorial-btn group"
+            disabled={isBriefing}
+            className={`editorial-btn group ${
+              isBriefing
+                ? 'opacity-60 cursor-not-allowed bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'
+                : ''
+            }`}
           >
-            <span>START CREATING</span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            <span>
+              {isBriefing
+                ? `BRIEFING IN PROGRESS (${formatTimer(remainingSeconds)})`
+                : 'START CREATING'}
+            </span>
+            {!isBriefing && (
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            )}
           </button>
         </div>
       </div>

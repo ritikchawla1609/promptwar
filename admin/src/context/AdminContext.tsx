@@ -321,7 +321,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } else if (c.status === 'BRIEFING' || c.status === 'SCHEDULED') {
           setEventStatus('LIVE');
           setTimerRunning(true);
-          setRemainingSeconds(c.durationSeconds || 600);
+          const briefingRem = c.scheduledStartAt
+            ? Math.max(0, Math.ceil((Date.parse(c.scheduledStartAt) - synNow) / 1000))
+            : (c.secondsUntilStart || 120);
+          setRemainingSeconds(briefingRem);
         }
       } else if (arenaRes.success && arenaRes.state) {
         const s = arenaRes.state;
@@ -490,7 +493,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addAuditLog('EVENT_CONCLUDED', 'Prompt War', 'Grand tournament officially completed.', 'ROUND');
   };
 
-  const startRound = async (roundId: ActiveRoundId, customDurationMin?: number, briefingSec: number = 60) => {
+  const startRound = async (roundId: ActiveRoundId, customDurationMin?: number, briefingSec: number = 120) => {
     setActiveRound(roundId);
     setEventStatus('LIVE');
     setTimerRunning(true);
@@ -515,7 +518,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshData();
   };
 
-  const scheduleRound = async (roundId: ActiveRoundId, durationMin?: number, briefingSec: number = 60) => {
+  const scheduleRound = async (roundId: ActiveRoundId, durationMin?: number, briefingSec: number = 120) => {
     await startRound(roundId, durationMin, briefingSec);
   };
 
