@@ -145,19 +145,30 @@ export async function fetchAllRegisteredTeams() {
     const res = await fetch(`${API_BASE}/api/teams`);
     if (res.ok) {
       const data = await res.json();
-      if (data.teams && data.teams.length > 0) {
+      if (Array.isArray(data.teams)) {
         return data.teams;
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('API error in fetchAllRegisteredTeams, checking fallback:', e);
+  }
 
-  // Fallback
+  // Fallback ONLY when network completely fails
   try {
     const raw = localStorage.getItem(STORAGE_KEY_TEAMS);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
 
   return [];
+}
+
+// Purge Arena Data API
+export async function purgeArenaDataAPI() {
+  const res = await fetch(`${API_BASE}/api/arena/purge-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
 }
 
 // Host 1-Click Qualify for Round 2

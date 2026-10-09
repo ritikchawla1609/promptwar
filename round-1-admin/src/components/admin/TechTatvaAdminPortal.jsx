@@ -45,6 +45,7 @@ import {
   registerTeamAPI,
   fetchAllArenaSubmissions,
   fetchPhaseClockAPI,
+  purgeArenaDataAPI,
 } from '../../utils/parasiteEngine';
 import { DEFAULT_CHALLENGE } from '../../data/parasiteChallenge';
 import { parasiteAudio } from '../../utils/parasiteAudio';
@@ -203,17 +204,12 @@ export default function TechTatvaAdminPortal({
       const updates = {
         isRoundStarted: shouldStart,
       };
-      const res = await fetch('http://127.0.0.1:5001/api/arena/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      const data = await res.json();
-      if (!res.ok || data.success === false) {
-        alert(`❌ Arena Start Blocked: ${data.error || 'Server error'}`);
+      const data = await updateArenaStateAPI(updates);
+      if (!data) {
+        alert(`❌ Arena Start Blocked: Server error`);
         return;
       }
-      setArenaState(data.state);
+      setArenaState(data);
       const clock = await fetchPhaseClockAPI();
       if (clock && clock.success) setPhaseClock(clock);
       parasiteAudio.playSubDrop();
@@ -227,13 +223,8 @@ export default function TechTatvaAdminPortal({
   const handleBroadcastPhase = async (phaseName) => {
     setIsUpdatingArena(true);
     try {
-      const res = await fetch('http://127.0.0.1:5001/api/arena/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activePhase: phaseName }),
-      });
-      const data = await res.json();
-      if (data.state) setArenaState(data.state);
+      const data = await updateArenaStateAPI({ activePhase: phaseName });
+      if (data) setArenaState(data);
       const clock = await fetchPhaseClockAPI();
       if (clock && clock.success) setPhaseClock(clock);
       parasiteAudio.playLock();
@@ -279,10 +270,7 @@ export default function TechTatvaAdminPortal({
     }
     setIsUpdatingArena(true);
     try {
-      const res = await fetch('http://127.0.0.1:5001/api/arena/purge-data', {
-        method: 'POST',
-      });
-      const data = await res.json();
+      const data = await purgeArenaDataAPI();
       if (data.success) {
         alert('✅ Tournament Reset Complete: All test teams and submissions have been wiped clean.');
         loadConsoleData();

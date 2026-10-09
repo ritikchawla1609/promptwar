@@ -135,11 +135,20 @@ function stopAutoAdvance() {
 // BALANCED RANDOM MATCHMAKING
 // -------------------------------------------------------------
 
-function runServerMatchmaking() {
+async function runServerMatchmaking() {
   console.log('🎯 [Matchmaking] Running balanced random matchmaking...');
 
+  let allTeams = inMemoryTeams;
+  if (isMongoConnected) {
+    try {
+      allTeams = await Team.find({});
+    } catch (e) {
+      console.warn('Error fetching teams in matchmaking:', e);
+    }
+  }
+
   // Get all teams with firstOutput
-  const submittedTeams = getSubmittedTeams();
+  const submittedTeams = getSubmittedTeams(allTeams);
 
   if (submittedTeams.length < 2) {
     console.log('⚠️ [Matchmaking] Less than 2 submissions — matching with available pool or empty.');
@@ -205,8 +214,9 @@ function runServerMatchmaking() {
   console.log(`📊 [Matchmaking] Distribution:`, assignmentCounts);
 }
 
-function getSubmittedTeams() {
-  return inMemoryTeams.filter(t => {
+function getSubmittedTeams(allTeams = null) {
+  const source = allTeams || inMemoryTeams;
+  return source.filter(t => {
     const output = t.round1?.firstOutput || '';
     return output.trim().length > 0;
   });
@@ -220,56 +230,57 @@ function shuffleArray(arr) {
   return arr;
 }
 
-function getSubmittedCount(phase) {
+function getSubmittedCount(phase, allTeams = null) {
+  const source = allTeams || inMemoryTeams;
   if (phase === 'CREATE') {
-    return inMemoryTeams.filter(t => (t.round1?.firstOutput || '').trim().length > 0).length;
+    return source.filter(t => (t.round1?.firstOutput || '').trim().length > 0).length;
   } else if (phase === 'EVOLVE') {
-    return inMemoryTeams.filter(t => (t.round1?.finalOutput || '').trim().length > 0).length;
+    return source.filter(t => (t.round1?.finalOutput || '').trim().length > 0).length;
   }
   return 0;
 }
 
 // -------------------------------------------------------------
 // DATABASE CONNECTION
-// -------------------------------------------------------------
+let cachedDbPromise = null;
 
-async function connectDB() {
-  if (!MONGODB_URI || MONGODB_URI.includes('<db_password>')) {
-    console.warn('\n⚠️ [MongoDB] MONGODB_URI contains placeholder <db_password>!');
-    console.warn('ℹ️ [MongoDB] Running in high-reliability in-memory fallback mode for local development.\n');
+async function ensureDB() {
+  if (mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
     return;
   }
-
-  try {
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    isMongoConnected = true;
-    console.log('✅ [MongoDB] Successfully connected to MongoDB Atlas cluster!');
-  } catch (err) {
+  if (!MONGODB_URI || MONGODB_URI.includes('<db_password>')) {
     isMongoConnected = false;
-    console.error('❌ [MongoDB] Connection error:', err.message);
+    return;
   }
+  if (!cachedDbPromise) {
+    cachedDbPromise = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 8000,
+      bufferCommands: false,
+    }).then(() => {
+      isMongoConnected = true;
+      console.log('✅ [MongoDB] Connected to MongoDB Atlas cluster');
+    }).catch(err => {
+      cachedDbPromise = null;
+      isMongoConnected = false;
+      console.error('❌ [MongoDB] Connection error:', err.message);
+    });
+  }
+  await cachedDbPromise;
 }
 
-mongoose.connection.on('disconnected', () => {
-  isMongoConnected = false;
-  console.warn('⚠️ [MongoDB] Disconnected from MongoDB');
+// Global middleware to guarantee DB is connected before processing requests
+app.use(async (req, res, next) => {
+  await ensureDB();
+  next();
 });
-
-mongoose.connection.on('reconnected', () => {
-  isMongoConnected = true;
-  console.log('🔄 [MongoDB] Reconnected to MongoDB');
-});
-
-connectDB();
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'Prompt War Unified Backend',
-    mongoConnected: isMongoConnected,
+    mongoConnected: mongoose.connection.readyState === 1,
     hasConfiguredUri: Boolean(MONGODB_URI && !MONGODB_URI.includes('<db_password>')),
     timestamp: new Date().toISOString(),
   });
@@ -285,13 +296,22 @@ app.get('/api/arena/state', (req, res) => {
 });
 
 // POST /api/arena/state (Updated exclusively by Tech Tatva Host Admin)
-app.post('/api/arena/state', (req, res) => {
+app.post('/api/arena/state', async (req, res) => {
   try {
     const updates = req.body;
 
     // MIN TEAM GATE: Block round start if not enough teams
     if (updates.isRoundStarted === true && !arenaState.isRoundStarted) {
-      const teamCount = inMemoryTeams.length;
+      let teamCount = inMemoryTeams.length;
+      if (isMongoConnected) {
+        try {
+          const dbTeams = await Team.find({});
+          teamCount = dbTeams.length;
+        } catch (e) {
+          console.warn('Error counting teams in arena state start:', e);
+        }
+      }
+
       if (teamCount < arenaState.minTeamsToStart) {
         return res.status(400).json({
           success: false,
@@ -409,13 +429,26 @@ app.post('/api/arena/purge-data', async (req, res) => {
 });
 
 // GET /api/arena/phase-clock (Server-authoritative countdown for all clients)
-app.get('/api/arena/phase-clock', (req, res) => {
+app.get('/api/arena/phase-clock', async (req, res) => {
   const now = Date.now();
   let remainingSeconds = 0;
   let totalSeconds = arenaState.phaseDuration || 0;
 
   if (arenaState.phaseEndsAt) {
     remainingSeconds = Math.max(0, Math.ceil((new Date(arenaState.phaseEndsAt).getTime() - now) / 1000));
+  }
+
+  let teamCount = inMemoryTeams.length;
+  let subCount = getSubmittedCount(arenaState.activePhase);
+
+  if (isMongoConnected) {
+    try {
+      const teams = await Team.find({});
+      teamCount = teams.length;
+      subCount = getSubmittedCount(arenaState.activePhase, teams);
+    } catch (e) {
+      console.warn('Error fetching teams in phase-clock:', e);
+    }
   }
 
   res.json({
@@ -427,8 +460,8 @@ app.get('/api/arena/phase-clock', (req, res) => {
     remainingSeconds,
     totalSeconds,
     minTeamsRequired: arenaState.minTeamsToStart,
-    registeredTeamCount: inMemoryTeams.length,
-    submittedCount: getSubmittedCount(arenaState.activePhase),
+    registeredTeamCount: teamCount,
+    submittedCount: subCount,
   });
 });
 
