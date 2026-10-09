@@ -2,20 +2,27 @@ import React, { useState } from 'react';
 import { Mission } from '../../types/frameZero';
 import { MISSIONS } from '../../data/missions';
 import { SceneBriefModal } from './SceneBriefModal';
-import { Clapperboard, ArrowLeft, Clock, Film, Award, BookOpen } from 'lucide-react';
+import { DirectorBriefingModal } from './DirectorBriefingModal';
+import { AuthoritativeClockState, formatSecondsToMMSS } from '../../utils/authoritativeClock';
+import { Clapperboard, ArrowLeft, Clock, Film, Award, BookOpen, HelpCircle } from 'lucide-react';
 
 interface MissionSelectProps {
   directorName: string;
   onSelectMission: (mission: Mission) => void;
   onBackToIntro: () => void;
+  serverClock?: AuthoritativeClockState | null;
+  remainingSeconds?: number;
 }
 
 export const MissionSelect: React.FC<MissionSelectProps> = ({
   directorName,
   onSelectMission,
-  onBackToIntro
+  onBackToIntro,
+  serverClock = null,
+  remainingSeconds,
 }) => {
   const [modalMission, setModalMission] = useState<Mission | null>(null);
+  const [isBriefingOpen, setIsBriefingOpen] = useState<boolean>(false);
 
   const getDifficultyColor = (stars: number) => {
     switch (stars) {
@@ -53,14 +60,33 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
             </div>
           </div>
 
-          {/* Director Badge */}
-          <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm self-start sm:self-auto">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 font-serif font-bold text-sm">
-              {directorName.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400">DIRECTOR IN CHAIR</div>
-              <div className="text-xs font-medium text-slate-200">{directorName}</div>
+          {/* Header Right: Clock & How to play & Director Badge */}
+          <div className="flex items-center space-x-3 self-start sm:self-auto">
+            {remainingSeconds !== undefined && (
+              <div className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>{formatSecondsToMMSS(remainingSeconds)}</span>
+              </div>
+            )}
+
+            <button
+              onClick={() => setIsBriefingOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 text-xs font-mono transition-all active:scale-95 shadow-sm"
+              title="Director's Manual & Rubric"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span>How to play</span>
+            </button>
+
+            {/* Director Badge */}
+            <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 font-serif font-bold text-sm">
+                {directorName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400">DIRECTOR IN CHAIR</div>
+                <div className="text-xs font-medium text-slate-200">{directorName}</div>
+              </div>
             </div>
           </div>
         </header>
@@ -224,6 +250,15 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
           setModalMission(null);
           onSelectMission(mission);
         }}
+      />
+
+      {/* Non-destructive Director Briefing & Rubric Modal */}
+      <DirectorBriefingModal
+        isOpen={isBriefingOpen}
+        isModal={true}
+        onClose={() => setIsBriefingOpen(false)}
+        serverClock={serverClock}
+        remainingSeconds={remainingSeconds}
       />
     </div>
   );

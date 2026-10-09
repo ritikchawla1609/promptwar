@@ -11,6 +11,7 @@ import Screen5Parasite from './components/screens/Screen5Parasite';
 import Screen6Evolve from './components/screens/Screen6Evolve';
 import Screen7Complete from './components/screens/Screen7Complete';
 import TeamRegistrationModal from './components/TeamRegistrationModal';
+import UnifiedBriefingModal from './components/UnifiedBriefingModal';
 import { DEFAULT_CHALLENGE } from './data/parasiteChallenge';
 import {
   loadLocalSession,
@@ -32,6 +33,7 @@ export default function App() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [registerModalTab, setRegisterModalTab] = useState('REGISTER');
   const [isMuted, setIsMuted] = useState(false);
+  const [isBriefingModalOpen, setIsBriefingModalOpen] = useState(false);
 
   // Global Arena Tournament State (Controlled by Admin Panel & Server Clock)
   const [arenaState, setArenaState] = useState({
@@ -360,6 +362,7 @@ export default function App() {
         session={session}
         onUpdateSession={handleUpdateSession}
         onOpenRegister={handleOpenRegister}
+        onOpenBriefing={() => setIsBriefingModalOpen(true)}
         onLogoutTeam={handleLogoutTeam}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
@@ -386,7 +389,14 @@ export default function App() {
         )}
 
         {currentStage === 'HOW_IT_WORKS' && (
-          <Screen1HowItWorks onProceed={() => setCurrentStage('CHALLENGE')} />
+          <UnifiedBriefingModal
+            isOpen={true}
+            isModal={false}
+            onProceed={() => setCurrentStage('CHALLENGE')}
+            serverClock={phaseClock}
+            remainingSeconds={currentRemaining}
+            activePhase={arenaState.activePhase}
+          />
         )}
 
         {currentStage === 'CHALLENGE' && (
@@ -476,6 +486,16 @@ export default function App() {
         initialTab={registerModalTab}
         onTeamRegistered={handleTeamAuthenticated}
         onTeamAuthenticated={handleTeamAuthenticated}
+      />
+
+      {/* In-Game Non-Destructive Briefing & Help Modal */}
+      <UnifiedBriefingModal
+        isOpen={isBriefingModalOpen}
+        isModal={true}
+        onClose={() => setIsBriefingModalOpen(false)}
+        serverClock={phaseClock}
+        remainingSeconds={currentRemaining}
+        activePhase={arenaState.activePhase}
       />
     </div>
   );

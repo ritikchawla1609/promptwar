@@ -191,6 +191,79 @@ test('Round 3 (Frame Zero) retains core components and Director trial', () => {
   assert(fs.existsSync('round 3/src/utils/authoritativeClock.ts'), 'authoritativeClock utility exists');
 });
 
+// =========================================================================
+// TEST SUITE 6: Unified Participant Instructions Across All 3 Rounds
+// =========================================================================
+console.log('\n--- TEST SUITE 6: Unified Participant Instructions & Non-Destructive Help ---');
+
+test('Round 1 implements UnifiedBriefingModal with 100-pt rubric and in-game help', () => {
+  assert(fs.existsSync('round-1/src/components/UnifiedBriefingModal.jsx'), 'UnifiedBriefingModal exists');
+  const modalContent = fs.readFileSync('round-1/src/components/UnifiedBriefingModal.jsx', 'utf-8');
+  assert(modalContent.includes('PROMPT WAR · ROUND 01'), 'Modal has Round 1 identity');
+  assert(modalContent.includes('PROMPT PARASITE'), 'Modal references Prompt Parasite');
+  assert(modalContent.includes('THE REGISTRATION PROBLEM'), 'Modal has registration objective');
+  assert(modalContent.includes('SCORING RUBRIC (100 PTS)'), 'Modal has 100-pt rubric');
+  assert(modalContent.includes('Strategy Viability'), 'Modal has strategy category');
+  assert(modalContent.includes('Fiscal Line-Items'), 'Modal has fiscal category');
+  assert(modalContent.includes('Channel Hooks'), 'Modal has channel hooks category');
+  assert(modalContent.includes('Guerrilla Activation'), 'Modal has guerrilla category');
+  assert(modalContent.includes('Parasite Leverage'), 'Modal has parasite category');
+  assert(modalContent.includes('WAITING FOR OFFICIAL START'), 'Modal supports gated action');
+
+  const headerContent = fs.readFileSync('round-1/src/components/ParasiteHeader.jsx', 'utf-8');
+  assert(headerContent.includes('HOW TO PLAY'), 'ParasiteHeader has HOW TO PLAY button');
+  assert(headerContent.includes('HelpCircle'), 'ParasiteHeader has HelpCircle icon');
+
+  const appContent = fs.readFileSync('round-1/src/App.jsx', 'utf-8');
+  assert(appContent.includes('isBriefingModalOpen'), 'App.jsx tracks modal open state');
+  assert(appContent.includes('<UnifiedBriefingModal'), 'App.jsx renders UnifiedBriefingModal');
+});
+
+test('Round 2 implements BlackboxBriefingModal with 100-pt rubric and in-game help', () => {
+  assert(fs.existsSync('round-2/src/components/BlackboxBriefingModal.jsx'), 'BlackboxBriefingModal exists');
+  const modalContent = fs.readFileSync('round-2/src/components/BlackboxBriefingModal.jsx', 'utf-8');
+  assert(modalContent.toLowerCase().includes('operation blackbox'), 'Modal has identity');
+  assert(modalContent.includes('SCORING RUBRIC (100 PTS)'), 'Modal has 100-pt rubric');
+  assert(modalContent.includes('Evidence Corroboration'), 'Modal has evidence category');
+  assert(modalContent.includes('Timeline Reconciliation'), 'Modal has timeline category');
+  assert(modalContent.includes('Entry Vector & Culprit'), 'Modal has culprit category');
+  assert(modalContent.includes('Precision & Brevity'), 'Modal has precision category');
+
+  const workspaceContent = fs.readFileSync('round-2/src/components/ScreenWorkspace.jsx', 'utf-8');
+  assert(workspaceContent.includes('How to play'), 'ScreenWorkspace has How to play button');
+  assert(workspaceContent.includes('onOpenBriefing'), 'ScreenWorkspace calls onOpenBriefing');
+
+  const appContent = fs.readFileSync('round-2/src/App.jsx', 'utf-8');
+  assert(appContent.includes('isBriefingOpen'), 'App.jsx tracks isBriefingOpen');
+  assert(appContent.includes('<BlackboxBriefingModal'), 'App.jsx renders BlackboxBriefingModal');
+});
+
+test('Round 3 implements DirectorBriefingModal with 100-pt rubric and in-game help', () => {
+  assert(fs.existsSync('round 3/src/components/frameZero/DirectorBriefingModal.tsx'), 'DirectorBriefingModal exists');
+  const modalContent = fs.readFileSync('round 3/src/components/frameZero/DirectorBriefingModal.tsx', 'utf-8');
+  assert(modalContent.includes('FRAME ZERO'), 'Modal has Frame Zero identity');
+  assert(modalContent.includes('The Director\'s Trial'), 'Modal has Director\'s Trial subtitle');
+  assert(modalContent.includes('SCORING RUBRIC (100 PTS)'), 'Modal has 100-pt rubric');
+  assert(modalContent.includes('Required Scene Elements'), 'Modal has scene elements pts');
+  assert(modalContent.includes('Emotional Direction'), 'Modal has emotion pts');
+  assert(modalContent.includes('Cinematic Composition'), 'Modal has composition pts');
+  assert(modalContent.includes('Lighting & Atmosphere'), 'Modal has lighting pts');
+  assert(modalContent.includes('Consistency & Flow'), 'Modal has flow pts');
+
+  const workspaceContent = fs.readFileSync('round 3/src/components/frameZero/DirectorWorkspace.tsx', 'utf-8');
+  assert(workspaceContent.includes('How to play'), 'DirectorWorkspace has How to play button');
+  assert(workspaceContent.includes('<DirectorBriefingModal'), 'DirectorWorkspace renders DirectorBriefingModal');
+
+  const introContent = fs.readFileSync('round 3/src/components/frameZero/DirectorIntro.tsx', 'utf-8');
+  assert(introContent.includes('How to play'), 'DirectorIntro has How to play button');
+  assert(introContent.includes('WAITING FOR OFFICIAL START'), 'DirectorIntro supports gated countdown');
+  assert(introContent.includes('<DirectorBriefingModal'), 'DirectorIntro renders DirectorBriefingModal');
+
+  const selectContent = fs.readFileSync('round 3/src/components/frameZero/MissionSelect.tsx', 'utf-8');
+  assert(selectContent.includes('How to play'), 'MissionSelect has How to play button');
+  assert(selectContent.includes('<DirectorBriefingModal'), 'MissionSelect renders DirectorBriefingModal');
+});
+
 console.log(`\n========================================`);
 console.log(`Summary: ${passedTests}/${totalTests} Tests Passed successfully!`);
 console.log(`========================================\n`);

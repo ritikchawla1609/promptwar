@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Terminal, Clock, Activity, Key, LogOut } from 'lucide-react';
+import { Volume2, VolumeX, Terminal, Clock, Activity, Key, LogOut, HelpCircle } from 'lucide-react';
 import { parasiteAudio } from '../utils/parasiteAudio';
 
 export default function ParasiteHeader({
@@ -8,6 +8,7 @@ export default function ParasiteHeader({
   session = {},
   onUpdateSession,
   onOpenRegister,
+  onOpenBriefing,
   onLogoutTeam,
   isMuted = false,
   onToggleMute,
@@ -118,6 +119,18 @@ export default function ParasiteHeader({
                 <span>LOGIN</span>
               </button>
             </div>
+          )}
+
+          {/* How to Play / Briefing Button */}
+          {onOpenBriefing && (
+            <button
+              onClick={onOpenBriefing}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/[0.12] bg-charcoal-900/60 hover:border-cyan hover:text-cyan text-bone-300 font-mono text-[11px] transition-all"
+              title="Review official briefing & scoring rules"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-cyan" />
+              <span className="hidden sm:inline">HOW TO PLAY</span>
+            </button>
           )}
 
           {/* Sound Toggle */}

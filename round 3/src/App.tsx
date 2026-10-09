@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Mission, PromptAttempt, EvaluationResult } from './types/frameZero';
 import { MISSIONS } from './data/missions';
 import { DirectorIntro } from './components/frameZero/DirectorIntro';
 import { MissionSelect } from './components/frameZero/MissionSelect';
 import { DirectorWorkspace } from './components/frameZero/DirectorWorkspace';
 import { DirectorResults } from './components/frameZero/DirectorResults';
+import {
+  AuthoritativeClockState,
+  fetchAuthoritativeClockAPI,
+  calculateSynchronizedRemaining,
+  submitDirectorCutToBackend,
+} from './utils/authoritativeClock';
+import { evaluateDirectorPrompt } from './engine/directorEvaluator';
 
 type ScreenState = 'INTRO' | 'SELECT' | 'WORKSPACE' | 'RESULTS';
 
@@ -60,6 +67,48 @@ export const App: React.FC = () => {
     }
   });
 
+  // Authoritative clock state & drift compensation
+  const [serverClock, setServerClock] = useState<AuthoritativeClockState | null>(null);
+  const serverOffsetRef = useRef<number>(0);
+  const [syncedSeconds, setSyncedSeconds] = useState<number>(720);
+  const autoSubmittedRef = useRef<boolean>(false);
+
+  // Poll authoritative clock every 3 seconds
+  useEffect(() => {
+    let mounted = true;
+
+    const pollClock = async () => {
+      const clock = await fetchAuthoritativeClockAPI();
+      if (!mounted) return;
+      if (clock && clock.success) {
+        setServerClock(clock);
+        const serverEpoch = Date.parse(clock.serverTime);
+        if (!isNaN(serverEpoch)) {
+          serverOffsetRef.current = serverEpoch - Date.now();
+        }
+      }
+    };
+
+    pollClock();
+    const clockInterval = setInterval(pollClock, 3000);
+    return () => {
+      mounted = false;
+      clearInterval(clockInterval);
+    };
+  }, []);
+
+  // Update remaining seconds tick every 1000ms
+  useEffect(() => {
+    const tickInterval = setInterval(() => {
+      if (serverClock) {
+        const remaining = calculateSynchronizedRemaining(serverClock, serverOffsetRef.current);
+        setSyncedSeconds(remaining);
+      }
+    }, 1000);
+
+    return () => clearInterval(tickInterval);
+  }, [serverClock]);
+
   // Persistence effects
   useEffect(() => {
     localStorage.setItem('framezero_screen', currentScreen);
@@ -99,21 +148,16 @@ export const App: React.FC = () => {
     }
   }, [bestTake]);
 
-  // Transitions
-  const handleStartProduction = (name: string) => {
-    setDirectorName(name);
-    setCurrentScreen('SELECT');
-  };
-
   const handleSelectMission = (mission: Mission) => {
     setSelectedMission(mission);
     setAttempts([]);
     setFinalEvaluation(null);
     setBestTake(null);
+    autoSubmittedRef.current = false;
     setCurrentScreen('WORKSPACE');
   };
 
-  const handleFinishWorkspace = (
+  const handleFinishWorkspace = useCallback((
     allAttempts: PromptAttempt[],
     evalResult: EvaluationResult,
     best: PromptAttempt
@@ -122,13 +166,67 @@ export const App: React.FC = () => {
     setFinalEvaluation(evalResult);
     setBestTake(best);
     setCurrentScreen('RESULTS');
-  };
+
+    // Authoritative submission to Prompt War central backend
+    const activeMission = selectedMission || MISSIONS[0];
+    submitDirectorCutToBackend({
+      teamCode: directorName || 'ANONYMOUS_DIRECTOR',
+      score: evalResult.totalScore,
+      prompt: best.prompt,
+      metrics: {
+        missionId: activeMission.id,
+        missionTitle: activeMission.title,
+        japaneseTitle: activeMission.japaneseTitle,
+        categoryScores: evalResult.categoryScores,
+        wordCount: evalResult.promptWordCount,
+        directorRank: evalResult.directorRank,
+        totalTakes: allAttempts.length,
+        submittedAt: new Date().toISOString(),
+      },
+    });
+  }, [directorName, selectedMission]);
+
+  // Synchronized round cutoff enforcement
+  useEffect(() => {
+    if (currentScreen !== 'WORKSPACE' || autoSubmittedRef.current) return;
+
+    const isExpired = serverClock?.status === 'COMPLETED' || (serverClock?.status === 'LIVE' && syncedSeconds <= 0);
+
+    if (isExpired) {
+      autoSubmittedRef.current = true;
+      const activeMission = selectedMission || MISSIONS[0];
+
+      if (attempts.length > 0) {
+        // Pick best take among attempts
+        let best = attempts[0];
+        let maxScore = -1;
+        for (const att of attempts) {
+          if (att.evaluation && att.evaluation.totalScore > maxScore) {
+            maxScore = att.evaluation.totalScore;
+            best = att;
+          }
+        }
+        handleFinishWorkspace(attempts, best.evaluation || finalEvaluation!, best);
+      } else {
+        // Default evaluation if no takes recorded before buzzer
+        const defaultEval = evaluateDirectorPrompt('Scene vision locked at deadline cutoff.', activeMission);
+        const fallbackAttempt: PromptAttempt = {
+          attemptNumber: 1,
+          prompt: 'Scene vision locked at deadline cutoff.',
+          timestamp: new Date().toLocaleTimeString(),
+          evaluation: defaultEval,
+        };
+        handleFinishWorkspace([fallbackAttempt], defaultEval, fallbackAttempt);
+      }
+    }
+  }, [currentScreen, serverClock?.status, syncedSeconds, attempts, selectedMission, finalEvaluation, handleFinishWorkspace]);
 
   const handleDirectAnother = () => {
     setSelectedMission(null);
     setAttempts([]);
     setFinalEvaluation(null);
     setBestTake(null);
+    autoSubmittedRef.current = false;
     setCurrentScreen('SELECT');
   };
 
@@ -142,6 +240,9 @@ export const App: React.FC = () => {
       <DirectorIntro
         directorName={directorName}
         onDirectorNameChange={setDirectorName}
+        serverClock={serverClock}
+        remainingSeconds={syncedSeconds}
+        serverOffset={serverOffsetRef.current}
         onEnterStudio={() => {
           if (!directorName.trim()) {
             setDirectorName('Director ' + Math.floor(100 + Math.random() * 900));
@@ -156,6 +257,8 @@ export const App: React.FC = () => {
     return (
       <MissionSelect
         directorName={directorName || 'Director 01'}
+        serverClock={serverClock}
+        remainingSeconds={syncedSeconds}
         onSelectMission={handleSelectMission}
         onBackToIntro={handleRestart}
       />
@@ -168,6 +271,8 @@ export const App: React.FC = () => {
       <DirectorWorkspace
         mission={mission}
         directorName={directorName || 'Director 01'}
+        serverClock={serverClock}
+        remainingSeconds={syncedSeconds}
         onFinish={handleFinishWorkspace}
         onExit={() => setCurrentScreen('SELECT')}
       />
@@ -218,6 +323,9 @@ export const App: React.FC = () => {
     <DirectorIntro
       directorName={directorName}
       onDirectorNameChange={setDirectorName}
+      serverClock={serverClock}
+      remainingSeconds={syncedSeconds}
+      serverOffset={serverOffsetRef.current}
       onEnterStudio={() => {
         if (!directorName.trim()) {
           setDirectorName('Director ' + Math.floor(100 + Math.random() * 900));

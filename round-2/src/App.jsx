@@ -30,6 +30,7 @@ import PromptHistoryModal from './components/PromptHistoryModal';
 import HostControlsModal from './components/HostControlsModal';
 import ScreenSubmission from './components/ScreenSubmission';
 import ScreenResults from './components/ScreenResults';
+import BlackboxBriefingModal from './components/BlackboxBriefingModal';
 
 const STORAGE_SESSION_KEY = 'blackbox_session_v2';
 
@@ -66,6 +67,7 @@ export default function App() {
   const [recordViewerTargetId, setRecordViewerTargetId] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHostControlsOpen, setIsHostControlsOpen] = useState(false);
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false);
 
   // Restore session from localStorage if exists
   useEffect(() => {
@@ -425,6 +427,7 @@ export default function App() {
             setIsRecordsOpen(true);
           }}
           onOpenHistory={() => setIsHistoryOpen(true)}
+          onOpenBriefing={() => setIsBriefingOpen(true)}
           onOpenHostControls={() => setIsHostControlsOpen(true)}
           onProceedToSubmission={() => setCurrentScreen('SUBMISSION')}
           scorePreview={scoreData}
@@ -492,6 +495,15 @@ export default function App() {
         }}
         scoreData={scoreData}
         isSolutionRevealed={isSolutionRevealed}
+      />
+
+      {/* Non-Destructive In-Game Briefing & Rules Modal */}
+      <BlackboxBriefingModal
+        isOpen={isBriefingOpen}
+        isModal={true}
+        onClose={() => setIsBriefingOpen(false)}
+        serverClock={serverClock}
+        remainingSeconds={timerState?.remainingSeconds || 0}
       />
     </div>
   );

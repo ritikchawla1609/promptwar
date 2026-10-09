@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mission, PromptAttempt, EvaluationResult } from '../../types/frameZero';
 import { evaluateDirectorPrompt } from '../../engine/directorEvaluator';
 import { SceneArtwork } from './SceneArtwork';
+import { DirectorBriefingModal } from './DirectorBriefingModal';
+import { AuthoritativeClockState, formatSecondsToMMSS } from '../../utils/authoritativeClock';
 import {
   Clapperboard,
   Clock,
@@ -27,13 +29,17 @@ interface DirectorWorkspaceProps {
   directorName: string;
   onFinish: (attempts: PromptAttempt[], finalEvaluation: EvaluationResult, bestTake: PromptAttempt) => void;
   onExit: () => void;
+  serverClock?: AuthoritativeClockState | null;
+  remainingSeconds?: number;
 }
 
 export const DirectorWorkspace: React.FC<DirectorWorkspaceProps> = ({
   mission,
   directorName,
   onFinish,
-  onExit
+  onExit,
+  serverClock = null,
+  remainingSeconds: externalRemainingSeconds,
 }) => {
   const [prompt, setPrompt] = useState<string>('');
   const [attempts, setAttempts] = useState<PromptAttempt[]>([]);
@@ -41,10 +47,13 @@ export const DirectorWorkspace: React.FC<DirectorWorkspaceProps> = ({
   const [isBriefExpanded, setIsBriefExpanded] = useState<boolean>(true);
   const [selectedAttemptIndex, setSelectedAttemptIndex] = useState<number | null>(null);
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [isManualOpen, setIsManualOpen] = useState<boolean>(false);
 
   // Timer: seconds remaining
   const [secondsRemaining, setSecondsRemaining] = useState<number>(mission.durationMinutes * 60);
   const [timerActive, setTimerActive] = useState<boolean>(true);
+
+  const effectiveSeconds = externalRemainingSeconds !== undefined ? externalRemainingSeconds : secondsRemaining;
 
   const maxAttempts = mission.maxAttempts;
   const currentTakeNumber = attempts.length + 1;
@@ -155,17 +164,27 @@ export const DirectorWorkspace: React.FC<DirectorWorkspaceProps> = ({
         </div>
 
         {/* Right: Clock & Quick Score */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          {/* How to Play Manual Modal Button */}
+          <button
+            onClick={() => setIsManualOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 text-xs font-mono transition-all active:scale-95 shadow-sm"
+            title="Director's Manual & 100-pt Rubric"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+            <span>How to play</span>
+          </button>
+
           {/* Timer */}
           <div
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-mono ${
-              secondsRemaining < 120
+              effectiveSeconds < 120
                 ? 'bg-rose-500/10 border-rose-500/30 text-rose-300 animate-pulse'
                 : 'bg-slate-900/80 border-slate-800 text-slate-300'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>{formatTime(secondsRemaining)}</span>
+            <span>{formatTime(effectiveSeconds)}</span>
           </div>
 
           {/* Current Score Gauge */}
@@ -534,6 +553,15 @@ export const DirectorWorkspace: React.FC<DirectorWorkspaceProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Non-destructive Director Briefing & Rubric Modal */}
+      <DirectorBriefingModal
+        isOpen={isManualOpen}
+        isModal={true}
+        onClose={() => setIsManualOpen(false)}
+        serverClock={serverClock}
+        remainingSeconds={effectiveSeconds}
+      />
     </div>
   );
 };

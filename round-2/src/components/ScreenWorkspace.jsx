@@ -26,6 +26,7 @@ export default function ScreenWorkspace({
   discoveredEvidence,
   onOpenRecordsDrawer,
   onOpenHistory,
+  onOpenBriefing,
   onOpenHostControls,
   onProceedToSubmission,
   scorePreview = null
@@ -98,6 +99,18 @@ export default function ScreenWorkspace({
                 {discoveredEvidence.length}/14
               </span>
             </button>
+
+            {/* How to Play / Briefing Button */}
+            {onOpenBriefing && (
+              <button
+                onClick={onOpenBriefing}
+                className="bg-archive-900 hover:bg-archive-850 border border-archive-700 hover:border-archive-600 text-ivory-200 text-xs font-medium px-3.5 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
+                title="Review investigation instructions and scoring rubric"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
+                <span className="hidden sm:inline">How to play</span>
+              </button>
+            )}
 
             {/* Countdown Timer */}
             <div 
