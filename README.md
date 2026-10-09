@@ -10,7 +10,7 @@
 | Round | Arena / Challenge | Status | Description |
 | :--- | :--- | :--- | :--- |
 | **Round 01** | **[PROMPT PARASITE](./round-1)** | ✅ **Production Ready** | Synchronized multi-phase adversarial prompt evolution tournament. Teams craft baseline prompts, peer-mutate outputs, and build evolved final forms under server-synced 10-minute timers. |
-| **Round 02** | *(Next Stage)* | ⏳ In Development | Team records and R2 qualifications carry forward directly from Round 1 database ledger. |
+| **Round 02** | **[OPERATION BLACKBOX](./round-2)** | ✅ **Production Ready** | Spacious forensic intelligence archive game. Reconstruct an unauthorized facility data breach across 14 records with deterministic local prompt evaluation and deceptive lead resolution. Live at: [round-promptwar.vercel.app](https://round-promptwar.vercel.app) |
 | **Round 03** | **[🩸 The House That Remembers (2.0)](./round%203)** | ✅ **Production Ready** | 3D First-Person Horror Mansion, Call of Duty Tactical HUD, 1-Click Forensic Deductions & 6-Layer Deception Matrix. |
 
 ---

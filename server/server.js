@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { Submission } from './models/Submission.js';
 import { Team } from './models/Team.js';
+import { ArenaState } from './models/ArenaState.js';
 
 dotenv.config();
 
@@ -31,11 +32,9 @@ const TIMED_PHASES = {
   EVOLVE: 600,     // 10 min
 };
 
-// Per-team match assignments: { [teamCode]: [{ anonymousId, output, teamCode }] }
-let matchAssignments = {};
-
-// Global Arena State (Round 1 lifecycle controller)
-let arenaState = {
+// Global default arena state
+const DEFAULT_ARENA_STATE = {
+  key: 'global_arena_state',
   isRoundStarted: false,
   activePhase: 'LOBBY',
   startedAt: null,
@@ -46,33 +45,12 @@ let arenaState = {
   autoAdvance: true,
   activeChallenge: null,
   timers: { create: 600, parasite: 600, evolve: 600 },
+  matchAssignments: {},
   lastUpdated: new Date().toISOString(),
 };
 
-// Auto-advance interval reference
-let autoAdvanceInterval = null;
-
-// -------------------------------------------------------------
-// PHASE TIMER & AUTO-ADVANCE SYSTEM
-// -------------------------------------------------------------
-
-function startPhaseTimer(phase) {
-  const duration = TIMED_PHASES[phase] || 0;
-  const now = new Date();
-
-  arenaState.activePhase = phase;
-  arenaState.phaseStartedAt = now.toISOString();
-  arenaState.phaseDuration = duration;
-
-  if (duration > 0) {
-    arenaState.phaseEndsAt = new Date(now.getTime() + duration * 1000).toISOString();
-  } else {
-    arenaState.phaseEndsAt = null;
-  }
-
-  arenaState.lastUpdated = now.toISOString();
-  console.log(`⏱️ [Phase Timer] Started: ${phase} | Duration: ${duration}s | Ends at: ${arenaState.phaseEndsAt || 'N/A'}`);
-}
+let arenaState = { ...DEFAULT_ARENA_STATE };
+let matchAssignments = {};
 
 function getNextPhase(currentPhase) {
   const idx = PHASE_SEQUENCE.indexOf(currentPhase);
@@ -80,61 +58,9 @@ function getNextPhase(currentPhase) {
   return PHASE_SEQUENCE[idx + 1];
 }
 
-function advanceToNextPhase() {
-  const current = arenaState.activePhase;
-  const next = getNextPhase(current);
-
-  if (!next) {
-    console.log('🏁 [Phase] Reached COMPLETE — stopping auto-advance.');
-    stopAutoAdvance();
-    return;
-  }
-
-  console.log(`🔄 [Phase Auto-Advance] ${current} → ${next}`);
-
-  // If transitioning from CREATE to MATCH, run matchmaking first
-  if (current === 'CREATE' && next === 'MATCH') {
-    runServerMatchmaking();
-  }
-
-  startPhaseTimer(next);
-
-  // If we reached COMPLETE, stop auto-advance
-  if (next === 'COMPLETE') {
-    stopAutoAdvance();
-  }
-}
-
-function startAutoAdvance() {
-  stopAutoAdvance(); // Clear any existing
-
-  autoAdvanceInterval = setInterval(() => {
-    if (!arenaState.isRoundStarted || !arenaState.autoAdvance) return;
-    if (!arenaState.phaseEndsAt) return;
-
-    const now = Date.now();
-    const endsAt = new Date(arenaState.phaseEndsAt).getTime();
-
-    if (now >= endsAt) {
-      advanceToNextPhase();
-    }
-  }, 1000);
-
-  console.log('🟢 [Auto-Advance] Timer system activated (1s tick)');
-}
-
-function stopAutoAdvance() {
-  if (autoAdvanceInterval) {
-    clearInterval(autoAdvanceInterval);
-    autoAdvanceInterval = null;
-    console.log('🔴 [Auto-Advance] Timer system stopped');
-  }
-}
-
 // -------------------------------------------------------------
 // BALANCED RANDOM MATCHMAKING
 // -------------------------------------------------------------
-
 async function runServerMatchmaking() {
   console.log('🎯 [Matchmaking] Running balanced random matchmaking...');
 
@@ -147,45 +73,38 @@ async function runServerMatchmaking() {
     }
   }
 
-  // Get all teams with firstOutput
   const submittedTeams = getSubmittedTeams(allTeams);
 
   if (submittedTeams.length < 2) {
-    console.log('⚠️ [Matchmaking] Less than 2 submissions — matching with available pool or empty.');
-    if (submittedTeams.length === 0) return;
+    console.log('⚠️ [Matchmaking] Less than 2 submissions with firstOutput — matching from all registered teams if available.');
   }
 
-  // Track how many times each team's output has been assigned
+  // Use submitted teams if available; otherwise use all teams with fallback
+  const poolTeams = submittedTeams.length >= 2 ? submittedTeams : allTeams;
+  if (poolTeams.length === 0) return {};
+
   const assignmentCounts = {};
-  submittedTeams.forEach(t => { assignmentCounts[t.teamCode] = 0; });
+  poolTeams.forEach(t => { assignmentCounts[t.teamCode] = 0; });
+  const newAssignments = {};
 
-  // Clear previous assignments
-  matchAssignments = {};
-
-  // For each team, assign 1-2 opponents using balanced distribution
-  for (const team of submittedTeams) {
-    // Build pool: all other submitted teams, sorted by assignment count (least assigned first)
-    const pool = submittedTeams
+  for (const team of poolTeams) {
+    const pool = poolTeams
       .filter(t => t.teamCode.toUpperCase() !== team.teamCode.toUpperCase())
       .sort((a, b) => (assignmentCounts[a.teamCode] || 0) - (assignmentCounts[b.teamCode] || 0));
 
     if (pool.length === 0) continue;
 
-    // Among those with the same (lowest) count, shuffle randomly
     const minCount = assignmentCounts[pool[0].teamCode] || 0;
     const lowestGroup = pool.filter(t => (assignmentCounts[t.teamCode] || 0) === minCount);
     shuffleArray(lowestGroup);
 
-    // Pick up to 2 opponents
     const pickCount = Math.min(2, pool.length);
     const picked = [];
 
-    // First pick from the lowest-count group
     for (let i = 0; i < Math.min(pickCount, lowestGroup.length); i++) {
       picked.push(lowestGroup[i]);
     }
 
-    // If we need more, pick from remaining pool
     if (picked.length < pickCount) {
       const remaining = pool.filter(t => !picked.some(p => p.teamCode === t.teamCode));
       shuffleArray(remaining);
@@ -194,30 +113,28 @@ async function runServerMatchmaking() {
       }
     }
 
-    // Create assignments
-    matchAssignments[team.teamCode.toUpperCase()] = picked.map((opp, idx) => ({
+    newAssignments[team.teamCode.toUpperCase()] = picked.map((opp, idx) => ({
       id: opp.teamCode,
       anonymousId: `HOST TARGET 0${idx + 1}`,
-      output: opp.round1?.firstOutput || opp.firstOutput || '',
+      output: opp.round1?.firstOutput || opp.firstOutput || 'Draft analysis generated during baseline synthesis.',
       teamCode: opp.teamCode,
       isRealPeer: true,
     }));
 
-    // Update assignment counts
     picked.forEach(p => {
       assignmentCounts[p.teamCode] = (assignmentCounts[p.teamCode] || 0) + 1;
     });
   }
 
-  const totalAssignments = Object.keys(matchAssignments).length;
-  console.log(`✅ [Matchmaking] Assigned opponents to ${totalAssignments} teams.`);
-  console.log(`📊 [Matchmaking] Distribution:`, assignmentCounts);
+  matchAssignments = newAssignments;
+  console.log(`✅ [Matchmaking] Assigned opponents to ${Object.keys(newAssignments).length} teams.`);
+  return newAssignments;
 }
 
 function getSubmittedTeams(allTeams = null) {
   const source = allTeams || inMemoryTeams;
   return source.filter(t => {
-    const output = t.round1?.firstOutput || '';
+    const output = t.round1?.firstOutput || t.firstOutput || '';
     return output.trim().length > 0;
   });
 }
@@ -233,15 +150,16 @@ function shuffleArray(arr) {
 function getSubmittedCount(phase, allTeams = null) {
   const source = allTeams || inMemoryTeams;
   if (phase === 'CREATE') {
-    return source.filter(t => (t.round1?.firstOutput || '').trim().length > 0).length;
+    return source.filter(t => (t.round1?.firstOutput || t.firstOutput || '').trim().length > 0).length;
   } else if (phase === 'EVOLVE') {
-    return source.filter(t => (t.round1?.finalOutput || '').trim().length > 0).length;
+    return source.filter(t => (t.round1?.finalOutput || t.finalOutput || '').trim().length > 0).length;
   }
   return 0;
 }
 
 // -------------------------------------------------------------
-// DATABASE CONNECTION
+// DATABASE CONNECTION & PERSISTENT ARENA STATE
+// -------------------------------------------------------------
 let cachedDbPromise = null;
 
 async function ensureDB() {
@@ -269,11 +187,62 @@ async function ensureDB() {
   await cachedDbPromise;
 }
 
-// Global middleware to guarantee DB is connected before processing requests
+// Global middleware to guarantee DB is connected
 app.use(async (req, res, next) => {
   await ensureDB();
   next();
 });
+
+// Authoritative Persistent Arena State Loader & Auto-Advancer
+async function getPersistentArenaState() {
+  if (!isMongoConnected) {
+    return arenaState;
+  }
+
+  try {
+    let doc = await ArenaState.findOne({ key: 'global_arena_state' });
+    if (!doc) {
+      doc = await ArenaState.create(DEFAULT_ARENA_STATE);
+    }
+
+    // Check wall-clock auto-advance
+    if (doc.isRoundStarted && doc.autoAdvance && doc.phaseEndsAt) {
+      const now = Date.now();
+      const endsAt = new Date(doc.phaseEndsAt).getTime();
+
+      if (now >= endsAt) {
+        const nextPhase = getNextPhase(doc.activePhase);
+        if (nextPhase) {
+          console.log(`🔄 [Auto-Advance DB] Wall-clock timer expired: ${doc.activePhase} -> ${nextPhase}`);
+          
+          if (doc.activePhase === 'CREATE' && (nextPhase === 'MATCH' || nextPhase === 'PARASITE')) {
+            const matches = await runServerMatchmaking();
+            doc.matchAssignments = matches;
+          }
+
+          doc.activePhase = nextPhase;
+          const dur = TIMED_PHASES[nextPhase] || 0;
+          doc.phaseDuration = dur;
+          doc.phaseStartedAt = new Date().toISOString();
+          doc.phaseEndsAt = dur > 0 ? new Date(now + dur * 1000).toISOString() : null;
+          if (nextPhase === 'COMPLETE') {
+            doc.autoAdvance = false;
+          }
+          doc.lastUpdated = new Date().toISOString();
+          doc.markModified('matchAssignments');
+          await doc.save();
+        }
+      }
+    }
+
+    arenaState = doc.toObject();
+    matchAssignments = arenaState.matchAssignments || {};
+    return arenaState;
+  } catch (err) {
+    console.warn('Error in getPersistentArenaState:', err);
+    return arenaState;
+  }
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -290,105 +259,164 @@ app.get('/api/health', (req, res) => {
 // ARENA STATE & LIFECYCLE CONTROLLER (START / PAUSE / PHASES)
 // -------------------------------------------------------------
 
-// GET /api/arena/state (Pollable by contestants in Holding Lobby)
-app.get('/api/arena/state', (req, res) => {
-  res.json({ success: true, state: arenaState });
+// GET /api/arena/state
+app.get('/api/arena/state', async (req, res) => {
+  try {
+    const state = await getPersistentArenaState();
+    res.json({ success: true, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST /api/arena/state (Updated exclusively by Tech Tatva Host Admin)
+// POST /api/arena/state (Tech Tatva Host Admin start/advance/pause)
 app.post('/api/arena/state', async (req, res) => {
   try {
     const updates = req.body;
+    let state = await getPersistentArenaState();
 
-    // MIN TEAM GATE: Block round start if not enough teams
-    if (updates.isRoundStarted === true && !arenaState.isRoundStarted) {
+    // 1. START ROUND
+    if (updates.isRoundStarted === true && !state.isRoundStarted) {
       let teamCount = inMemoryTeams.length;
       if (isMongoConnected) {
         try {
           const dbTeams = await Team.find({});
           teamCount = dbTeams.length;
         } catch (e) {
-          console.warn('Error counting teams in arena state start:', e);
+          console.warn('Error counting teams in arena start:', e);
         }
       }
 
-      if (teamCount < arenaState.minTeamsToStart) {
+      const minTeams = Number(state.minTeamsToStart || 3);
+      if (teamCount < minTeams) {
         return res.status(400).json({
           success: false,
-          error: `Minimum ${arenaState.minTeamsToStart} teams required to start. Currently registered: ${teamCount}`,
+          error: `Minimum ${minTeams} teams required to start. Currently registered: ${teamCount}`,
           currentTeamCount: teamCount,
-          requiredTeamCount: arenaState.minTeamsToStart,
+          requiredTeamCount: minTeams,
         });
       }
 
-      // Start the round — begin with BRIEFING phase
-      arenaState.isRoundStarted = true;
-      arenaState.startedAt = new Date().toISOString();
-      matchAssignments = {}; // Clear old assignments
+      const now = new Date();
+      const duration = TIMED_PHASES.BRIEFING; // 60s
+      const newState = {
+        isRoundStarted: true,
+        startedAt: now.toISOString(),
+        activePhase: 'BRIEFING',
+        phaseStartedAt: now.toISOString(),
+        phaseDuration: duration,
+        phaseEndsAt: new Date(now.getTime() + duration * 1000).toISOString(),
+        autoAdvance: true,
+        matchAssignments: {},
+        lastUpdated: now.toISOString(),
+      };
 
-      // Start BRIEFING phase with timer
-      startPhaseTimer('BRIEFING');
-      startAutoAdvance();
+      if (isMongoConnected) {
+        const updated = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: newState },
+          { upsert: true, new: true }
+        );
+        state = updated.toObject();
+      } else {
+        arenaState = { ...arenaState, ...newState };
+        state = arenaState;
+      }
 
-      console.log(`🚀 [Arena] ROUND 01 STARTED! Teams: ${teamCount} | Phase: BRIEFING`);
-      return res.json({ success: true, state: arenaState });
+      console.log(`🚀 [Arena Started] Phase: BRIEFING | Teams: ${teamCount} | Ends: ${state.phaseEndsAt}`);
+      return res.json({ success: true, state });
     }
 
-    // STOP / PAUSE round
+    // 2. STOP / PAUSE ROUND
     if (updates.isRoundStarted === false) {
-      arenaState.isRoundStarted = false;
-      arenaState.startedAt = null;
-      arenaState.activePhase = 'LOBBY';
-      arenaState.phaseStartedAt = null;
-      arenaState.phaseEndsAt = null;
-      arenaState.phaseDuration = 0;
-      stopAutoAdvance();
+      const resetData = {
+        isRoundStarted: false,
+        startedAt: null,
+        activePhase: 'LOBBY',
+        phaseStartedAt: null,
+        phaseEndsAt: null,
+        phaseDuration: 0,
+        lastUpdated: new Date().toISOString(),
+      };
 
-      arenaState.lastUpdated = new Date().toISOString();
-      console.log('⏸️ [Arena] ROUND 01 PAUSED / STOPPED');
-      return res.json({ success: true, state: arenaState });
+      if (isMongoConnected) {
+        const updated = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: resetData },
+          { upsert: true, new: true }
+        );
+        state = updated.toObject();
+      } else {
+        arenaState = { ...arenaState, ...resetData };
+        state = arenaState;
+      }
+
+      console.log('⏸️ [Arena Stopped] Phase reset to LOBBY');
+      return res.json({ success: true, state });
     }
 
-    // FORCE ADVANCE to specific phase (admin override)
-    if (updates.activePhase && updates.activePhase !== arenaState.activePhase) {
+    // 3. FORCE ADVANCE TO SPECIFIC PHASE
+    if (updates.activePhase && updates.activePhase !== state.activePhase) {
       const newPhase = updates.activePhase;
+      const now = new Date();
+      const duration = TIMED_PHASES[newPhase] || 0;
+      let newAssignments = state.matchAssignments || {};
 
-      // If advancing to MATCH from CREATE, run matchmaking first
-      if (arenaState.activePhase === 'CREATE' && (newPhase === 'MATCH' || newPhase === 'PARASITE')) {
-        runServerMatchmaking();
+      if (state.activePhase === 'CREATE' && (newPhase === 'MATCH' || newPhase === 'PARASITE')) {
+        newAssignments = await runServerMatchmaking();
+      } else if (newPhase === 'PARASITE' && Object.keys(newAssignments).length === 0) {
+        newAssignments = await runServerMatchmaking();
       }
 
-      // If jumping directly to PARASITE and matchmaking hasn't been done
-      if (newPhase === 'PARASITE' && Object.keys(matchAssignments).length === 0) {
-        runServerMatchmaking();
+      const advanceData = {
+        isRoundStarted: true,
+        activePhase: newPhase,
+        phaseStartedAt: now.toISOString(),
+        phaseDuration: duration,
+        phaseEndsAt: duration > 0 ? new Date(now.getTime() + duration * 1000).toISOString() : null,
+        matchAssignments: newAssignments,
+        autoAdvance: newPhase !== 'COMPLETE',
+        lastUpdated: now.toISOString(),
+      };
+
+      if (isMongoConnected) {
+        const updated = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: advanceData },
+          { upsert: true, new: true }
+        );
+        state = updated.toObject();
+      } else {
+        arenaState = { ...arenaState, ...advanceData };
+        state = arenaState;
       }
 
-      startPhaseTimer(newPhase);
-
-      if (newPhase === 'COMPLETE') {
-        stopAutoAdvance();
-      } else if (arenaState.isRoundStarted && !autoAdvanceInterval) {
-        startAutoAdvance();
-      }
-
-      console.log(`📡 [Arena] ADMIN FORCE-ADVANCE to ${newPhase}`);
-      return res.json({ success: true, state: arenaState });
+      console.log(`📡 [Admin Force-Advance] Advanced to ${newPhase}`);
+      return res.json({ success: true, state });
     }
 
-    // Generic updates (timers, minTeamsToStart, etc.)
-    if (updates.minTeamsToStart !== undefined) {
-      arenaState.minTeamsToStart = Number(updates.minTeamsToStart);
-    }
-    if (updates.timers) {
-      arenaState.timers = { ...arenaState.timers, ...updates.timers };
-    }
-    if (updates.activeChallenge !== undefined) {
-      arenaState.activeChallenge = updates.activeChallenge;
-    }
-    arenaState.lastUpdated = new Date().toISOString();
+    // 4. Other updates (timers, challenge, minTeams)
+    const otherUpdates = {};
+    if (updates.minTeamsToStart !== undefined) otherUpdates.minTeamsToStart = Number(updates.minTeamsToStart);
+    if (updates.timers) otherUpdates.timers = { ...(state.timers || {}), ...updates.timers };
+    if (updates.activeChallenge !== undefined) otherUpdates.activeChallenge = updates.activeChallenge;
+    otherUpdates.lastUpdated = new Date().toISOString();
 
-    return res.json({ success: true, state: arenaState });
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: otherUpdates },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...otherUpdates };
+      state = arenaState;
+    }
+
+    return res.json({ success: true, state });
   } catch (err) {
+    console.error('Arena State Update Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -396,33 +424,26 @@ app.post('/api/arena/state', async (req, res) => {
 // POST /api/arena/purge-data (Clear all test teams and submissions, reset arena to initial LOBBY)
 app.post('/api/arena/purge-data', async (req, res) => {
   try {
-    stopAutoAdvance();
-
-    arenaState = {
-      isRoundStarted: false,
-      activePhase: 'LOBBY',
-      startedAt: null,
-      phaseStartedAt: null,
-      phaseEndsAt: null,
-      phaseDuration: 0,
-      minTeamsToStart: 3,
-      autoAdvance: true,
-      activeChallenge: null,
-      timers: { create: 600, parasite: 600, evolve: 600 },
-      lastUpdated: new Date().toISOString(),
-    };
-
     matchAssignments = {};
     inMemoryTeams.length = 0;
     inMemorySubmissions.length = 0;
 
+    let state = { ...DEFAULT_ARENA_STATE, lastUpdated: new Date().toISOString() };
+
     if (isMongoConnected) {
+      await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: state },
+        { upsert: true }
+      );
       await Team.deleteMany({});
       await Submission.deleteMany({});
+    } else {
+      arenaState = { ...state };
     }
 
     console.log('🧹 [Arena Purge] All tournament data, teams, and submissions wiped clean.');
-    return res.json({ success: true, message: 'All arena data purged successfully', state: arenaState });
+    return res.json({ success: true, message: 'All arena data purged successfully', state });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -430,56 +451,67 @@ app.post('/api/arena/purge-data', async (req, res) => {
 
 // GET /api/arena/phase-clock (Server-authoritative countdown for all clients)
 app.get('/api/arena/phase-clock', async (req, res) => {
-  const now = Date.now();
-  let remainingSeconds = 0;
-  let totalSeconds = arenaState.phaseDuration || 0;
+  try {
+    const state = await getPersistentArenaState();
+    const now = Date.now();
+    let remainingSeconds = 0;
+    let totalSeconds = state.phaseDuration || 0;
 
-  if (arenaState.phaseEndsAt) {
-    remainingSeconds = Math.max(0, Math.ceil((new Date(arenaState.phaseEndsAt).getTime() - now) / 1000));
-  }
-
-  let teamCount = inMemoryTeams.length;
-  let subCount = getSubmittedCount(arenaState.activePhase);
-
-  if (isMongoConnected) {
-    try {
-      const teams = await Team.find({});
-      teamCount = teams.length;
-      subCount = getSubmittedCount(arenaState.activePhase, teams);
-    } catch (e) {
-      console.warn('Error fetching teams in phase-clock:', e);
+    if (state.phaseEndsAt) {
+      remainingSeconds = Math.max(0, Math.ceil((new Date(state.phaseEndsAt).getTime() - now) / 1000));
     }
-  }
 
-  res.json({
-    success: true,
-    activePhase: arenaState.activePhase,
-    isRoundStarted: arenaState.isRoundStarted,
-    phaseStartedAt: arenaState.phaseStartedAt,
-    phaseEndsAt: arenaState.phaseEndsAt,
-    remainingSeconds,
-    totalSeconds,
-    minTeamsRequired: arenaState.minTeamsToStart,
-    registeredTeamCount: teamCount,
-    submittedCount: subCount,
-  });
+    let teamCount = inMemoryTeams.length;
+    let subCount = getSubmittedCount(state.activePhase);
+
+    if (isMongoConnected) {
+      try {
+        const teams = await Team.find({});
+        teamCount = teams.length;
+        subCount = getSubmittedCount(state.activePhase, teams);
+      } catch (e) {
+        console.warn('Error fetching teams in phase-clock:', e);
+      }
+    }
+
+    res.json({
+      success: true,
+      activePhase: state.activePhase,
+      isRoundStarted: Boolean(state.isRoundStarted),
+      phaseStartedAt: state.phaseStartedAt,
+      phaseEndsAt: state.phaseEndsAt,
+      remainingSeconds,
+      totalSeconds,
+      minTeamsRequired: state.minTeamsToStart || 3,
+      registeredTeamCount: teamCount,
+      submittedCount: subCount,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/arena/matches/:teamCode (Get match assignments for a specific team)
-app.get('/api/arena/matches/:teamCode', (req, res) => {
-  const { teamCode } = req.params;
-  const upper = teamCode.toUpperCase();
-  const opponents = matchAssignments[upper] || [];
+app.get('/api/arena/matches/:teamCode', async (req, res) => {
+  try {
+    const state = await getPersistentArenaState();
+    const { teamCode } = req.params;
+    const upper = teamCode.toUpperCase();
+    const assignments = state.matchAssignments || matchAssignments || {};
+    const opponents = assignments[upper] || [];
 
-  res.json({
-    success: true,
-    teamCode: upper,
-    opponents,
-    matchPhaseActive: arenaState.activePhase === 'MATCH' || arenaState.activePhase === 'PARASITE' || arenaState.activePhase === 'EVOLVE',
-  });
+    res.json({
+      success: true,
+      teamCode: upper,
+      opponents,
+      matchPhaseActive: state.activePhase === 'MATCH' || state.activePhase === 'PARASITE' || state.activePhase === 'EVOLVE',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Helper: Generate Unique Team Code (e.g. PW-7482)
+// Helper: Generate Unique Team Code
 function generateTeamCode() {
   const num = Math.floor(1000 + Math.random() * 9000);
   return `PW-${num}`;
@@ -533,7 +565,6 @@ app.post('/api/teams/register', async (req, res) => {
       await team.save();
       return res.json({ success: true, team, isExisting: false });
     } else {
-      // In-memory fallback
       let team = inMemoryTeams.find(
         (t) => t.teamName.toLowerCase() === trimmedTeamName.toLowerCase() || t.teamCode === teamCode
       );
@@ -569,7 +600,7 @@ app.post('/api/teams/register', async (req, res) => {
   }
 });
 
-// POST /api/teams/login (Resume with Team Code or Team Name)
+// POST /api/teams/login
 app.post('/api/teams/login', async (req, res) => {
   try {
     const { query } = req.body;
@@ -610,7 +641,7 @@ app.post('/api/teams/login', async (req, res) => {
   }
 });
 
-// GET /api/teams (List all teams for Tournament Leaderboard & Rounds 2 & 3)
+// GET /api/teams
 app.get('/api/teams', async (req, res) => {
   try {
     if (isMongoConnected) {
@@ -627,7 +658,7 @@ app.get('/api/teams', async (req, res) => {
   }
 });
 
-// PATCH /api/teams/:codeOrId (Update Round 1/2/3 progress or scores)
+// PATCH /api/teams/:codeOrId
 app.patch('/api/teams/:codeOrId', async (req, res) => {
   try {
     const { codeOrId } = req.params;
@@ -676,7 +707,7 @@ app.patch('/api/teams/:codeOrId', async (req, res) => {
   }
 });
 
-// POST /api/teams/:codeOrId/qualify-r2 (Host 1-click qualify for Round 2)
+// POST /api/teams/:codeOrId/qualify-r2
 app.post('/api/teams/:codeOrId/qualify-r2', async (req, res) => {
   try {
     const { codeOrId } = req.params;
@@ -715,7 +746,7 @@ app.post('/api/teams/:codeOrId/qualify-r2', async (req, res) => {
   }
 });
 
-// DELETE /api/teams/:codeOrId (Host deletion of test/duplicate/disqualified teams)
+// DELETE /api/teams/:codeOrId
 app.delete('/api/teams/:codeOrId', async (req, res) => {
   try {
     const { codeOrId } = req.params;
@@ -751,7 +782,7 @@ app.delete('/api/teams/:codeOrId', async (req, res) => {
   }
 });
 
-// PUT /api/teams/:codeOrId (Host editing of team details, typos, leader contact)
+// PUT /api/teams/:codeOrId
 app.put('/api/teams/:codeOrId', async (req, res) => {
   try {
     const { codeOrId } = req.params;
@@ -798,7 +829,7 @@ app.put('/api/teams/:codeOrId', async (req, res) => {
   }
 });
 
-// POST /api/teams/:codeOrId/score (Official Judge verdict submission)
+// POST /api/teams/:codeOrId/score
 app.post('/api/teams/:codeOrId/score', async (req, res) => {
   try {
     const { codeOrId } = req.params;
@@ -882,7 +913,6 @@ app.get('/api/submissions', async (req, res) => {
       const submissions = await Submission.find(filter).sort({ totalScore: -1, createdAt: -1 });
       return res.json({ success: true, count: submissions.length, submissions });
     } else {
-      // In-memory: Also ensure any team with firstOutput in inMemoryTeams is mirrored in submissions
       inMemoryTeams.forEach((t) => {
         if (t.round1?.firstOutput) {
           const exists = inMemorySubmissions.some(
@@ -927,7 +957,6 @@ app.post('/api/submissions', async (req, res) => {
         { new: true, upsert: true }
       );
 
-      // Also sync to Team document if teamName or teamCode matches
       if (data.teamName || data.teamCode) {
         const teamFilter = data.teamCode
           ? { teamCode: data.teamCode.toUpperCase() }
@@ -962,7 +991,6 @@ app.post('/api/submissions', async (req, res) => {
         inMemorySubmissions.push(subObj);
       }
 
-      // Also update inMemoryTeams!
       const memTeam = inMemoryTeams.find(
         (t) =>
           (data.teamCode && t.teamCode.toUpperCase() === data.teamCode.toUpperCase()) ||

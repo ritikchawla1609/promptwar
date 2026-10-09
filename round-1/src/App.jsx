@@ -95,8 +95,10 @@ export default function App() {
         if (subs) setAllSubmissions(subs);
         if (tms) setAllTeams(tms);
 
-        const activePhase = clock?.activePhase || state?.activePhase || 'LOBBY';
-        const isRoundStarted = clock ? clock.isRoundStarted : state?.isRoundStarted;
+        const activePhase = (clock && clock.success ? clock.activePhase : state?.activePhase) || 'LOBBY';
+        const isRoundStarted = (clock && clock.success && typeof clock.isRoundStarted === 'boolean')
+          ? clock.isRoundStarted
+          : Boolean(state?.isRoundStarted);
         const currentSession = sessionRef.current;
 
         // If team is logged in, synchronize screen based on server activePhase

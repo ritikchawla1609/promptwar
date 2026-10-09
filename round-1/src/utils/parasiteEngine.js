@@ -270,6 +270,7 @@ export async function fetchPhaseClockAPI() {
   return {
     success: false,
     activePhase: 'LOBBY',
+    isRoundStarted: false,
     remainingSeconds: 0,
     totalSeconds: 0,
     minTeamsRequired: 3,
