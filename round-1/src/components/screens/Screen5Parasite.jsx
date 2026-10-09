@@ -6,6 +6,7 @@ export default function Screen5Parasite({
   session,
   matchedOpponents = [],
   timer = 600,
+  serverActivePhase = 'PARASITE',
   onUpdateSession,
   onProceedToEvolve,
 }) {
@@ -13,6 +14,7 @@ export default function Screen5Parasite({
   const [notes, setNotes] = useState(session.mutationNotes || '');
   const [showMidwayAlert, setShowMidwayAlert] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isNotesSaved, setIsNotesSaved] = useState(Boolean(session.mutationNotes));
 
   // Autosave notes
   useEffect(() => {
@@ -279,12 +281,37 @@ export default function Screen5Parasite({
             </span>
           </div>
 
-          <button
-            onClick={onProceedToEvolve}
-            className="editorial-btn py-1.5 px-3 text-[11px] flex items-center gap-1.5"
-          >
-            <span>PROCEED TO EVOLUTION →</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-cyan font-mono hidden sm:inline">
+              {serverActivePhase === 'EVOLVE' || timer <= 0
+                ? 'COHORT EVOLUTION PHASE ACTIVE'
+                : `SYNCHRONIZED SHIFT IN ${formatTimer(timer)}`}
+            </span>
+
+            {serverActivePhase === 'EVOLVE' || timer <= 0 ? (
+              <button
+                onClick={onProceedToEvolve}
+                className="editorial-btn py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-acid-lime text-charcoal-950 font-bold hover:bg-acid-lime/90 animate-pulse"
+              >
+                <span>ENTER EVOLUTION WORKSPACE →</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  onUpdateSession({ mutationNotes: notes });
+                  parasiteAudio.playLock();
+                  setIsNotesSaved(true);
+                }}
+                className={`editorial-btn py-1.5 px-3 text-[11px] flex items-center gap-1.5 transition-all ${
+                  isNotesSaved
+                    ? 'border-acid-lime/60 text-acid-lime bg-acid-lime/10'
+                    : 'border-white/20 text-bone-200 hover:border-acid-lime hover:text-acid-lime'
+                }`}
+              >
+                <span>{isNotesSaved ? '✓ MUTATION NOTES SECURED' : 'SAVE MUTATION NOTES'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <textarea

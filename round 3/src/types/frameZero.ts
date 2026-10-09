@@ -54,6 +54,8 @@ export interface CategoryScore {
   earned: number;
   max: number;
   percentage: number;
+  explanation?: string;
+  evidence?: string[];
 }
 
 export interface EvaluationResult {

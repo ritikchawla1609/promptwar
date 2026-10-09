@@ -73,16 +73,22 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   const words = cleanPrompt.split(/\s+/).filter(Boolean);
   const wordCount = words.length;
 
-  // Empty prompt handling
+  const maxElements = 35;
+  const maxEmotion = 20;
+  const maxComp = 20;
+  const maxLighting = 15;
+  const maxConsistency = 10;
+
+  // Empty or ultra-short input handling (< 3 words or blank)
   if (!cleanPrompt || wordCount === 0) {
     return {
       totalScore: 0,
       categoryScores: {
-        elements: { name: 'Required Scene Elements', earned: 0, max: 35, percentage: 0 },
-        emotion: { name: 'Emotional Direction', earned: 0, max: 20, percentage: 0 },
-        composition: { name: 'Cinematic Composition', earned: 0, max: 20, percentage: 0 },
-        lighting: { name: 'Lighting & Atmosphere', earned: 0, max: 15, percentage: 0 },
-        consistency: { name: 'Consistency & Tone', earned: 10, max: 10, percentage: 100 },
+        elements: { name: 'Required Scene Elements', earned: 0, max: maxElements, percentage: 0, explanation: 'Slate is empty. No scene elements specified.', evidence: [] },
+        emotion: { name: 'Emotional Direction', earned: 0, max: maxEmotion, percentage: 0, explanation: 'No emotional nuance specified.', evidence: [] },
+        composition: { name: 'Cinematic Composition', earned: 0, max: maxComp, percentage: 0, explanation: 'No camera framing or composition specified.', evidence: [] },
+        lighting: { name: 'Lighting & Atmosphere', earned: 0, max: maxLighting, percentage: 0, explanation: 'No lighting or atmospheric direction specified.', evidence: [] },
+        consistency: { name: 'Consistency & Tone', earned: 0, max: maxConsistency, percentage: 0, explanation: 'Empty prompt cannot demonstrate scene-consistent tone.', evidence: [] },
       },
       satisfiedRequirements: [],
       missingRequirements: mission.requirements.map(r => r.label),
@@ -98,10 +104,15 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   const missingRequirements: string[] = [];
   const feedbackNotes: string[] = [];
 
+  // Track evidence per category
+  const elementsEvidence: string[] = [];
+  const emotionEvidence: string[] = [];
+  const compEvidence: string[] = [];
+  const lightingEvidence: string[] = [];
+
   // 1. Evaluate Scene Elements (Max: 35 pts)
   const elementReqs = mission.requirements.filter(r => r.category === 'element');
   let elementsEarned = 0;
-  const maxElements = 35;
 
   elementReqs.forEach(req => {
     const terms = [...req.primaryTerms, ...req.synonyms];
@@ -109,6 +120,7 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
     if (match.matched) {
       elementsEarned += req.weight;
       satisfiedRequirements.push(req.label);
+      if (match.matchedTerm) elementsEvidence.push(`${req.label} ("${match.matchedTerm}")`);
     } else {
       missingRequirements.push(req.label);
     }
@@ -117,7 +129,6 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   // 2. Evaluate Emotional Direction (Max: 20 pts)
   const emotionReqs = mission.requirements.filter(r => r.category === 'emotion');
   let emotionEarned = 0;
-  const maxEmotion = 20;
 
   emotionReqs.forEach(req => {
     const terms = [...req.primaryTerms, ...req.synonyms];
@@ -125,6 +136,7 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
     if (match.matched) {
       emotionEarned += req.weight;
       satisfiedRequirements.push(req.label);
+      if (match.matchedTerm) emotionEvidence.push(`${req.label} ("${match.matchedTerm}")`);
     } else {
       missingRequirements.push(req.label);
     }
@@ -133,7 +145,6 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   // 3. Evaluate Cinematic Composition (Max: 20 pts)
   const compReqs = mission.requirements.filter(r => r.category === 'composition');
   let compEarned = 0;
-  const maxComp = 20;
 
   compReqs.forEach(req => {
     const terms = [...req.primaryTerms, ...req.synonyms];
@@ -141,6 +152,7 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
     if (match.matched) {
       compEarned += req.weight;
       satisfiedRequirements.push(req.label);
+      if (match.matchedTerm) compEvidence.push(`${req.label} ("${match.matchedTerm}")`);
     } else {
       missingRequirements.push(req.label);
     }
@@ -149,7 +161,6 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   // 4. Evaluate Lighting & Atmosphere (Max: 15 pts)
   const lightReqs = mission.requirements.filter(r => r.category === 'lighting');
   let lightingEarned = 0;
-  const maxLighting = 15;
 
   lightReqs.forEach(req => {
     const terms = [...req.primaryTerms, ...req.synonyms];
@@ -157,21 +168,9 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
     if (match.matched) {
       lightingEarned += req.weight;
       satisfiedRequirements.push(req.label);
+      if (match.matchedTerm) lightingEvidence.push(`${req.label} ("${match.matchedTerm}")`);
     } else {
       missingRequirements.push(req.label);
-    }
-  });
-
-  // 5. Evaluate Consistency & Contradictions (Max: 10 pts)
-  const maxConsistency = 10;
-  let consistencyEarned = 10;
-  const detectedContradictions: string[] = [];
-
-  mission.contradictions.forEach(rule => {
-    const match = matchConcept(normalized, rule.conflictingTerms);
-    if (match.matched) {
-      consistencyEarned = Math.max(0, consistencyEarned - rule.penalty);
-      detectedContradictions.push(rule.explanation);
     }
   });
 
@@ -182,11 +181,58 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   compEarned = Math.round(compEarned * dampener);
   lightingEarned = Math.round(lightingEarned * dampener);
 
-  // Partial credit cap check
+  // Clamp category sub-scores
   elementsEarned = Math.min(maxElements, Math.max(0, elementsEarned));
   emotionEarned = Math.min(maxEmotion, Math.max(0, emotionEarned));
   compEarned = Math.min(maxComp, Math.max(0, compEarned));
   lightingEarned = Math.min(maxLighting, Math.max(0, lightingEarned));
+
+  // 5. Evaluate Consistency & Contradictions (Max: 10 pts)
+  // CRITICAL FIX: Consistency must NOT default to 10/10 if the prompt is meaningless,
+  // unrelated, or has zero substantive content matching the scene brief!
+  const substantiveScore = elementsEarned + emotionEarned + compEarned + lightingEarned;
+  const detectedContradictions: string[] = [];
+
+  let consistencyEarned = 0;
+  let consistencyExplanation = '';
+
+  mission.contradictions.forEach(rule => {
+    const match = matchConcept(normalized, rule.conflictingTerms);
+    if (match.matched) {
+      detectedContradictions.push(rule.explanation);
+    }
+  });
+
+  if (substantiveScore === 0) {
+    // Quality Gate: Prompt has no relevant scene content (e.g. "its very goof", random noise)
+    consistencyEarned = 0;
+    consistencyExplanation = 'No scene elements or directorial directives detected. Tonal consistency cannot be awarded.';
+    feedbackNotes.push('The submitted direction lacks relevance to the scene brief. Review the requirements and re-frame the scene.');
+  } else {
+    // Award consistency proportional to established scene substance and absence of contradictions
+    // Scale base consistency: 1-10 based on substantive score
+    // 35+ substantive points allows full 10 base consistency
+    const baseConsistency = Math.min(maxConsistency, Math.max(2, Math.round((substantiveScore / 35) * maxConsistency)));
+    
+    let penaltyTotal = 0;
+    mission.contradictions.forEach(rule => {
+      const match = matchConcept(normalized, rule.conflictingTerms);
+      if (match.matched) {
+        penaltyTotal += rule.penalty;
+      }
+    });
+
+    consistencyEarned = Math.max(0, baseConsistency - penaltyTotal);
+
+    if (detectedContradictions.length > 0) {
+      consistencyExplanation = `Tonal contradiction detected: ${detectedContradictions.join('; ')}`;
+    } else if (substantiveScore >= 35) {
+      consistencyExplanation = 'Scene direction maintains strong narrative cohesion and tonal consistency with the brief.';
+    } else {
+      consistencyExplanation = 'Partial narrative consistency established for identified scene elements.';
+    }
+  }
+
   consistencyEarned = Math.min(maxConsistency, Math.max(0, consistencyEarned));
 
   const totalScore = Math.min(100, Math.max(0, elementsEarned + emotionEarned + compEarned + lightingEarned + consistencyEarned));
@@ -198,15 +244,15 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
     feedbackNotes.push('Core subjects and environmental elements are well established in the frame.');
   }
 
-  if (emotionEarned < maxEmotion) {
+  if (substantiveScore > 0 && emotionEarned < maxEmotion) {
     feedbackNotes.push(`The character's emotional nuance needs stronger emphasis (${mission.brief.emotionRequirement.toLowerCase()}).`);
   }
 
-  if (compEarned < maxComp) {
+  if (substantiveScore > 0 && compEarned < maxComp) {
     feedbackNotes.push(`Specify camera distance, angle, or cinematic depth (e.g., ${mission.brief.compositionRequirement.toLowerCase()}).`);
   }
 
-  if (lightingEarned < maxLighting) {
+  if (substantiveScore > 0 && lightingEarned < maxLighting) {
     feedbackNotes.push(`Describe the interplay of lighting and atmosphere (${mission.brief.lightingRequirement.toLowerCase()}).`);
   }
 
@@ -224,6 +270,7 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
   else if (totalScore >= 80) directorRank = 'Visionary Director (名監督)';
   else if (totalScore >= 65) directorRank = 'Cinematic Stylist (演出家)';
   else if (totalScore >= 45) directorRank = 'Assistant Director (助監督)';
+  else if (totalScore === 0) directorRank = 'Empty Frame';
 
   return {
     totalScore,
@@ -232,31 +279,41 @@ export function evaluateDirectorPrompt(rawPrompt: string, mission: Mission): Eva
         name: 'Required Scene Elements',
         earned: elementsEarned,
         max: maxElements,
-        percentage: Math.round((elementsEarned / maxElements) * 100)
+        percentage: Math.round((elementsEarned / maxElements) * 100),
+        explanation: `${elementsEarned}/${maxElements} pts awarded. ${satisfiedRequirements.filter(r => elementReqs.some(e => e.label === r)).length} of ${elementReqs.length} elements verified.`,
+        evidence: elementsEvidence,
       },
       emotion: {
         name: 'Emotional Direction',
         earned: emotionEarned,
         max: maxEmotion,
-        percentage: Math.round((emotionEarned / maxEmotion) * 100)
+        percentage: Math.round((emotionEarned / maxEmotion) * 100),
+        explanation: `${emotionEarned}/${maxEmotion} pts awarded for emotional nuances.`,
+        evidence: emotionEvidence,
       },
       composition: {
         name: 'Cinematic Composition',
         earned: compEarned,
         max: maxComp,
-        percentage: Math.round((compEarned / maxComp) * 100)
+        percentage: Math.round((compEarned / maxComp) * 100),
+        explanation: `${compEarned}/${maxComp} pts awarded for camera framing and perspective.`,
+        evidence: compEvidence,
       },
       lighting: {
         name: 'Lighting & Atmosphere',
         earned: lightingEarned,
         max: maxLighting,
-        percentage: Math.round((lightingEarned / maxLighting) * 100)
+        percentage: Math.round((lightingEarned / maxLighting) * 100),
+        explanation: `${lightingEarned}/${maxLighting} pts awarded for lighting and atmospheric mood.`,
+        evidence: lightingEvidence,
       },
       consistency: {
         name: 'Consistency & Tone',
         earned: consistencyEarned,
         max: maxConsistency,
-        percentage: Math.round((consistencyEarned / maxConsistency) * 100)
+        percentage: Math.round((consistencyEarned / maxConsistency) * 100),
+        explanation: consistencyExplanation,
+        evidence: detectedContradictions.length > 0 ? [`Contradictions: ${detectedContradictions.join(', ')}`] : ['No contradictory directives.'],
       }
     },
     satisfiedRequirements,

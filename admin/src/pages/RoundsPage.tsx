@@ -34,6 +34,7 @@ export default function RoundsPage() {
     startRound,
     pauseRound,
     resumeRound,
+    resetRound,
     addAuditLog
   } = useAdmin();
 
@@ -41,6 +42,12 @@ export default function RoundsPage() {
   const [r1Search, setR1Search] = useState('');
   const [matchmakingStatus, setMatchmakingStatus] = useState<string>('Balanced (24 Pairs Active)');
   const [forceMatchDone, setForceMatchDone] = useState(false);
+
+  // Round Reset Modal State
+  const [resetModalRound, setResetModalRound] = useState<'ROUND_1' | 'ROUND_2' | 'ROUND_3' | null>(null);
+  const [resetMode, setResetMode] = useState<'RESET_STATE' | 'RESET_RESULTS'>('RESET_STATE');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<string | null>(null);
 
   // R1 Submissions
   const r1Submissions = teams.map(t => ({
@@ -76,6 +83,20 @@ export default function RoundsPage() {
     setMatchmakingStatus('48/48 Teams Matched in Balanced Pairs');
     addAuditLog('MATCHMAKING_FORCED', 'Round 1 (Prompt Parasite)', 'Organizer forced balanced random matchmaking for all teams.', 'ROUND');
     setTimeout(() => setForceMatchDone(false), 3000);
+  };
+
+  const handleExecuteReset = async () => {
+    if (!resetModalRound) return;
+    setIsResetting(true);
+    const success = await resetRound(resetModalRound, resetMode);
+    setIsResetting(false);
+    if (success) {
+      setResetFeedback(`Round reset complete (${resetMode === 'RESET_RESULTS' ? 'Results Cleared' : 'State Reset to Lobby'}).`);
+      setTimeout(() => {
+        setResetFeedback(null);
+        setResetModalRound(null);
+      }, 1600);
+    }
   };
 
   return (
@@ -178,6 +199,18 @@ export default function RoundsPage() {
                   </button>
                 )
               )}
+
+              <button
+                onClick={() => {
+                  setResetModalRound('ROUND_1');
+                  setResetMode('RESET_STATE');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors"
+                title="Reset Round 1 State or Results"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                <span>Reset Round</span>
+              </button>
             </div>
           </div>
 
@@ -320,6 +353,17 @@ export default function RoundsPage() {
               <span className="text-xs font-mono text-slate-400">
                 15 Mins · 4 Investigation Phases
               </span>
+              <button
+                onClick={() => {
+                  setResetModalRound('ROUND_2');
+                  setResetMode('RESET_STATE');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors"
+                title="Reset Round 2 State or Results"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                <span>Reset Round</span>
+              </button>
             </div>
           </div>
 
@@ -424,6 +468,17 @@ export default function RoundsPage() {
               <span className="text-xs font-mono text-slate-400">
                 12 Mins · Max 5 Takes
               </span>
+              <button
+                onClick={() => {
+                  setResetModalRound('ROUND_3');
+                  setResetMode('RESET_STATE');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors"
+                title="Reset Round 3 State or Results"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                <span>Reset Round</span>
+              </button>
             </div>
           </div>
 
@@ -533,6 +588,108 @@ export default function RoundsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Round Reset Modal */}
+      {resetModalRound && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center space-x-3 text-rose-400">
+              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  Reset {resetModalRound === 'ROUND_1' ? 'Round 1 (Prompt Parasite)' : resetModalRound === 'ROUND_2' ? 'Round 2 (Operation Blackbox)' : 'Round 3 (Frame Zero)'}
+                </h3>
+                <p className="text-xs text-slate-400 font-sans">
+                  Select reset scope. This action is recorded in the administrative audit log.
+                </p>
+              </div>
+            </div>
+
+            {/* Mode Selection */}
+            <div className="space-y-3 font-sans">
+              <label
+                onClick={() => setResetMode('RESET_STATE')}
+                className={`flex items-start space-x-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  resetMode === 'RESET_STATE'
+                    ? 'bg-amber-500/10 border-amber-500/50 text-white'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="resetMode"
+                  checked={resetMode === 'RESET_STATE'}
+                  onChange={() => setResetMode('RESET_STATE')}
+                  className="mt-1 text-amber-500"
+                />
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-amber-300 font-mono">Option A: Reset Round State</div>
+                  <p className="text-slate-300 leading-relaxed">
+                    Returns the round to initial phase (LOBBY) and resets the timer. All participant registrations, draft submissions, and recorded scores remain intact. Connected participants return to the waiting lobby.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                onClick={() => setResetMode('RESET_RESULTS')}
+                className={`flex items-start space-x-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  resetMode === 'RESET_RESULTS'
+                    ? 'bg-rose-500/10 border-rose-500/50 text-white'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="resetMode"
+                  checked={resetMode === 'RESET_RESULTS'}
+                  onChange={() => setResetMode('RESET_RESULTS')}
+                  className="mt-1 text-rose-500"
+                />
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-rose-300 font-mono">Option B: Reset Round Results & Submissions</div>
+                  <p className="text-slate-300 leading-relaxed">
+                    Wipes all prompt submissions, evaluations, and scores recorded specifically for this round. Resets round state back to LOBBY. Preserves team credentials and earlier round history.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {resetFeedback && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono text-center">
+                ✓ {resetFeedback}
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setResetModalRound(null)}
+                disabled={isResetting}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteReset}
+                disabled={isResetting}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-mono font-bold transition-all shadow-md shadow-rose-600/20 flex items-center space-x-2"
+              >
+                {isResetting ? (
+                  <span>Executing Reset...</span>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Confirm Reset</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

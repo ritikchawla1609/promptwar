@@ -9,7 +9,9 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
-  Database
+  Database,
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 
@@ -18,6 +20,7 @@ export default function SettingsPage() {
     settings,
     updateSettings,
     purgeAllData,
+    resetEntireEvent,
     teams,
     auditLogs
   } = useAdmin();
@@ -30,8 +33,13 @@ export default function SettingsPage() {
   const [tieBreaker, setTieBreaker] = useState(settings.tieBreakerRule);
   const [isSavedMessage, setIsSavedMessage] = useState(false);
 
-  // Purge modal
+  // Reset & Purge modals
   const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
+  const [isResetAllModalOpen, setIsResetAllModalOpen] = useState(false);
+  const [clearTeamsInReset, setClearTeamsInReset] = useState(false);
+  const [typedConfirmText, setTypedConfirmText] = useState('');
+  const [isResettingAll, setIsResettingAll] = useState(false);
+  const [resetAllSuccess, setResetAllSuccess] = useState<string | null>(null);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,29 +251,174 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Danger Zone: Purge */}
-      <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-900/40 space-y-3">
+      {/* Danger Zone: Event Reset & Purge */}
+      <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-900/40 space-y-6">
         <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-wider text-rose-400 font-bold">
           <AlertTriangle className="w-4 h-4" />
-          <span>Danger Zone · Reset Tournament Arena</span>
+          <span>Danger Zone · Tournament Arena Operations</span>
         </div>
 
-        <p className="text-xs text-rose-300/80">
-          Purging arena data deletes all local participant session progress, clears team ledgers, and resets rounds back to initial factory state.
-        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Action 1: Reset All Rounds */}
+          <div className="p-4 rounded-xl bg-slate-900/90 border border-amber-900/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>Reset All Rounds</span>
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                Safe Reset
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Returns Round 1, Round 2, and Round 3 to LOBBY, resets timers, and wipes all round scores/submissions. Team accounts and login credentials remain intact.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setTypedConfirmText('');
+                setResetAllSuccess(null);
+                setIsResetAllModalOpen(true);
+              }}
+              className="w-full px-4 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold transition-all flex items-center justify-center space-x-2 active:scale-95"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset All Rounds (Keep Teams)</span>
+            </button>
+          </div>
 
-        <div className="pt-2">
-          <button
-            onClick={() => setIsPurgeModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold transition-all shadow-md shadow-rose-600/20 active:scale-95 flex items-center space-x-2"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Purge All Tournament Data</span>
-          </button>
+          {/* Action 2: Purge All Tournament Data */}
+          <div className="p-4 rounded-xl bg-slate-900/90 border border-rose-900/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span>Purge Entire Arena</span>
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30">
+                Destructive
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Permanently purges all registered teams, submissions, round histories, and event audit logs. Restores arena to initial zero state.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsPurgeModalOpen(true)}
+              className="w-full px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold transition-all shadow-md shadow-rose-600/20 flex items-center justify-center space-x-2 active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Purge All Tournament Data</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Master Reset All Rounds Modal */}
+      {isResetAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-slate-900 border border-amber-500/40 shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-amber-400 font-mono text-sm font-bold">
+                <RotateCcw className="w-4 h-4" />
+                <span>Tournament Master Reset</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetAllModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This administrative action returns all three competition rounds (Round 1, Round 2, Round 3) to the initial <code className="text-amber-300 bg-amber-950/60 px-1 py-0.5 rounded">LOBBY</code> phase, resets official timers, and clears all participant submissions and rubric evaluations.
+            </p>
+
+            {/* Team Preservation Option */}
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={clearTeamsInReset}
+                  onChange={(e) => setClearTeamsInReset(e.target.checked)}
+                  className="mt-1 text-rose-500 rounded"
+                />
+                <div className="text-xs space-y-0.5">
+                  <div className="font-bold text-slate-200 font-mono">Also Delete Registered Teams?</div>
+                  <p className="text-slate-400 text-[11px]">
+                    If unchecked, team accounts and access credentials remain valid so participants can rejoin immediately.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Typed Confirmation Safety Gate */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+                Type <span className="text-rose-400 font-bold">RESET EVENT</span> to unlock master reset:
+              </label>
+              <input
+                type="text"
+                value={typedConfirmText}
+                onChange={(e) => setTypedConfirmText(e.target.value)}
+                placeholder="RESET EVENT"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-500 text-xs font-mono text-slate-100 outline-none"
+              />
+            </div>
+
+            {resetAllSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono text-center">
+                ✓ {resetAllSuccess}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsResetAllModalOpen(false)}
+                disabled={isResettingAll}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsResettingAll(true);
+                  try {
+                    const ok = await resetEntireEvent(clearTeamsInReset);
+                    if (ok) {
+                      setResetAllSuccess('All rounds successfully reset to pre-event state.');
+                      setTimeout(() => {
+                        setIsResetAllModalOpen(false);
+                        setResetAllSuccess(null);
+                        setTypedConfirmText('');
+                      }, 1800);
+                    }
+                  } finally {
+                    setIsResettingAll(false);
+                  }
+                }}
+                disabled={typedConfirmText !== 'RESET EVENT' || isResettingAll}
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-mono font-bold transition-all shadow-md shadow-amber-600/20 flex items-center space-x-2"
+              >
+                {isResettingAll ? (
+                  <span>Executing Master Reset...</span>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Confirm Master Reset</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Purge */}
       <ConfirmDialog
         isOpen={isPurgeModalOpen}
         title="Permanently Purge All Event Data?"

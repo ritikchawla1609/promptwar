@@ -138,6 +138,17 @@ async function runServerMatchmaking() {
   }
 
   matchAssignments = newAssignments;
+  if (isMongoConnected) {
+    try {
+      await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: { matchAssignments: newAssignments, lastUpdated: new Date().toISOString() } },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.warn('Could not persist matchAssignments to MongoDB:', err);
+    }
+  }
   console.log(`✅ [Matchmaking] Assigned opponents to ${Object.keys(newAssignments).length} teams.`);
   return newAssignments;
 }
@@ -555,6 +566,262 @@ app.post('/api/arena/purge-data', async (req, res) => {
   }
 });
 
+// POST /api/arena/reset-round (Comprehensive Round Reset: State, Results, or Entire Event)
+app.post('/api/arena/reset-round', async (req, res) => {
+  try {
+    const { roundId = 'ROUND_1', mode = 'RESET_STATE', clearTeams = false } = req.body;
+    const now = new Date().toISOString();
+
+    console.log(`🔄 [Reset Round] Requested: roundId=${roundId}, mode=${mode}, clearTeams=${clearTeams}`);
+
+    // Operation A: RESET_STATE (Return selected round to initial phase & timer; keep all teams, submissions, and scores)
+    if (mode === 'RESET_STATE') {
+      const stateReset = {
+        isRoundStarted: false,
+        roundId,
+        scheduleStatus: 'LOBBY',
+        startedAt: null,
+        activePhase: 'LOBBY',
+        phaseStartedAt: null,
+        phaseEndsAt: null,
+        phaseDuration: 0,
+        scheduledStartAt: null,
+        scheduledEndAt: null,
+        actualStartedAt: null,
+        actualEndedAt: null,
+        pausedAt: null,
+        accumulatedPausedSeconds: 0,
+        lastUpdated: now,
+      };
+
+      if (roundId === 'ROUND_1') {
+        stateReset.matchAssignments = {};
+        matchAssignments = {};
+      }
+
+      let updatedState;
+      if (isMongoConnected) {
+        const doc = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: stateReset },
+          { upsert: true, new: true }
+        );
+        updatedState = doc.toObject();
+      } else {
+        arenaState = { ...arenaState, ...stateReset };
+        updatedState = arenaState;
+      }
+
+      console.log(`✅ [Reset Round State] Round ${roundId} returned to initial LOBBY state.`);
+      return res.json({
+        success: true,
+        operation: 'RESET_STATE',
+        roundId,
+        message: `Round ${roundId} state returned to initial LOBBY. All submissions and scores preserved.`,
+        state: updatedState,
+      });
+    }
+
+    // Operation B: RESET_RESULTS (Clear submissions and scores for THIS round; reset round state)
+    if (mode === 'RESET_RESULTS') {
+      const stateReset = {
+        isRoundStarted: false,
+        roundId,
+        scheduleStatus: 'LOBBY',
+        startedAt: null,
+        activePhase: 'LOBBY',
+        phaseStartedAt: null,
+        phaseEndsAt: null,
+        phaseDuration: 0,
+        scheduledStartAt: null,
+        scheduledEndAt: null,
+        actualStartedAt: null,
+        actualEndedAt: null,
+        pausedAt: null,
+        accumulatedPausedSeconds: 0,
+        lastUpdated: now,
+      };
+
+      if (roundId === 'ROUND_1') {
+        stateReset.matchAssignments = {};
+        matchAssignments = {};
+      }
+
+      let updatedState;
+      if (isMongoConnected) {
+        const doc = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: stateReset },
+          { upsert: true, new: true }
+        );
+        updatedState = doc.toObject();
+
+        if (roundId === 'ROUND_1') {
+          await Team.updateMany(
+            {},
+            {
+              $set: {
+                'round1.status': 'NOT_STARTED',
+                'round1.score': 0,
+                'round1.firstPrompt': '',
+                'round1.firstOutput': '',
+                'round1.mutationNotes': '',
+                'round1.finalPrompt': '',
+                'round1.finalOutput': '',
+                'round1.matchedOpponents': [],
+                'round1.evaluation': { promptQuality: 0, problemUnderstanding: 0, outputQuality: 0, improvement: 0, total: 0, judgeNotes: '', evaluatedAt: null },
+              },
+            }
+          );
+          await Submission.deleteMany({
+            $or: [{ round: 'round-1' }, { round: 'ROUND_1' }, { round: '1' }],
+          });
+        } else if (roundId === 'ROUND_2') {
+          await Team.updateMany(
+            {},
+            {
+              $set: {
+                'round2.status': 'LOCKED',
+                'round2.score': 0,
+              },
+            }
+          );
+          await Submission.deleteMany({
+            $or: [{ round: 'round-2' }, { round: 'ROUND_2' }, { round: '2' }],
+          });
+        } else if (roundId === 'ROUND_3') {
+          await Team.updateMany(
+            {},
+            {
+              $set: {
+                'round3.status': 'LOCKED',
+                'round3.score': 0,
+                'round3.rank': null,
+              },
+            }
+          );
+          await Submission.deleteMany({
+            $or: [{ round: 'round-3' }, { round: 'ROUND_3' }, { round: '3' }],
+          });
+        }
+
+        // Recalculate total tournament scores for all teams
+        const allTeams = await Team.find({});
+        for (const t of allTeams) {
+          t.totalTournamentScore = (t.round1?.score || 0) + (t.round2?.score || 0) + (t.round3?.score || 0);
+          await t.save();
+        }
+      } else {
+        arenaState = { ...arenaState, ...stateReset };
+        updatedState = arenaState;
+
+        inMemoryTeams.forEach(t => {
+          if (roundId === 'ROUND_1' && t.round1) {
+            t.round1.status = 'NOT_STARTED';
+            t.round1.score = 0;
+            t.round1.firstPrompt = '';
+            t.round1.firstOutput = '';
+            t.round1.finalPrompt = '';
+            t.round1.finalOutput = '';
+          } else if (roundId === 'ROUND_2' && t.round2) {
+            t.round2.score = 0;
+          } else if (roundId === 'ROUND_3' && t.round3) {
+            t.round3.score = 0;
+          }
+          t.totalTournamentScore = (t.round1?.score || 0) + (t.round2?.score || 0) + (t.round3?.score || 0);
+        });
+      }
+
+      console.log(`✅ [Reset Round Results] Results for ${roundId} cleared.`);
+      return res.json({
+        success: true,
+        operation: 'RESET_RESULTS',
+        roundId,
+        message: `Round ${roundId} results and submissions wiped. Round reset to LOBBY.`,
+        state: updatedState,
+      });
+    }
+
+    // Operation C: RESET_EVENT (Reset all rounds, return event to setup/lobby)
+    if (mode === 'RESET_EVENT') {
+      matchAssignments = {};
+      const fullReset = {
+        ...DEFAULT_ARENA_STATE,
+        lastUpdated: now,
+      };
+
+      let updatedState;
+      if (isMongoConnected) {
+        const doc = await ArenaState.findOneAndUpdate(
+          { key: 'global_arena_state' },
+          { $set: fullReset },
+          { upsert: true, new: true }
+        );
+        updatedState = doc.toObject();
+
+        if (clearTeams) {
+          await Team.deleteMany({});
+          await Submission.deleteMany({});
+          inMemoryTeams.length = 0;
+          inMemorySubmissions.length = 0;
+        } else {
+          await Team.updateMany(
+            {},
+            {
+              $set: {
+                'round1.status': 'NOT_STARTED',
+                'round1.score': 0,
+                'round1.firstPrompt': '',
+                'round1.firstOutput': '',
+                'round1.mutationNotes': '',
+                'round1.finalPrompt': '',
+                'round1.finalOutput': '',
+                'round1.matchedOpponents': [],
+                'round1.isQualifiedR2': false,
+                'round2.status': 'LOCKED',
+                'round2.score': 0,
+                'round2.isQualifiedR3': false,
+                'round3.status': 'LOCKED',
+                'round3.score': 0,
+                'round3.rank': null,
+                totalTournamentScore: 0,
+              },
+            }
+          );
+          await Submission.deleteMany({});
+        }
+      } else {
+        arenaState = { ...fullReset };
+        updatedState = arenaState;
+        if (clearTeams) {
+          inMemoryTeams.length = 0;
+          inMemorySubmissions.length = 0;
+        } else {
+          inMemoryTeams.forEach(t => {
+            if (t.round1) { t.round1.score = 0; t.round1.status = 'NOT_STARTED'; }
+            if (t.round2) { t.round2.score = 0; t.round2.status = 'LOCKED'; }
+            if (t.round3) { t.round3.score = 0; t.round3.status = 'LOCKED'; }
+            t.totalTournamentScore = 0;
+          });
+        }
+      }
+
+      console.log(`🧹 [Reset Entire Event] Competition completely reset to pre-event status.`);
+      return res.json({
+        success: true,
+        operation: 'RESET_EVENT',
+        message: `Entire Prompt War competition reset to pre-event state. ${clearTeams ? 'Teams deleted.' : 'Teams preserved with reset scores.'}`,
+        state: updatedState,
+      });
+    }
+
+    return res.status(400).json({ error: `Unknown reset mode: ${mode}. Valid modes: RESET_STATE, RESET_RESULTS, RESET_EVENT` });
+  } catch (err) {
+    console.error('Reset Round Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/arena/phase-clock (Server-authoritative countdown for all clients)
 app.get('/api/arena/phase-clock', async (req, res) => {
   try {
@@ -883,14 +1150,23 @@ app.get('/api/arena/matches/:teamCode', async (req, res) => {
     const state = await getPersistentArenaState();
     const { teamCode } = req.params;
     const upper = teamCode.toUpperCase();
-    const assignments = state.matchAssignments || matchAssignments || {};
-    const opponents = assignments[upper] || [];
+    let assignments = state.matchAssignments || matchAssignments || {};
+    let opponents = assignments[upper] || [];
+
+    // If assignments are missing/empty for this team and round is in MATCH, PARASITE, or EVOLVE:
+    const isMatchingPhase = ['MATCH', 'PARASITE', 'EVOLVE'].includes(state.activePhase);
+    if ((!opponents || opponents.length === 0) && (isMatchingPhase || state.isRoundStarted)) {
+      console.log(`⚡ [Matchmaking On-Demand] Assigning opponents for ${upper}...`);
+      const freshAssignments = await runServerMatchmaking();
+      assignments = freshAssignments || {};
+      opponents = assignments[upper] || [];
+    }
 
     res.json({
       success: true,
       teamCode: upper,
       opponents,
-      matchPhaseActive: state.activePhase === 'MATCH' || state.activePhase === 'PARASITE' || state.activePhase === 'EVOLVE',
+      matchPhaseActive: ['MATCH', 'PARASITE', 'EVOLVE'].includes(state.activePhase),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

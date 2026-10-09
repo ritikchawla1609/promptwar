@@ -120,15 +120,18 @@ export default function App() {
             console.log(`[Phase Sync] Transition detected: ${prevPhase} -> ${activePhase}`);
             prevServerPhaseRef.current = activePhase;
 
-            // 1. If transitioning AWAY from CREATE, auto-lock first form if not already locked
+            // 1. If transitioning AWAY from CREATE, auto-lock first form ONLY if substantive output exists
             if (prevPhase === 'CREATE') {
-              if (currentSession.status !== 'FIRST_LOCKED' && !currentSession.firstSubmittedAt) {
-                console.log('[Auto-Save] CREATE timer expired — auto-locking first form');
+              const hasDraftOutput = Boolean(currentSession.firstOutput && currentSession.firstOutput.trim().length > 0);
+              if (hasDraftOutput && currentSession.status !== 'FIRST_LOCKED' && !currentSession.firstSubmittedAt) {
+                console.log('[Auto-Save] CREATE timer expired — auto-locking valid draft');
                 const autoSubmitData = {
-                  firstPrompt: currentSession.firstPrompt || '',
-                  firstOutput: currentSession.firstOutput || '',
+                  firstPrompt: currentSession.firstPrompt?.trim() || '',
+                  firstOutput: currentSession.firstOutput.trim(),
                 };
                 handleLockFirstForm(autoSubmitData);
+              } else if (!hasDraftOutput && !currentSession.firstSubmittedAt) {
+                console.log('[Phase Sync] CREATE phase expired with NO submission recorded.');
               }
             }
 
@@ -137,9 +140,12 @@ export default function App() {
               try {
                 const matchData = await fetchMatchAssignmentsAPI(currentSession.teamCode);
                 if (matchData && matchData.opponents && matchData.opponents.length > 0) {
-                  handleUpdateSession({ matchedOpponents: matchData.opponents });
-                  parasiteAudio.playSubDrop();
-                } else {
+                  // Only update if not already set or changed
+                  if (!currentSession.matchedOpponents || currentSession.matchedOpponents.length === 0) {
+                    handleUpdateSession({ matchedOpponents: matchData.opponents });
+                    parasiteAudio.playSubDrop();
+                  }
+                } else if (!currentSession.matchedOpponents || currentSession.matchedOpponents.length === 0) {
                   // Fallback to local pool if server has not assigned yet
                   const fallbackMatches = generateAnonymousMatches(subs || [], currentSession.participantId, currentSession.teamCode);
                   if (fallbackMatches.length > 0) {
@@ -152,15 +158,18 @@ export default function App() {
               }
             }
 
-            // 3. If transitioning AWAY from EVOLVE, auto-lock final form if not locked
+            // 3. If transitioning AWAY from EVOLVE, auto-lock final form ONLY if substantive output exists
             if (prevPhase === 'EVOLVE') {
-              if (currentSession.status !== 'FINAL_LOCKED' && !currentSession.finalSubmittedAt) {
-                console.log('[Auto-Save] EVOLVE timer expired — auto-locking final form');
+              const hasDraftFinal = Boolean(currentSession.finalOutput && currentSession.finalOutput.trim().length > 0);
+              if (hasDraftFinal && currentSession.status !== 'FINAL_LOCKED' && !currentSession.finalSubmittedAt) {
+                console.log('[Auto-Save] EVOLVE timer expired — auto-locking final draft');
                 const autoFinalData = {
-                  finalPrompt: currentSession.finalPrompt || '',
-                  finalOutput: currentSession.finalOutput || '',
+                  finalPrompt: currentSession.finalPrompt?.trim() || '',
+                  finalOutput: currentSession.finalOutput.trim(),
                 };
                 handleLockFinalForm(autoFinalData);
+              } else if (!hasDraftFinal && !currentSession.finalSubmittedAt) {
+                console.log('[Phase Sync] EVOLVE phase expired with NO submission recorded.');
               }
             }
           }
@@ -297,10 +306,17 @@ export default function App() {
 
   // STAGE TRANSITION HANDLERS (Synchronized Phase Progression)
   const handleLockFirstForm = async (formData) => {
+    const trimmedOutput = (formData?.firstOutput || '').trim();
+    const trimmedPrompt = (formData?.firstPrompt || '').trim();
+    if (!trimmedOutput) {
+      console.warn('[handleLockFirstForm] Cannot lock first form without substantive output.');
+      return;
+    }
+
     const updated = {
       ...sessionRef.current,
-      firstPrompt: formData.firstPrompt,
-      firstOutput: formData.firstOutput,
+      firstPrompt: trimmedPrompt,
+      firstOutput: trimmedOutput,
       firstSubmittedAt: new Date().toISOString(),
       status: 'FIRST_LOCKED',
     };
@@ -323,10 +339,17 @@ export default function App() {
   };
 
   const handleLockFinalForm = async (formData) => {
+    const trimmedFinalOutput = (formData?.finalOutput || '').trim();
+    const trimmedFinalPrompt = (formData?.finalPrompt || '').trim();
+    if (!trimmedFinalOutput) {
+      console.warn('[handleLockFinalForm] Cannot lock final form without substantive output.');
+      return;
+    }
+
     const updated = {
       ...sessionRef.current,
-      finalPrompt: formData.finalPrompt,
-      finalOutput: formData.finalOutput,
+      finalPrompt: trimmedFinalPrompt,
+      finalOutput: trimmedFinalOutput,
       finalSubmittedAt: new Date().toISOString(),
       status: 'FINAL_LOCKED',
     };
@@ -449,6 +472,7 @@ export default function App() {
             session={session}
             matchedOpponents={session.matchedOpponents || []}
             timer={currentRemaining}
+            serverActivePhase={phaseClock?.activePhase || arenaState.activePhase}
             onUpdateSession={handleUpdateSession}
             onProceedToEvolve={() => setCurrentStage('EVOLVE')}
           />

@@ -497,6 +497,11 @@ export const DirectorWorkspace: React.FC<DirectorWorkspaceProps> = ({
                             }}
                           />
                         </div>
+                        {cat.explanation && (
+                          <div className="text-[11px] text-slate-400 font-sans italic pt-0.5">
+                            {cat.explanation}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

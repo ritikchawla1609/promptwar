@@ -28,12 +28,18 @@ export default function Screen3Create({
   const hasPrompt = promptInput.trim().length > 0;
   const hasOutput = outputInput.trim().length > 0;
   const isReady = hasPrompt && hasOutput;
-  const isLocked = session.status === 'FIRST_LOCKED' || session.status === 'MATCHED' || session.firstSubmittedAt;
 
-  // Auto-lock when phase timer hits 0
+  // A team has submitted IF AND ONLY IF they have recorded submission timestamp AND non-empty output
+  const hasSubmitted = Boolean(
+    session.firstSubmittedAt &&
+    session.firstOutput &&
+    session.firstOutput.trim().length > 0
+  );
+
+  // Auto-lock when phase timer hits 0 ONLY IF user has actually generated content
   useEffect(() => {
-    if (timer === 0 && !isLocked && !isSubmitting) {
-      if (promptInput.trim() || outputInput.trim()) {
+    if (timer === 0 && !hasSubmitted && !isSubmitting) {
+      if (promptInput.trim() && outputInput.trim()) {
         parasiteAudio.playLock();
         onLockFirstForm({
           firstPrompt: promptInput.trim(),
@@ -41,7 +47,7 @@ export default function Screen3Create({
         });
       }
     }
-  }, [timer, isLocked, isSubmitting, promptInput, outputInput]);
+  }, [timer, hasSubmitted, isSubmitting, promptInput, outputInput]);
 
   const handleLock = () => {
     if (!isReady) return;
@@ -63,8 +69,8 @@ export default function Screen3Create({
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // If already locked, show the atmospheric waiting room
-  if (isLocked) {
+  // 1. IF TEAM ACTUALLY SUBMITTED: Show encrypted waiting room with confirmed submission
+  if (hasSubmitted) {
     return (
       <div className="relative min-h-[calc(100vh-56px)] flex flex-col justify-between px-6 sm:px-12 py-12 max-w-5xl mx-auto select-none">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 font-mono text-xs">
@@ -129,6 +135,85 @@ export default function Screen3Create({
 
             <p className="text-[11px] text-bone-400 leading-normal">
               Contenders are independently finalizing their baseline runs. Anonymous matching will engage automatically once the cohort aligns.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-white/[0.06] font-mono text-[10px] text-bone-500 uppercase tracking-widest flex items-center justify-between">
+          <span>HOST REVERSE ROUTING ACTIVE</span>
+          <span>STAGE 02 / MATCHMAKING IMMINENT</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. IF TIME EXPIRED WITHOUT SUBMISSION: Show honest expired state (NEVER false lock!)
+  if (!hasSubmitted && timer === 0 && !isSubmitting) {
+    return (
+      <div className="relative min-h-[calc(100vh-56px)] flex flex-col justify-between px-6 sm:px-12 py-12 max-w-5xl mx-auto select-none">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 font-mono text-xs">
+          <span className="text-bone-400 uppercase tracking-widest">
+            PHASE 01: CREATION WINDOW CLOSED
+          </span>
+          <span className="text-crimson font-bold uppercase tracking-wider">
+            STATUS: NO TRANSMISSION
+          </span>
+        </div>
+
+        <div className="my-auto py-12 flex flex-col items-center text-center">
+          <div className="w-16 h-16 border border-crimson/40 bg-crimson/5 flex items-center justify-center mb-6">
+            <AlertCircle className="w-8 h-8 text-crimson" />
+          </div>
+
+          <span className="font-mono text-xs uppercase tracking-[0.3em] text-crimson font-bold mb-2">
+            DEADLINE CONCLUDED
+          </span>
+          <h2 className="font-display font-black text-4xl sm:text-6xl text-bone-50 tracking-tightest uppercase mb-4">
+            SUBMISSION WINDOW CLOSED.
+          </h2>
+
+          <p className="font-mono text-xs sm:text-sm text-bone-300 max-w-md leading-relaxed mb-6">
+            THE OFFICIAL TIME WINDOW FOR PHASE 01 HAS EXPIRED.
+            <br />
+            NO BASELINE PROMPT OR OUTPUT WAS TRANSMITTED BEFORE THE DEADLINE.
+            <br />
+            YOUR TEAM WILL OBSERVE OPPONENT SIGNALS DURING UPCOMING PHASES.
+          </p>
+
+          {/* Synchronized Phase Timer Badge */}
+          <div className="mb-8 px-5 py-2.5 bg-charcoal-900 border border-crimson/40 rounded-xl inline-flex items-center gap-3 shadow-[0_0_20px_rgba(255,0,55,0.15)]">
+            <Clock className="w-4 h-4 text-crimson animate-pulse" />
+            <span className="text-crimson font-bold font-mono text-sm tracking-wider">
+              NEXT PHASE IN: {formatTimer(timer)}
+            </span>
+            <span className="text-bone-400 text-xs font-mono">
+              // SYNCHRONIZED COHORT SHIFT
+            </span>
+          </div>
+
+          {/* Network Cohort Widget */}
+          <div className="w-full max-w-md p-6 border border-white/[0.12] bg-charcoal-900/70 text-left font-mono">
+            <div className="flex items-center justify-between text-xs mb-3">
+              <span className="text-bone-400 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 bg-crimson animate-ping" />
+                <span>ARENA COHORT STATUS</span>
+              </span>
+              <span className="text-bone-300 font-bold font-mono">
+                {lockedSubmissionsCount} / {Math.max(1, registeredTeamsCount)} TRANSMITTED
+              </span>
+            </div>
+
+            <div className="w-full bg-charcoal-800 h-1.5 overflow-hidden mb-4">
+              <div
+                className="bg-crimson h-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, Math.round((lockedSubmissionsCount / Math.max(1, registeredTeamsCount)) * 100))}%`,
+                }}
+              />
+            </div>
+
+            <p className="text-[11px] text-bone-400 leading-normal">
+              Contenders that submitted work will enter peer inspection. Stand by for the synchronized transition.
             </p>
           </div>
         </div>

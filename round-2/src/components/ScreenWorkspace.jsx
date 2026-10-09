@@ -15,6 +15,13 @@ import {
 } from 'lucide-react';
 import { formatTimeMMSS } from '../utils/timer';
 
+const PROMPT_STARTERS = [
+  'Which system transferred the most data outside the facility?',
+  'Who accessed the server room during the critical window?',
+  'What discrepancy exists between physical badges and terminal logins?',
+  'Which unauthorized protocol was initiated on terminal 4?',
+];
+
 export default function ScreenWorkspace({
   teamName,
   timerState,
@@ -88,15 +95,16 @@ export default function ScreenWorkspace({
               </span>
             </div>
 
-            {/* Records Access Button */}
+            {/* Prominent Evidence Library Button */}
             <button
               onClick={onOpenRecordsDrawer}
-              className="bg-archive-900 hover:bg-archive-850 border border-archive-700 hover:border-archive-600 text-ivory-200 text-xs font-medium px-3.5 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
+              className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
+              title="Open the 14-document Evidence Library"
             >
-              <FileText className="w-3.5 h-3.5 text-amber-500" />
-              <span>View records</span>
-              <span className="font-mono text-[11px] text-ivory-500 bg-archive-800 px-1.5 py-0.5 rounded ml-1">
-                {discoveredEvidence.length}/14
+              <FileText className="w-3.5 h-3.5 text-amber-400" />
+              <span>Evidence Library</span>
+              <span className="font-mono text-[11px] text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded font-bold">
+                {discoveredEvidence.length} / 14
               </span>
             </button>
 
@@ -182,18 +190,58 @@ export default function ScreenWorkspace({
           )}
         </div>
 
+        {/* 3 Core Investigation Objectives Progress Tracker */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {objectives.map((obj, i) => (
+            <div
+              key={obj.id}
+              className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+                obj.completed
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+                  : i === activeObjectiveIndex
+                  ? 'bg-amber-500/10 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/5'
+                  : 'bg-archive-900 border-archive-700/60 text-ivory-400'
+              }`}
+            >
+              <div className="flex items-center space-x-3 truncate">
+                {obj.completed ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                ) : (
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${i === activeObjectiveIndex ? 'bg-amber-400 animate-ping' : 'bg-archive-600'}`} />
+                )}
+                <div className="truncate">
+                  <div className="text-[10px] uppercase font-mono tracking-wider opacity-70">
+                    Objective 0{i + 1}
+                  </div>
+                  <div className="text-xs font-semibold text-ivory-100 truncate">
+                    {obj.title}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-archive-950/60 font-bold border border-archive-700/40 flex-shrink-0 ml-2">
+                {obj.completed ? 'RESOLVED' : i === activeObjectiveIndex ? 'ACTIVE' : 'QUEUED'}
+              </span>
+            </div>
+          ))}
+        </div>
+
         {/* Central Workspace Layout: Prompt Editor + Conversational Response */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Prompt Editor (Focal Point) */}
+          {/* Left Column: Ask the Investigation (Prompt Editor) */}
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-archive-900 border border-archive-700 rounded-xl p-6 sm:p-7 space-y-4 shadow-sm focus-within:border-archive-600 transition-colors">
               <div className="flex items-center justify-between pb-1">
-                <label 
-                  htmlFor="promptInput" 
-                  className="text-xs font-mono uppercase tracking-wider text-ivory-400 font-medium"
-                >
-                  Prompt Investigation Query
-                </label>
+                <div>
+                  <label 
+                    htmlFor="promptInput" 
+                    className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold block"
+                  >
+                    Ask the Investigation
+                  </label>
+                  <span className="text-[11px] text-ivory-400">
+                    Interrogate facility logs, compare timestamps, or test hypotheses.
+                  </span>
+                </div>
                 <div className="flex items-center space-x-3 text-xs text-ivory-500">
                   <span>{promptText.length} chars</span>
                   <button
@@ -214,14 +262,34 @@ export default function ScreenWorkspace({
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={5}
+                rows={4}
                 placeholder="Ask a question about the records, cross-reference source IDs, or test a timestamp hypothesis..."
                 className="w-full bg-archive-950 border border-archive-700/80 rounded-lg p-4 text-sm sm:text-base text-ivory-100 placeholder:text-ivory-500 focus:outline-none focus:border-amber-500 transition-colors font-mono resize-none leading-relaxed"
                 autoComplete="off"
               />
 
+              {/* Clickable Prompt Starters */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-[11px] font-mono text-amber-400 font-semibold uppercase tracking-wider">
+                  <span>Clickable Investigative Starters</span>
+                  <span className="text-[10px] text-ivory-500 font-normal">Select to populate prompt</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {PROMPT_STARTERS.map((starter, sIdx) => (
+                    <button
+                      key={sIdx}
+                      type="button"
+                      onClick={() => setPromptText(starter)}
+                      className="text-left text-xs text-ivory-300 hover:text-amber-300 bg-archive-950 hover:bg-archive-850 border border-archive-700 hover:border-amber-500/50 p-2.5 rounded-lg transition-colors font-sans leading-snug"
+                    >
+                      "{starter}"
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Action Bar */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-archive-800">
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
@@ -237,13 +305,13 @@ export default function ScreenWorkspace({
                   type="button"
                   onClick={handleSubmit}
                   disabled={!promptText.trim() || isSubmitting}
-                  className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-500 text-archive-950 font-semibold px-6 py-2.5 rounded-lg text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/10 active:translate-y-0.5"
+                  className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-500 text-archive-950 font-bold px-6 py-2.5 rounded-lg text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/10 active:translate-y-0.5"
                 >
                   {isSubmitting ? (
                     <span className="inline-block w-4 h-4 border-2 border-archive-950 border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Submit prompt</span>
+                      <span>Submit Query</span>
                       <Send className="w-3.5 h-3.5 text-archive-950" />
                     </>
                   )}
@@ -269,7 +337,7 @@ export default function ScreenWorkspace({
                   <div className="flex items-center space-x-2">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
                     <span className="text-xs uppercase tracking-wider text-ivory-400 font-semibold">
-                      Findings & Synthesis
+                      Findings & Synthesis Panel
                     </span>
                   </div>
 
@@ -287,21 +355,26 @@ export default function ScreenWorkspace({
                       Archive is standing by.
                     </p>
                     <p className="text-xs text-ivory-500 max-w-xs mx-auto leading-relaxed">
-                      Submit a question above to analyze the facility records, inspect access registries, and discover evidence.
+                      Select a prompt starter or formulate an investigative query to analyze facility records and extract evidence.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-4 text-xs sm:text-sm">
-                    {/* Summary Headline */}
-                    <h3 className="text-base font-medium text-ivory-100">
-                      {lastResponse.summary}
-                    </h3>
+                    {/* 1. Finding / Forensic Summary */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+                        FINDING / FORENSIC SUMMARY
+                      </span>
+                      <h3 className="text-sm sm:text-base font-medium text-ivory-100 leading-snug">
+                        {lastResponse.summary}
+                      </h3>
+                    </div>
 
-                    {/* What the records establish */}
+                    {/* 2. Supporting Evidence (Source ID & Citations) */}
                     {lastResponse.establishedFacts?.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-[11px] font-mono uppercase tracking-wider text-amber-500 block">
-                          Verified in Archive
+                      <div className="space-y-2 pt-2 border-t border-archive-800">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-amber-500 font-bold block">
+                          SUPPORTING EVIDENCE (CLICK TO INSPECT)
                         </span>
                         <div className="space-y-2">
                           {lastResponse.establishedFacts.map((fact, idx) => (
@@ -309,14 +382,14 @@ export default function ScreenWorkspace({
                               key={idx}
                               className="bg-archive-950 p-3 rounded-lg border border-archive-700/60 flex items-start justify-between space-x-3"
                             >
-                              <p className="text-xs text-ivory-200 leading-relaxed">
+                              <p className="text-xs text-ivory-200 leading-relaxed font-sans">
                                 {fact.text}
                               </p>
                               {fact.citation && (
                                 <button
                                   onClick={() => onOpenRecordsDrawer(fact.citation)}
-                                  className="flex-shrink-0 font-mono text-[11px] px-2 py-0.5 rounded bg-archive-850 hover:bg-archive-800 text-amber-400 border border-archive-700 hover:border-amber-500 transition-colors"
-                                  title={`Open ${fact.citation}`}
+                                  className="flex-shrink-0 font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:border-amber-400 transition-colors"
+                                  title={`Inspect Record ${fact.citation}`}
                                 >
                                   {fact.citation}
                                 </button>
@@ -327,13 +400,13 @@ export default function ScreenWorkspace({
                       </div>
                     )}
 
-                    {/* What remains uncertain */}
+                    {/* 3. Why It Matters / Tactical Significance */}
                     {lastResponse.uncertainties?.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-mono uppercase tracking-wider text-ivory-400 block">
-                          Uncertainties & Open Questions
+                      <div className="space-y-1.5 pt-2 border-t border-archive-800">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-ivory-400 font-bold block">
+                          WHY IT MATTERS / TACTICAL SIGNIFICANCE
                         </span>
-                        <ul className="list-disc list-inside space-y-1 text-xs text-ivory-300 leading-relaxed">
+                        <ul className="list-disc list-inside space-y-1 text-xs text-ivory-300 leading-relaxed font-sans">
                           {lastResponse.uncertainties.map((item, idx) => (
                             <li key={idx}>{item}</li>
                           ))}
@@ -344,14 +417,14 @@ export default function ScreenWorkspace({
                 )}
               </div>
 
-              {/* Contextual Improvement Tip */}
+              {/* 4. Recommended Next Step / Prompt Tip */}
               {lastResponse?.improvementTip && (
-                <div className="mt-4 pt-4 border-t border-archive-700/60 bg-archive-950/40 -mx-6 -mb-6 p-5 rounded-b-xl space-y-1">
+                <div className="mt-4 pt-4 border-t border-archive-700/60 bg-archive-950/60 -mx-6 -mb-6 p-4 rounded-b-xl space-y-1">
                   <div className="flex items-center space-x-1.5 text-xs text-amber-400 font-medium">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Improve your prompt</span>
+                    <span className="font-mono text-[11px] uppercase tracking-wider font-bold">Recommended Next Step</span>
                   </div>
-                  <p className="text-xs text-ivory-400 leading-relaxed">
+                  <p className="text-xs text-ivory-300 leading-relaxed font-sans">
                     {lastResponse.improvementTip}
                   </p>
                 </div>

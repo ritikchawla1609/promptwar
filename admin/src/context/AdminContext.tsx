@@ -24,7 +24,8 @@ import {
   deleteTeamAPI,
   adjustTeamScoreAPI,
   qualifyTeamR2API,
-  purgeArenaDataAPI
+  purgeArenaDataAPI,
+  resetRoundAPI
 } from '../services/api';
 
 export const HOST_PASSCODE = 'TATVA@2026';
@@ -77,10 +78,12 @@ interface AdminContextType {
   addAuditLog: (action: string, target: string, details: string, type?: AuditLogEntry['type']) => void;
   exportAuditLogCSV: () => void;
 
-  // Settings
+  // Settings & Reset
   settings: EventSettings;
   updateSettings: (newSettings: Partial<EventSettings>) => void;
   purgeAllData: () => Promise<void>;
+  resetRound: (roundId: ActiveRoundId, mode: 'RESET_STATE' | 'RESET_RESULTS') => Promise<boolean>;
+  resetEntireEvent: (clearTeams?: boolean) => Promise<boolean>;
 }
 
 const DEFAULT_SETTINGS: EventSettings = {
@@ -596,6 +599,36 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addAuditLog('DATA_PURGED', 'System Ledger', 'All tournament and arena data purged.', 'SYSTEM');
   };
 
+  const resetRound = async (roundId: ActiveRoundId, mode: 'RESET_STATE' | 'RESET_RESULTS'): Promise<boolean> => {
+    const result = await resetRoundAPI(roundId, mode, false);
+    if (result.success) {
+      addAuditLog(
+        mode === 'RESET_RESULTS' ? 'ROUND_RESULTS_RESET' : 'ROUND_STATE_RESET',
+        roundId,
+        `Round ${roundId} ${mode === 'RESET_RESULTS' ? 'results wiped and state reset' : 'state reset to initial lobby'}.`,
+        'ROUND'
+      );
+      await refreshData();
+      return true;
+    }
+    return false;
+  };
+
+  const resetEntireEvent = async (clearTeams: boolean = false): Promise<boolean> => {
+    const result = await resetRoundAPI('ROUND_1', 'RESET_EVENT', clearTeams);
+    if (result.success) {
+      addAuditLog(
+        'EVENT_RESET',
+        'All Rounds',
+        `Entire event reset to pre-event state. ${clearTeams ? 'Teams deleted.' : 'Teams preserved with reset scores.'}`,
+        'SYSTEM'
+      );
+      await refreshData();
+      return true;
+    }
+    return false;
+  };
+
   const exportAuditLogCSV = () => {
     const headers = ['Timestamp', 'Action', 'Target', 'Actor', 'Type', 'Details'];
     const rows = auditLogs.map(l => [
@@ -658,7 +691,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         exportAuditLogCSV,
         settings,
         updateSettings,
-        purgeAllData
+        purgeAllData,
+        resetRound,
+        resetEntireEvent
       }}
     >
       {children}

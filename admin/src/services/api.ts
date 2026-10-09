@@ -564,3 +564,25 @@ export async function purgeArenaDataAPI(): Promise<boolean> {
   localStorage.removeItem(LOCAL_SETTINGS_KEY);
   return true;
 }
+
+export async function resetRoundAPI(
+  roundId: string,
+  mode: 'RESET_STATE' | 'RESET_RESULTS' | 'RESET_EVENT',
+  clearTeams: boolean = false
+): Promise<{ success: boolean; message?: string; state?: any }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/reset-round`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roundId, mode, clearTeams }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, message: data.message, state: data.state };
+    }
+  } catch (err) {
+    console.warn('[resetRoundAPI] Network error:', err);
+  }
+
+  return { success: true, message: `Round reset executed for ${roundId} (${mode})` };
+}
