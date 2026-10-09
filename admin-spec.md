@@ -101,7 +101,7 @@
 ### A. Round Discovery Architecture
 - Tabs for `Round 1`, `Round 2` (Future), `Round 3`.
 
-### B. Round 1 (Dalgona Prompt) Controls
+### B. Round 1 (Prompt Parasite) Controls
 - Monitor matchmaking pools.
 - Force match teams.
 - Reopen locked submissions.

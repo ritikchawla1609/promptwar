@@ -167,7 +167,7 @@ export default function TeamsPage() {
             className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 outline-none"
           >
             <option value="ALL">All Rounds</option>
-            <option value="ROUND_1">Round 1 (Dalgona)</option>
+            <option value="ROUND_1">Round 1 (Prompt Parasite)</option>
             <option value="ROUND_2">Round 2 (Blackbox)</option>
             <option value="ROUND_3">Round 3 (Frame Zero)</option>
           </select>

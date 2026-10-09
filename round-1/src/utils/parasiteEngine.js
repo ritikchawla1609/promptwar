@@ -7,7 +7,7 @@ const API_BASE =
   import.meta.env.VITE_API_BASE || 
   (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://127.0.0.1:5001'
-    : '');
+    : 'https://server-five-flame-54.vercel.app');
 const STORAGE_KEY_SESSION = 'prompt_parasite_session_v2';
 const STORAGE_KEY_TEAMS = 'prompt_parasite_teams_v2';
 const STORAGE_KEY_SUBMISSIONS = 'prompt_parasite_submissions_v2';
@@ -276,6 +276,35 @@ export async function fetchPhaseClockAPI() {
     minTeamsRequired: 3,
     registeredTeamCount: 0,
     submittedCount: 0,
+  };
+}
+
+// Fetch Authoritative Synchronized Round Clock API
+export async function fetchAuthoritativeClockAPI() {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/clock`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {}
+  return {
+    success: false,
+    serverTime: new Date().toISOString(),
+    roundId: 'ROUND_1',
+    sessionId: 'pw_sess_fallback',
+    status: 'LOBBY',
+    scheduledStartAt: null,
+    actualStartedAt: null,
+    scheduledEndAt: null,
+    actualEndedAt: null,
+    remainingSeconds: 600,
+    secondsUntilStart: 0,
+    totalSeconds: 600,
+    durationSeconds: 600,
+    pausedAt: null,
+    accumulatedPausedSeconds: 0,
+    activePhase: 'LOBBY',
+    isRoundStarted: false,
   };
 }
 

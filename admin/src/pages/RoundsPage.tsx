@@ -46,7 +46,7 @@ export default function RoundsPage() {
   const r1Submissions = teams.map(t => ({
     teamCode: t.teamCode,
     teamName: t.teamName,
-    prompt: t.history?.find(h => h.round === 'ROUND_1')?.prompt || 'Dalgona perimeter extraction prompt submitted.',
+    prompt: t.history?.find(h => h.round === 'ROUND_1')?.prompt || 'Campus ambassador bounty matrix & viral campaign strategy.',
     score: t.roundScores.round1,
     status: t.roundScores.round1 > 0 ? 'Evaluated' : 'In Progress'
   }));
@@ -74,7 +74,7 @@ export default function RoundsPage() {
   const handleForceMatch = () => {
     setForceMatchDone(true);
     setMatchmakingStatus('48/48 Teams Matched in Balanced Pairs');
-    addAuditLog('MATCHMAKING_FORCED', 'Round 1 (Dalgona)', 'Organizer forced balanced random matchmaking for all teams.', 'ROUND');
+    addAuditLog('MATCHMAKING_FORCED', 'Round 1 (Prompt Parasite)', 'Organizer forced balanced random matchmaking for all teams.', 'ROUND');
     setTimeout(() => setForceMatchDone(false), 3000);
   };
 
@@ -90,7 +90,7 @@ export default function RoundsPage() {
           Round Management Center
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 font-light mt-1">
-          Tailored controls for Dalgona Prompt, Operation Blackbox, and Frame Zero.
+          Tailored controls for Prompt Parasite, Operation Blackbox, and Frame Zero.
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export default function RoundsPage() {
           }`}
         >
           <span>ROUND 01</span>
-          <span className="font-normal opacity-80">(Dalgona Prompt)</span>
+          <span className="font-normal opacity-80">(Prompt Parasite)</span>
         </button>
 
         <button
@@ -134,7 +134,7 @@ export default function RoundsPage() {
       </div>
 
       {/* ============================================================== */}
-      {/* TAB 1: ROUND 1 — DALGONA PROMPT */}
+      {/* TAB 1: ROUND 1 — PROMPT PARASITE */}
       {/* ============================================================== */}
       {selectedRoundTab === 'R1' && (
         <div className="space-y-6 animate-fadeIn">
@@ -144,12 +144,12 @@ export default function RoundsPage() {
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-mono font-bold text-amber-400">ROUND 01 PROTOCOL</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                  DALGONA PROMPT & MUTATION
+                  PROMPT PARASITE · SEE. STEAL. EVOLVE.
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-white mt-1">Dalgona Shape Incision Arena</h2>
+              <h2 className="text-xl font-bold text-white mt-1">Prompt Parasite Command Deck</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Participants carve delicate cookie shapes using prompt instructions, mutate opponent outputs, and evolve prompts.
+                Participants craft growth marketing blueprints, infiltrate anonymous opponent strategies, steal key mechanisms, and synthesize evolved final submissions.
               </p>
             </div>
 
@@ -241,12 +241,12 @@ export default function RoundsPage() {
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
               <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center space-x-2">
                 <Sliders className="w-4 h-4 text-amber-400" />
-                <span>Shape Challenge Specifications</span>
+                <span>Challenge Specifications: The Registration Problem</span>
               </h3>
               <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5 text-slate-300">
-                <div className="font-mono text-amber-300 font-bold">Active Template: Hexagonal Umbrella Shield</div>
+                <div className="font-mono text-amber-300 font-bold">Goal: 500 Verified Registrations in 7 Days (₹10,000 Budget Cap)</div>
                 <p className="text-slate-400 leading-relaxed">
-                  Tolerance: 8% edge variance. Penalties applied for perimeter blowout or micro-fractures during thermal prompting.
+                  Requirements: Day 1-7 sprint milestones, itemized budget breakdown, WhatsApp & Instagram conversion scripts, campus guerrilla tactics, and Day 4 contingency triggers.
                 </p>
               </div>
             </div>

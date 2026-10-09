@@ -46,6 +46,17 @@ const DEFAULT_ARENA_STATE = {
   activeChallenge: null,
   timers: { create: 600, parasite: 600, evolve: 600 },
   matchAssignments: {},
+  // Authoritative synchronized round schedule
+  roundId: 'ROUND_1',
+  sessionId: 'pw_sess_default',
+  scheduleStatus: 'LOBBY', // 'SCHEDULED' | 'BRIEFING' | 'LIVE' | 'PAUSED' | 'COMPLETED' | 'LOBBY'
+  scheduledStartAt: null,
+  actualStartedAt: null,
+  scheduledEndAt: null,
+  actualEndedAt: null,
+  durationSeconds: 600,
+  pausedAt: null,
+  accumulatedPausedSeconds: 0,
   lastUpdated: new Date().toISOString(),
 };
 
@@ -193,9 +204,42 @@ app.use(async (req, res, next) => {
   next();
 });
 
+function checkInMemoryAutoAdvance(s) {
+  if (!s) return;
+  const now = Date.now();
+  if (s.scheduleStatus === 'BRIEFING' || s.scheduleStatus === 'SCHEDULED') {
+    if (s.scheduledStartAt && now >= new Date(s.scheduledStartAt).getTime()) {
+      console.log(`⏰ [Schedule Clock Memory] Transitioning ${s.scheduleStatus} -> LIVE for ${s.roundId}`);
+      s.scheduleStatus = 'LIVE';
+      s.actualStartedAt = s.scheduledStartAt;
+      if (!s.scheduledEndAt && s.durationSeconds) {
+        s.scheduledEndAt = new Date(new Date(s.actualStartedAt).getTime() + s.durationSeconds * 1000).toISOString();
+      }
+      if (s.roundId === 'ROUND_1' && (s.activePhase === 'BRIEFING' || s.activePhase === 'LOBBY')) {
+        s.activePhase = 'CREATE';
+        const dur = TIMED_PHASES.CREATE || 600;
+        s.phaseDuration = dur;
+        s.phaseStartedAt = new Date().toISOString();
+        s.phaseEndsAt = s.scheduledEndAt || new Date(now + dur * 1000).toISOString();
+      }
+      s.lastUpdated = new Date().toISOString();
+    }
+  } else if (s.scheduleStatus === 'LIVE') {
+    if (s.scheduledEndAt && now >= new Date(s.scheduledEndAt).getTime()) {
+      console.log(`🏁 [Schedule Clock Memory] Deadline reached for ${s.roundId}. Concluding round.`);
+      s.scheduleStatus = 'COMPLETED';
+      s.actualEndedAt = new Date().toISOString();
+      s.activePhase = 'COMPLETE';
+      s.isRoundStarted = false;
+      s.lastUpdated = new Date().toISOString();
+    }
+  }
+}
+
 // Authoritative Persistent Arena State Loader & Auto-Advancer
 async function getPersistentArenaState() {
   if (!isMongoConnected) {
+    checkInMemoryAutoAdvance(arenaState);
     return arenaState;
   }
 
@@ -205,15 +249,46 @@ async function getPersistentArenaState() {
       doc = await ArenaState.create(DEFAULT_ARENA_STATE);
     }
 
-    // Check wall-clock auto-advance
-    if (doc.isRoundStarted && doc.autoAdvance && doc.phaseEndsAt) {
-      const now = Date.now();
+    let modified = false;
+    const now = Date.now();
+
+    // 1. Authoritative Round Schedule Wall-Clock Auto Advance
+    if (doc.scheduleStatus === 'BRIEFING' || doc.scheduleStatus === 'SCHEDULED') {
+      if (doc.scheduledStartAt && now >= new Date(doc.scheduledStartAt).getTime()) {
+        console.log(`⏰ [Schedule Clock DB] Transitioning ${doc.scheduleStatus} -> LIVE for ${doc.roundId}`);
+        doc.scheduleStatus = 'LIVE';
+        doc.actualStartedAt = doc.scheduledStartAt;
+        if (!doc.scheduledEndAt && doc.durationSeconds) {
+          doc.scheduledEndAt = new Date(new Date(doc.actualStartedAt).getTime() + doc.durationSeconds * 1000).toISOString();
+        }
+        if (doc.roundId === 'ROUND_1' && (doc.activePhase === 'BRIEFING' || doc.activePhase === 'LOBBY')) {
+          doc.activePhase = 'CREATE';
+          const dur = TIMED_PHASES.CREATE || 600;
+          doc.phaseDuration = dur;
+          doc.phaseStartedAt = new Date().toISOString();
+          doc.phaseEndsAt = doc.scheduledEndAt || new Date(now + dur * 1000).toISOString();
+        }
+        modified = true;
+      }
+    } else if (doc.scheduleStatus === 'LIVE') {
+      if (doc.scheduledEndAt && now >= new Date(doc.scheduledEndAt).getTime()) {
+        console.log(`🏁 [Schedule Clock DB] Deadline reached for ${doc.roundId}. Concluding round.`);
+        doc.scheduleStatus = 'COMPLETED';
+        doc.actualEndedAt = new Date().toISOString();
+        doc.activePhase = 'COMPLETE';
+        doc.isRoundStarted = false;
+        modified = true;
+      }
+    }
+
+    // 2. Round 1 Sub-Phase Auto Advance (CREATE -> MATCH -> PARASITE -> EVOLVE -> COMPLETE)
+    if (doc.isRoundStarted && doc.autoAdvance && doc.phaseEndsAt && doc.roundId === 'ROUND_1' && doc.scheduleStatus === 'LIVE') {
       const endsAt = new Date(doc.phaseEndsAt).getTime();
 
       if (now >= endsAt) {
         const nextPhase = getNextPhase(doc.activePhase);
         if (nextPhase) {
-          console.log(`🔄 [Auto-Advance DB] Wall-clock timer expired: ${doc.activePhase} -> ${nextPhase}`);
+          console.log(`🔄 [Auto-Advance DB] Sub-phase timer expired: ${doc.activePhase} -> ${nextPhase}`);
           
           if (doc.activePhase === 'CREATE' && (nextPhase === 'MATCH' || nextPhase === 'PARASITE')) {
             const matches = await runServerMatchmaking();
@@ -227,12 +302,17 @@ async function getPersistentArenaState() {
           doc.phaseEndsAt = dur > 0 ? new Date(now + dur * 1000).toISOString() : null;
           if (nextPhase === 'COMPLETE') {
             doc.autoAdvance = false;
+            doc.scheduleStatus = 'COMPLETED';
           }
-          doc.lastUpdated = new Date().toISOString();
           doc.markModified('matchAssignments');
-          await doc.save();
+          modified = true;
         }
       }
+    }
+
+    if (modified) {
+      doc.lastUpdated = new Date().toISOString();
+      await doc.save();
     }
 
     arenaState = doc.toObject();
@@ -298,14 +378,28 @@ app.post('/api/arena/state', async (req, res) => {
       }
 
       const now = new Date();
-      const duration = TIMED_PHASES.BRIEFING; // 60s
+      const targetRound = updates.roundId || state.roundId || 'ROUND_1';
+      const duration = updates.phaseDuration || TIMED_PHASES.BRIEFING; // 60s
+      const roundDur = updates.durationSeconds || 600;
+      const isBriefing = updates.activePhase === 'BRIEFING' || !updates.activePhase;
+
       const newState = {
         isRoundStarted: true,
+        roundId: targetRound,
+        sessionId: updates.sessionId || ('pw_sess_' + Date.now()),
+        scheduleStatus: isBriefing ? 'BRIEFING' : 'LIVE',
         startedAt: now.toISOString(),
-        activePhase: 'BRIEFING',
+        activePhase: isBriefing ? 'BRIEFING' : (targetRound === 'ROUND_1' ? 'CREATE' : 'LIVE'),
         phaseStartedAt: now.toISOString(),
         phaseDuration: duration,
         phaseEndsAt: new Date(now.getTime() + duration * 1000).toISOString(),
+        scheduledStartAt: isBriefing ? new Date(now.getTime() + duration * 1000).toISOString() : now.toISOString(),
+        actualStartedAt: isBriefing ? null : now.toISOString(),
+        durationSeconds: roundDur,
+        scheduledEndAt: new Date(now.getTime() + ((isBriefing ? duration : 0) + roundDur) * 1000).toISOString(),
+        actualEndedAt: null,
+        pausedAt: null,
+        accumulatedPausedSeconds: 0,
         autoAdvance: true,
         matchAssignments: {},
         lastUpdated: now.toISOString(),
@@ -323,7 +417,7 @@ app.post('/api/arena/state', async (req, res) => {
         state = arenaState;
       }
 
-      console.log(`🚀 [Arena Started] Phase: BRIEFING | Teams: ${teamCount} | Ends: ${state.phaseEndsAt}`);
+      console.log(`🚀 [Arena Started] Round: ${targetRound} | Phase: ${newState.activePhase} | Teams: ${teamCount} | Ends: ${state.phaseEndsAt}`);
       return res.json({ success: true, state });
     }
 
@@ -331,11 +425,13 @@ app.post('/api/arena/state', async (req, res) => {
     if (updates.isRoundStarted === false) {
       const resetData = {
         isRoundStarted: false,
+        scheduleStatus: updates.activePhase === 'COMPLETE' ? 'COMPLETED' : 'LOBBY',
         startedAt: null,
-        activePhase: 'LOBBY',
+        activePhase: updates.activePhase || 'LOBBY',
         phaseStartedAt: null,
         phaseEndsAt: null,
         phaseDuration: 0,
+        pausedAt: null,
         lastUpdated: new Date().toISOString(),
       };
 
@@ -379,6 +475,15 @@ app.post('/api/arena/state', async (req, res) => {
         lastUpdated: now.toISOString(),
       };
 
+      if (newPhase === 'COMPLETE') {
+        advanceData.scheduleStatus = 'COMPLETED';
+        advanceData.actualEndedAt = now.toISOString();
+        advanceData.isRoundStarted = false;
+      } else if (state.scheduleStatus === 'BRIEFING' && newPhase !== 'BRIEFING') {
+        advanceData.scheduleStatus = 'LIVE';
+        advanceData.actualStartedAt = now.toISOString();
+      }
+
       if (isMongoConnected) {
         const updated = await ArenaState.findOneAndUpdate(
           { key: 'global_arena_state' },
@@ -397,6 +502,7 @@ app.post('/api/arena/state', async (req, res) => {
 
     // 4. Other updates (timers, challenge, minTeams)
     const otherUpdates = {};
+    if (updates.roundId) otherUpdates.roundId = updates.roundId;
     if (updates.minTeamsToStart !== undefined) otherUpdates.minTeamsToStart = Number(updates.minTeamsToStart);
     if (updates.timers) otherUpdates.timers = { ...(state.timers || {}), ...updates.timers };
     if (updates.activeChallenge !== undefined) otherUpdates.activeChallenge = updates.activeChallenge;
@@ -485,7 +591,287 @@ app.get('/api/arena/phase-clock', async (req, res) => {
       minTeamsRequired: state.minTeamsToStart || 3,
       registeredTeamCount: teamCount,
       submittedCount: subCount,
+      // Synchronized Clock Compatibility Fields
+      serverTime: new Date().toISOString(),
+      roundId: state.roundId || 'ROUND_1',
+      sessionId: state.sessionId || 'pw_sess_default',
+      scheduleStatus: state.scheduleStatus || 'LOBBY',
+      scheduledStartAt: state.scheduledStartAt || null,
+      scheduledEndAt: state.scheduledEndAt || null,
+      actualStartedAt: state.actualStartedAt || null,
+      actualEndedAt: state.actualEndedAt || null,
+      pausedAt: state.pausedAt || null,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// AUTHORITATIVE SYNCHRONIZED ROUND SCHEDULE API (GLOBAL CLOCK)
+// -------------------------------------------------------------
+
+// GET /api/arena/clock (Universal authoritative synchronized clock for all rounds & admin)
+app.get('/api/arena/clock', async (req, res) => {
+  try {
+    const state = await getPersistentArenaState();
+    const now = Date.now();
+    let remainingSeconds = 0;
+    let secondsUntilStart = 0;
+
+    if (state.scheduleStatus === 'PAUSED' && state.pausedAt && state.scheduledEndAt) {
+      // Frozen at pause timestamp
+      remainingSeconds = Math.max(0, Math.ceil((new Date(state.scheduledEndAt).getTime() - new Date(state.pausedAt).getTime()) / 1000));
+    } else if (state.scheduleStatus === 'LIVE' && state.scheduledEndAt) {
+      remainingSeconds = Math.max(0, Math.ceil((new Date(state.scheduledEndAt).getTime() - now) / 1000));
+    } else if (state.scheduleStatus === 'BRIEFING' || state.scheduleStatus === 'SCHEDULED') {
+      remainingSeconds = state.durationSeconds || 600;
+      if (state.scheduledStartAt) {
+        secondsUntilStart = Math.max(0, Math.ceil((new Date(state.scheduledStartAt).getTime() - now) / 1000));
+      }
+    } else if (state.scheduleStatus === 'COMPLETED') {
+      remainingSeconds = 0;
+    } else {
+      // LOBBY
+      remainingSeconds = state.durationSeconds || 600;
+    }
+
+    res.json({
+      success: true,
+      serverTime: new Date().toISOString(),
+      roundId: state.roundId || 'ROUND_1',
+      sessionId: state.sessionId || 'pw_sess_default',
+      status: state.scheduleStatus || 'LOBBY',
+      scheduledStartAt: state.scheduledStartAt || null,
+      actualStartedAt: state.actualStartedAt || null,
+      scheduledEndAt: state.scheduledEndAt || null,
+      actualEndedAt: state.actualEndedAt || null,
+      remainingSeconds,
+      secondsUntilStart,
+      totalSeconds: state.durationSeconds || 600,
+      durationSeconds: state.durationSeconds || 600,
+      pausedAt: state.pausedAt || null,
+      accumulatedPausedSeconds: state.accumulatedPausedSeconds || 0,
+      activePhase: state.activePhase || 'LOBBY',
+      isRoundStarted: Boolean(state.isRoundStarted),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/arena/schedule (Admin authoritative round schedule setter)
+app.post('/api/arena/schedule', async (req, res) => {
+  try {
+    const {
+      roundId = 'ROUND_1',
+      durationSeconds = 600,
+      briefingSeconds = 60,
+      scheduledStartAt = null,
+      autoAdvance = true,
+    } = req.body;
+
+    const now = new Date();
+    const sessionId = 'pw_sess_' + Date.now();
+    let computedStartAt;
+    let computedStatus;
+    let computedEndAt;
+    let actualStartedAt = null;
+
+    if (briefingSeconds > 0) {
+      computedStartAt = scheduledStartAt || new Date(now.getTime() + briefingSeconds * 1000).toISOString();
+      computedStatus = 'BRIEFING';
+      computedEndAt = new Date(new Date(computedStartAt).getTime() + durationSeconds * 1000).toISOString();
+    } else {
+      computedStartAt = scheduledStartAt || now.toISOString();
+      computedStatus = 'LIVE';
+      actualStartedAt = computedStartAt;
+      computedEndAt = new Date(new Date(computedStartAt).getTime() + durationSeconds * 1000).toISOString();
+    }
+
+    const scheduleData = {
+      isRoundStarted: true,
+      roundId,
+      sessionId,
+      scheduleStatus: computedStatus,
+      scheduledStartAt: computedStartAt,
+      actualStartedAt,
+      scheduledEndAt: computedEndAt,
+      actualEndedAt: null,
+      durationSeconds: Number(durationSeconds),
+      pausedAt: null,
+      accumulatedPausedSeconds: 0,
+      activePhase: computedStatus === 'BRIEFING' ? 'BRIEFING' : (roundId === 'ROUND_1' ? 'CREATE' : 'LIVE'),
+      phaseStartedAt: now.toISOString(),
+      phaseDuration: computedStatus === 'BRIEFING' ? briefingSeconds : durationSeconds,
+      phaseEndsAt: computedStatus === 'BRIEFING' ? computedStartAt : computedEndAt,
+      autoAdvance: Boolean(autoAdvance),
+      lastUpdated: now.toISOString(),
+    };
+
+    let state;
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: scheduleData },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...scheduleData };
+      state = arenaState;
+    }
+
+    console.log(`📅 [Schedule Set] Round: ${roundId} | Status: ${computedStatus} | Starts: ${computedStartAt} | Ends: ${computedEndAt}`);
+    return res.json({ success: true, state });
+  } catch (err) {
+    console.error('Arena Schedule Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/arena/schedule/pause
+app.post('/api/arena/schedule/pause', async (req, res) => {
+  try {
+    let state = await getPersistentArenaState();
+    if (state.scheduleStatus === 'PAUSED') {
+      return res.json({ success: true, state, message: 'Already paused' });
+    }
+
+    const now = new Date().toISOString();
+    const pauseData = {
+      scheduleStatus: 'PAUSED',
+      pausedAt: now,
+      lastUpdated: now,
+    };
+
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: pauseData },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...pauseData };
+      state = arenaState;
+    }
+
+    console.log(`⏸️ [Schedule Paused] Paused at: ${now}`);
+    return res.json({ success: true, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/arena/schedule/resume
+app.post('/api/arena/schedule/resume', async (req, res) => {
+  try {
+    let state = await getPersistentArenaState();
+    if (state.scheduleStatus !== 'PAUSED') {
+      return res.json({ success: true, state, message: 'Not paused' });
+    }
+
+    const now = Date.now();
+    const pausedTime = state.pausedAt ? new Date(state.pausedAt).getTime() : now;
+    const pauseDurationMs = Math.max(0, now - pausedTime);
+    const newEndMs = state.scheduledEndAt ? new Date(state.scheduledEndAt).getTime() + pauseDurationMs : now + (state.durationSeconds || 600) * 1000;
+    const newPhaseEndMs = state.phaseEndsAt ? new Date(state.phaseEndsAt).getTime() + pauseDurationMs : newEndMs;
+
+    const resumeData = {
+      scheduleStatus: 'LIVE',
+      pausedAt: null,
+      accumulatedPausedSeconds: (state.accumulatedPausedSeconds || 0) + Math.round(pauseDurationMs / 1000),
+      scheduledEndAt: new Date(newEndMs).toISOString(),
+      phaseEndsAt: new Date(newPhaseEndMs).toISOString(),
+      lastUpdated: new Date().toISOString(),
+    };
+
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: resumeData },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...resumeData };
+      state = arenaState;
+    }
+
+    console.log(`▶️ [Schedule Resumed] Extended end by ${Math.round(pauseDurationMs / 1000)}s to ${resumeData.scheduledEndAt}`);
+    return res.json({ success: true, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/arena/schedule/extend (Add extra seconds to current live deadline)
+app.post('/api/arena/schedule/extend', async (req, res) => {
+  try {
+    const { extraSeconds = 120 } = req.body;
+    let state = await getPersistentArenaState();
+
+    const addMs = Number(extraSeconds) * 1000;
+    const newEndMs = state.scheduledEndAt ? new Date(state.scheduledEndAt).getTime() + addMs : Date.now() + addMs;
+    const newPhaseEndMs = state.phaseEndsAt ? new Date(state.phaseEndsAt).getTime() + addMs : newEndMs;
+
+    const extendData = {
+      scheduledEndAt: new Date(newEndMs).toISOString(),
+      phaseEndsAt: new Date(newPhaseEndMs).toISOString(),
+      durationSeconds: (state.durationSeconds || 600) + Number(extraSeconds),
+      lastUpdated: new Date().toISOString(),
+    };
+
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: extendData },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...extendData };
+      state = arenaState;
+    }
+
+    console.log(`⏱️ [Schedule Extended] +${extraSeconds}s, new end: ${extendData.scheduledEndAt}`);
+    return res.json({ success: true, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/arena/schedule/end (Immediately force conclude active round)
+app.post('/api/arena/schedule/end', async (req, res) => {
+  try {
+    const now = new Date().toISOString();
+    const endData = {
+      isRoundStarted: false,
+      scheduleStatus: 'COMPLETED',
+      activePhase: 'COMPLETE',
+      actualEndedAt: now,
+      scheduledEndAt: now,
+      phaseEndsAt: now,
+      autoAdvance: false,
+      lastUpdated: now,
+    };
+
+    let state;
+    if (isMongoConnected) {
+      const updated = await ArenaState.findOneAndUpdate(
+        { key: 'global_arena_state' },
+        { $set: endData },
+        { upsert: true, new: true }
+      );
+      state = updated.toObject();
+    } else {
+      arenaState = { ...arenaState, ...endData };
+      state = arenaState;
+    }
+
+    console.log(`🏁 [Schedule Force Concluded] Round marked COMPLETED at ${now}`);
+    return res.json({ success: true, state });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -950,6 +1336,31 @@ app.post('/api/submissions', async (req, res) => {
     const subId = data.id || data.submissionId || 'sub_' + Date.now();
     const round = data.round || 'round-1';
 
+    // Authoritative Synchronized Clock submission gate
+    const state = await getPersistentArenaState();
+    if (state.scheduleStatus === 'LOBBY' || state.scheduleStatus === 'SCHEDULED' || state.scheduleStatus === 'BRIEFING') {
+      return res.status(403).json({
+        success: false,
+        error: 'Submissions not accepted: Round has not officially started yet.',
+      });
+    }
+
+    if (state.scheduleStatus === 'PAUSED') {
+      return res.status(403).json({
+        success: false,
+        error: 'Submission rejected: Competition arena is currently paused by admin.',
+      });
+    }
+
+    if (state.scheduleStatus === 'COMPLETED' || (state.scheduledEndAt && Date.now() > new Date(state.scheduledEndAt).getTime() + 5000)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Submission rejected: Official round deadline has passed.',
+        scheduledEndAt: state.scheduledEndAt,
+        serverTime: new Date().toISOString(),
+      });
+    }
+
     if (isMongoConnected) {
       const updated = await Submission.findOneAndUpdate(
         { $or: [{ submissionId: subId }, { teamName: data.teamName, round }] },
@@ -1027,6 +1438,12 @@ if (process.env.VERCEL !== '1') {
     console.log(`   - GET  /api/arena/state`);
     console.log(`   - POST /api/arena/state`);
     console.log(`   - GET  /api/arena/phase-clock`);
+    console.log(`   - GET  /api/arena/clock`);
+    console.log(`   - POST /api/arena/schedule`);
+    console.log(`   - POST /api/arena/schedule/pause`);
+    console.log(`   - POST /api/arena/schedule/resume`);
+    console.log(`   - POST /api/arena/schedule/extend`);
+    console.log(`   - POST /api/arena/schedule/end`);
     console.log(`   - GET  /api/arena/matches/:teamCode\n`);
   });
 }

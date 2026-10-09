@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
             Unified Master Leaderboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 font-light mt-0.5">
-            Combined rankings aggregating Dalgona Prompt (30%), Operation Blackbox (35%), and Frame Zero (35%).
+            Combined rankings aggregating Prompt Parasite (30%), Operation Blackbox (35%), and Frame Zero (35%).
           </p>
         </div>
 
@@ -210,7 +210,7 @@ export default function LeaderboardPage() {
                 <th className="py-3.5 px-4 text-center w-16">RANK</th>
                 <th className="py-3.5 px-4">TEAM & CODE</th>
                 <th className="py-3.5 px-4">COLLEGE / INSTITUTION</th>
-                <th className="py-3.5 px-4 text-center">R1 (DALGONA)</th>
+                <th className="py-3.5 px-4 text-center">R1 (PARASITE)</th>
                 <th className="py-3.5 px-4 text-center">R2 (BLACKBOX)</th>
                 <th className="py-3.5 px-4 text-center">R3 (FRAME ZERO)</th>
                 <th className="py-3.5 px-4 text-right">TOTAL SCORE</th>

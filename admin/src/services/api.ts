@@ -56,7 +56,7 @@ export const INITIAL_MOCK_TEAMS: TeamRecord[] = [
     registeredAt: '2026-10-09T08:35:00.000Z',
     lastActiveAt: '5 minutes ago',
     history: [
-      { round: 'ROUND_1', prompt: 'Precision thermal incision around inner cookie star silhouette.', score: 88, timestamp: '10:14 AM' },
+      { round: 'ROUND_1', prompt: 'Guerrilla ambassador QR drop + Department rivalry WhatsApp blitz with ₹10k budget cap.', score: 88, timestamp: '10:14 AM' },
       { round: 'ROUND_2', prompt: 'Trace network blackout back to relay transformer at 12:15 AM.', score: 90, timestamp: '11:42 AM' },
       { round: 'ROUND_3', takeNumber: 2, prompt: 'Two friends meet at rural train station platform during golden hour sunset.', score: 84, timestamp: '12:18 PM' }
     ]
@@ -148,7 +148,7 @@ export const INITIAL_MOCK_TEAMS: TeamRecord[] = [
     registeredAt: '2026-10-09T08:50:00.000Z',
     lastActiveAt: '25 minutes ago',
     history: [
-      { round: 'ROUND_1', prompt: 'Dalgona triangle outline trace.', score: 65, timestamp: '10:12 AM' }
+      { round: 'ROUND_1', prompt: 'Campus ambassador bounty matrix + Instagram Reels campaign.', score: 65, timestamp: '10:12 AM' }
     ]
   }
 ];
@@ -221,12 +221,146 @@ export async function updateArenaState(updates: Partial<ArenaStateServer>): Prom
     });
     if (res.ok) {
       const data = await res.json();
-      return { success: true, state: data.arenaState || data };
+      return { success: true, state: data.arenaState || data.state || data };
     }
   } catch (err) {
     console.warn('updateArenaState API failed, operating locally:', err);
   }
   return { success: true, state: updates as ArenaStateServer };
+}
+
+// -------------------------------------------------------------
+// AUTHORITATIVE SYNCHRONIZED CLOCK & SCHEDULE APIs
+// -------------------------------------------------------------
+export async function fetchAuthoritativeClock(): Promise<{
+  success: boolean;
+  clock?: any;
+  serverTime?: string;
+  source: 'SERVER' | 'LOCAL';
+}> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${API_BASE}/api/arena/clock`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, clock: data, serverTime: data.serverTime, source: 'SERVER' };
+    }
+  } catch (err) {
+    // console.warn('fetchAuthoritativeClock failed, falling back to local simulation:', err);
+  }
+
+  return {
+    success: false,
+    source: 'LOCAL',
+    clock: {
+      serverTime: new Date().toISOString(),
+      roundId: 'ROUND_1',
+      sessionId: 'pw_local_sess',
+      status: 'LOBBY',
+      scheduledStartAt: null,
+      actualStartedAt: null,
+      scheduledEndAt: null,
+      actualEndedAt: null,
+      remainingSeconds: 600,
+      secondsUntilStart: 0,
+      totalSeconds: 600,
+      durationSeconds: 600,
+      pausedAt: null,
+      accumulatedPausedSeconds: 0,
+      activePhase: 'LOBBY',
+      isRoundStarted: false,
+    }
+  };
+}
+
+export async function scheduleRoundAPI(params: {
+  roundId: string;
+  durationSeconds: number;
+  briefingSeconds?: number;
+  scheduledStartAt?: string | null;
+}): Promise<{ success: boolean; state?: ArenaStateServer }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/schedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, state: data.state };
+    }
+  } catch (err) {
+    console.warn('scheduleRoundAPI failed:', err);
+  }
+  return { success: false };
+}
+
+export async function pauseScheduleAPI(): Promise<{ success: boolean; state?: ArenaStateServer }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/schedule/pause`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, state: data.state };
+    }
+  } catch (err) {
+    console.warn('pauseScheduleAPI failed:', err);
+  }
+  return { success: false };
+}
+
+export async function resumeScheduleAPI(): Promise<{ success: boolean; state?: ArenaStateServer }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/schedule/resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, state: data.state };
+    }
+  } catch (err) {
+    console.warn('resumeScheduleAPI failed:', err);
+  }
+  return { success: false };
+}
+
+export async function extendScheduleAPI(extraSeconds: number = 120): Promise<{ success: boolean; state?: ArenaStateServer }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/schedule/extend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ extraSeconds }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, state: data.state };
+    }
+  } catch (err) {
+    console.warn('extendScheduleAPI failed:', err);
+  }
+  return { success: false };
+}
+
+export async function endScheduleAPI(): Promise<{ success: boolean; state?: ArenaStateServer }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/arena/schedule/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, state: data.state };
+    }
+  } catch (err) {
+    console.warn('endScheduleAPI failed:', err);
+  }
+  return { success: false };
 }
 
 // -------------------------------------------------------------

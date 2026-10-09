@@ -101,7 +101,7 @@ export const TeamDetailDrawer: React.FC<TeamDetailDrawerProps> = ({
               {/* Round 1 */}
               <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
                 <span className="text-[10px] font-mono text-slate-400">ROUND 1</span>
-                <div className="font-semibold text-slate-200 truncate">Dalgona Prompt</div>
+                <div className="font-semibold text-slate-200 truncate">Prompt Parasite</div>
                 <div className="text-xl font-bold font-mono text-blue-400">
                   {team.roundScores.round1} <span className="text-[10px] text-slate-400 font-normal">/100</span>
                 </div>

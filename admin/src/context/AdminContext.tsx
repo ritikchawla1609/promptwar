@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   EventStatus,
   ActiveRoundId,
@@ -6,11 +6,18 @@ import {
   AuditLogEntry,
   EventSettings,
   ArenaStateServer,
-  RoundSummary
+  RoundSummary,
+  AuthoritativeClockState
 } from '../types/admin';
 import {
   fetchArenaState,
   updateArenaState,
+  fetchAuthoritativeClock,
+  scheduleRoundAPI,
+  pauseScheduleAPI,
+  resumeScheduleAPI,
+  extendScheduleAPI,
+  endScheduleAPI,
   fetchAllTeams,
   registerTeam,
   updateTeamAPI,
@@ -28,9 +35,10 @@ interface AdminContextType {
   login: (passcode: string) => boolean;
   logout: () => void;
 
-  // Event State
+  // Event State & Authoritative Clock
   eventStatus: EventStatus;
   activeRound: ActiveRoundId;
+  authoritativeClock: AuthoritativeClockState;
   roundSummaries: Record<ActiveRoundId, RoundSummary>;
   remainingSeconds: number;
   totalDurationSeconds: number;
@@ -54,12 +62,14 @@ interface AdminContextType {
   pauseEvent: () => Promise<void>;
   resumeEvent: () => Promise<void>;
   endEvent: () => Promise<void>;
-  startRound: (roundId: ActiveRoundId) => Promise<void>;
+  startRound: (roundId: ActiveRoundId, customDurationMin?: number, briefingSec?: number) => Promise<void>;
+  scheduleRound: (roundId: ActiveRoundId, durationMin?: number, briefingSec?: number) => Promise<void>;
   pauseRound: (roundId: ActiveRoundId) => Promise<void>;
   resumeRound: (roundId: ActiveRoundId) => Promise<void>;
   endRound: (roundId: ActiveRoundId) => Promise<void>;
   advanceRound: () => Promise<void>;
   adjustTimer: (secondsDelta: number) => void;
+  extendTimer: (extraSeconds?: number) => Promise<void>;
   emergencyStop: () => Promise<void>;
 
   // Audit Log
@@ -87,8 +97,8 @@ const DEFAULT_SETTINGS: EventSettings = {
 const INITIAL_ROUNDS_DATA: Record<ActiveRoundId, RoundSummary> = {
   ROUND_1: {
     id: 'ROUND_1',
-    name: 'Round 1: Dalgona Prompt',
-    subtitle: 'Precision prompt-writing & shape incision protocol',
+    name: 'Round 1: Prompt Parasite',
+    subtitle: 'Growth architecture, concept infiltration & prompt evolution protocol',
     status: 'ACTIVE',
     configuredDurationMinutes: 10,
     currentPhase: 'CREATE',
@@ -153,7 +163,7 @@ const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     id: 'log-2',
     timestamp: new Date(Date.now() - 1800000).toLocaleTimeString(),
     action: 'ROUND_STARTED',
-    target: 'Round 1 (Dalgona Prompt)',
+    target: 'Round 1 (Prompt Parasite)',
     actor: 'Lead Organizer',
     details: 'Phase set to CREATE with 600s timer.',
     type: 'ROUND'
@@ -182,8 +192,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeRound, setActiveRound] = useState<ActiveRoundId>('ROUND_1');
   const [roundSummaries, setRoundSummaries] = useState<Record<ActiveRoundId, RoundSummary>>(INITIAL_ROUNDS_DATA);
 
+  // Authoritative Synchronized Clock State
+  const [authoritativeClock, setAuthoritativeClock] = useState<AuthoritativeClockState>({
+    serverTime: new Date().toISOString(),
+    roundId: 'ROUND_1',
+    sessionId: 'pw_sess_default',
+    status: 'LOBBY',
+    scheduledStartAt: null,
+    actualStartedAt: null,
+    scheduledEndAt: null,
+    actualEndedAt: null,
+    remainingSeconds: 600,
+    secondsUntilStart: 0,
+    totalSeconds: 600,
+    durationSeconds: 600,
+    pausedAt: null,
+    accumulatedPausedSeconds: 0,
+    activePhase: 'LOBBY',
+    isRoundStarted: false,
+  });
+  const serverOffsetRef = useRef<number>(0);
+
   // Timer State (deadline-based)
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(540); // 9 minutes
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(600);
   const [totalDurationSeconds, setTotalDurationSeconds] = useState<number>(600);
   const [timerRunning, setTimerRunning] = useState<boolean>(true);
 
@@ -245,9 +276,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const [teamsRes, arenaRes] = await Promise.all([
+      const [teamsRes, arenaRes, clockRes] = await Promise.all([
         fetchAllTeams(),
-        fetchArenaState()
+        fetchArenaState(),
+        fetchAuthoritativeClock(),
       ]);
 
       if (teamsRes.success) {
@@ -255,7 +287,40 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setConnectionMode(teamsRes.source === 'SERVER' ? 'LIVE_MONGODB' : 'LOCAL_OFFLINE');
       }
 
-      if (arenaRes.success && arenaRes.state) {
+      if (clockRes.success && clockRes.clock) {
+        const c = clockRes.clock;
+        if (c.serverTime) {
+          serverOffsetRef.current = Date.parse(c.serverTime) - Date.now();
+        }
+        setAuthoritativeClock(c);
+        if (c.roundId && c.roundId !== 'NONE') {
+          setActiveRound(c.roundId as ActiveRoundId);
+        }
+        if (c.durationSeconds) {
+          setTotalDurationSeconds(c.durationSeconds);
+        }
+
+        const synNow = Date.now() + serverOffsetRef.current;
+        if (c.status === 'LIVE' && c.scheduledEndAt) {
+          setEventStatus('LIVE');
+          setTimerRunning(true);
+          const rem = Math.max(0, Math.ceil((Date.parse(c.scheduledEndAt) - synNow) / 1000));
+          setRemainingSeconds(rem);
+        } else if (c.status === 'PAUSED' && c.pausedAt && c.scheduledEndAt) {
+          setEventStatus('PAUSED');
+          setTimerRunning(false);
+          const rem = Math.max(0, Math.ceil((Date.parse(c.scheduledEndAt) - Date.parse(c.pausedAt)) / 1000));
+          setRemainingSeconds(rem);
+        } else if (c.status === 'COMPLETED') {
+          setEventStatus('COMPLETED');
+          setTimerRunning(false);
+          setRemainingSeconds(0);
+        } else if (c.status === 'BRIEFING' || c.status === 'SCHEDULED') {
+          setEventStatus('LIVE');
+          setTimerRunning(true);
+          setRemainingSeconds(c.durationSeconds || 600);
+        }
+      } else if (arenaRes.success && arenaRes.state) {
         const s = arenaRes.state;
         if (s.phaseEndsAt) {
           const diff = Math.max(0, Math.ceil((new Date(s.phaseEndsAt).getTime() - Date.now()) / 1000));
@@ -281,29 +346,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshData();
   }, [refreshData]);
 
-  // Periodic polling every 8 seconds
+  // Periodic polling every 3.5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       refreshData();
-    }, 8000);
+    }, 3500);
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  // Local Timer countdown ticker
+  // Local Authoritative Timer countdown ticker with drift compensation
   useEffect(() => {
-    if (!timerRunning || remainingSeconds <= 0) return;
-
     const ticker = setInterval(() => {
-      setRemainingSeconds(prev => {
-        if (prev <= 1) {
-          return 0;
+      const synNow = Date.now() + serverOffsetRef.current;
+
+      setAuthoritativeClock(prev => {
+        if (!prev) return prev;
+        if (prev.status === 'LIVE' && prev.scheduledEndAt) {
+          const rem = Math.max(0, Math.ceil((Date.parse(prev.scheduledEndAt) - synNow) / 1000));
+          setRemainingSeconds(rem);
+          return { ...prev, remainingSeconds: rem };
+        } else if ((prev.status === 'BRIEFING' || prev.status === 'SCHEDULED') && prev.scheduledStartAt) {
+          const untilStart = Math.max(0, Math.ceil((Date.parse(prev.scheduledStartAt) - synNow) / 1000));
+          return { ...prev, secondsUntilStart: untilStart };
         }
-        return prev - 1;
+        return prev;
       });
     }, 1000);
 
     return () => clearInterval(ticker);
-  }, [timerRunning, remainingSeconds]);
+  }, []);
 
   // Auth Functions
   const login = (passcode: string): boolean => {
@@ -416,47 +487,57 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addAuditLog('EVENT_CONCLUDED', 'Prompt War', 'Grand tournament officially completed.', 'ROUND');
   };
 
-  const startRound = async (roundId: ActiveRoundId) => {
+  const startRound = async (roundId: ActiveRoundId, customDurationMin?: number, briefingSec: number = 60) => {
     setActiveRound(roundId);
     setEventStatus('LIVE');
     setTimerRunning(true);
-    const duration = (settings.roundDurations[roundId === 'ROUND_1' ? 'round1' : roundId === 'ROUND_2' ? 'round2' : 'round3'] || 10) * 60;
-    setRemainingSeconds(duration);
-    setTotalDurationSeconds(duration);
+    const durationMin = customDurationMin || (settings.roundDurations[roundId === 'ROUND_1' ? 'round1' : roundId === 'ROUND_2' ? 'round2' : 'round3'] || 10);
+    const durationSeconds = durationMin * 60;
+    setRemainingSeconds(durationSeconds);
+    setTotalDurationSeconds(durationSeconds);
 
     setRoundSummaries(prev => ({
       ...prev,
       [roundId]: { ...prev[roundId], status: 'ACTIVE' }
     }));
 
-    await updateArenaState({
-      isRoundStarted: true,
-      activePhase: roundId === 'ROUND_1' ? 'CREATE' : 'BRIEFING',
-      phaseDuration: duration,
-      phaseEndsAt: new Date(Date.now() + duration * 1000).toISOString()
+    // Authoritative Server Synchronized Schedule
+    await scheduleRoundAPI({
+      roundId,
+      durationSeconds,
+      briefingSeconds: briefingSec,
     });
 
-    addAuditLog('ROUND_STARTED', roundSummaries[roundId]?.name || roundId, `Round started with ${duration / 60}m timer.`, 'ROUND');
+    addAuditLog('ROUND_STARTED', roundSummaries[roundId]?.name || roundId, `Round scheduled: ${durationMin}m duration, ${briefingSec}s briefing.`, 'ROUND');
+    await refreshData();
+  };
+
+  const scheduleRound = async (roundId: ActiveRoundId, durationMin?: number, briefingSec: number = 60) => {
+    await startRound(roundId, durationMin, briefingSec);
   };
 
   const pauseRound = async (roundId: ActiveRoundId) => {
     setTimerRunning(false);
+    setEventStatus('PAUSED');
     setRoundSummaries(prev => ({
       ...prev,
       [roundId]: { ...prev[roundId], status: 'PAUSED' }
     }));
-    await updateArenaState({ isRoundStarted: false });
-    addAuditLog('ROUND_PAUSED', roundSummaries[roundId]?.name || roundId, 'Round countdown paused.', 'ROUND');
+    await pauseScheduleAPI();
+    addAuditLog('ROUND_PAUSED', roundSummaries[roundId]?.name || roundId, 'Authoritative round timer paused on server.', 'ROUND');
+    await refreshData();
   };
 
   const resumeRound = async (roundId: ActiveRoundId) => {
     setTimerRunning(true);
+    setEventStatus('LIVE');
     setRoundSummaries(prev => ({
       ...prev,
       [roundId]: { ...prev[roundId], status: 'ACTIVE' }
     }));
-    await updateArenaState({ isRoundStarted: true });
-    addAuditLog('ROUND_RESUMED', roundSummaries[roundId]?.name || roundId, 'Round countdown resumed.', 'ROUND');
+    await resumeScheduleAPI();
+    addAuditLog('ROUND_RESUMED', roundSummaries[roundId]?.name || roundId, 'Authoritative round timer resumed on server.', 'ROUND');
+    await refreshData();
   };
 
   const endRound = async (roundId: ActiveRoundId) => {
@@ -464,8 +545,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...prev,
       [roundId]: { ...prev[roundId], status: 'COMPLETED' }
     }));
-    await updateArenaState({ activePhase: 'COMPLETE' });
-    addAuditLog('ROUND_COMPLETED', roundSummaries[roundId]?.name || roundId, 'Round completed.', 'ROUND');
+    setTimerRunning(false);
+    setRemainingSeconds(0);
+    await endScheduleAPI();
+    addAuditLog('ROUND_COMPLETED', roundSummaries[roundId]?.name || roundId, 'Authoritative round concluded on server.', 'ROUND');
+    await refreshData();
   };
 
   const advanceRound = async () => {
@@ -482,16 +566,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const adjustTimer = (secondsDelta: number) => {
-    setRemainingSeconds(prev => Math.max(0, prev + secondsDelta));
-    addAuditLog('TIMER_ADJUSTED', activeRound, `Adjusted by ${secondsDelta > 0 ? '+' : ''}${secondsDelta} seconds.`, 'ROUND');
+  const adjustTimer = async (secondsDelta: number) => {
+    await extendScheduleAPI(secondsDelta);
+    addAuditLog('TIMER_ADJUSTED', activeRound, `Deadline adjusted by ${secondsDelta > 0 ? '+' : ''}${secondsDelta}s globally.`, 'ROUND');
+    await refreshData();
+  };
+
+  const extendTimer = async (extraSeconds: number = 120) => {
+    await adjustTimer(extraSeconds);
   };
 
   const emergencyStop = async () => {
     setEventStatus('PAUSED');
     setTimerRunning(false);
-    await updateArenaState({ isRoundStarted: false });
+    await pauseScheduleAPI();
     addAuditLog('EMERGENCY_HALT', 'All Systems', 'Emergency stop initiated. All participant screens held.', 'SYSTEM');
+    await refreshData();
   };
 
   const updateSettings = (newSettings: Partial<EventSettings>) => {
@@ -534,6 +624,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         eventStatus,
         activeRound,
+        authoritativeClock,
         roundSummaries,
         remainingSeconds,
         totalDurationSeconds,
@@ -554,11 +645,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         resumeEvent,
         endEvent,
         startRound,
+        scheduleRound,
         pauseRound,
         resumeRound,
         endRound,
         advanceRound,
         adjustTimer,
+        extendTimer,
         emergencyStop,
         auditLogs,
         addAuditLog,

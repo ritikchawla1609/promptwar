@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="text-amber-400 font-bold">ROUND 1 · DALGONA PROMPT</span>
+              <span className="text-amber-400 font-bold">ROUND 1 · PROMPT PARASITE</span>
               <input
                 type="number"
                 min="1"

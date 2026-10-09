@@ -62,14 +62,14 @@ export default function OverviewPage() {
       if (remainingSeconds < 60) {
         return {
           title: 'Advance to Round 2 (Operation Blackbox)',
-          description: 'Round 1 time limit is expiring. Conclude Dalgona Prompt and advance qualified teams.',
+          description: 'Round 1 time limit is expiring. Conclude Prompt Parasite and advance qualified teams.',
           buttonLabel: 'Advance to Round 2',
           action: () => advanceRound()
         };
       }
       return {
         title: 'Monitor Round 1 Submissions',
-        description: 'Teams are submitting Dalgona prompt shape incisions. Review active takes reel.',
+        description: 'Teams are actively engaged in the Parasite phase, stealing opponent concepts and evolving final submissions.',
         buttonLabel: 'Inspect Round 1',
         action: () => navigate('/rounds')
       };
@@ -113,7 +113,7 @@ export default function OverviewPage() {
             Arena Master Overview
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-xl font-light">
-            Real-time status across Dalgona Prompt (R1), Operation Blackbox (R2), and Frame Zero (R3).
+            Real-time status across Prompt Parasite (R1), Operation Blackbox (R2), and Frame Zero (R3).
           </p>
         </div>
 
@@ -232,10 +232,10 @@ export default function OverviewPage() {
 
             <div>
               <h3 className="text-lg font-serif font-bold text-white group-hover:text-blue-400 transition-colors">
-                Dalgona Prompt
+                Prompt Parasite
               </h3>
               <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                Cookie shape incision prompt writing, parasite mutation, and prompt evolution.
+                Original strategy design, anonymous opponent matchmaking, concept theft, and evolutionary synthesis.
               </p>
             </div>
 

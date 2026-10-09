@@ -46,7 +46,7 @@ export const Navbar: React.FC = () => {
   const getRoundLabel = () => {
     switch (activeRound) {
       case 'ROUND_1':
-        return 'R1 · Dalgona Prompt';
+        return 'R1 · Prompt Parasite';
       case 'ROUND_2':
         return 'R2 · Operation Blackbox';
       case 'ROUND_3':

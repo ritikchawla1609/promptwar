@@ -16,7 +16,10 @@ import {
   resumeTimer, 
   adjustTimer, 
   resetTimer, 
-  calculateRemainingSeconds 
+  calculateRemainingSeconds,
+  fetchAuthoritativeClockAPI,
+  calculateSynchronizedRemaining,
+  API_BASE
 } from './utils/timer';
 import { exportSessionToCSV } from './utils/csvExport';
 
@@ -48,6 +51,10 @@ export default function App() {
   const [submissionData, setSubmissionData] = useState(null);
   const [scoreData, setScoreData] = useState(() => calculateLiveScore([], []));
   const [isSolutionRevealed, setIsSolutionRevealed] = useState(false);
+
+  // Authoritative Synchronized Clock State
+  const [serverClock, setServerClock] = useState(null);
+  const serverOffsetRef = useRef(0);
 
   // Timer State
   const [timerState, setTimerState] = useState(() => initializeTimer(MISSION_METADATA.defaultDurationSeconds));
@@ -81,6 +88,59 @@ export default function App() {
     }
   }, []);
 
+  // Continuous Authoritative Clock Sync (polls every 3 seconds)
+  useEffect(() => {
+    let mounted = true;
+    const syncClock = async () => {
+      const data = await fetchAuthoritativeClockAPI();
+      if (!mounted || !data) return;
+      if (data.serverTime) {
+        serverOffsetRef.current = Date.parse(data.serverTime) - Date.now();
+      }
+      setServerClock(data);
+
+      const rem = calculateSynchronizedRemaining(data, serverOffsetRef.current);
+
+      if (data.status === 'LIVE') {
+        setTimerState(prev => ({
+          ...prev,
+          totalDuration: data.durationSeconds || prev.totalDuration,
+          remainingSeconds: rem,
+          isRunning: rem > 0,
+          isPaused: false,
+          isExpired: rem <= 0,
+        }));
+        if (rem <= 0 && (currentScreen === 'WORKSPACE' || currentScreen === 'SUBMISSION')) {
+          handleTimeout();
+        }
+      } else if (data.status === 'PAUSED') {
+        setTimerState(prev => ({
+          ...prev,
+          remainingSeconds: rem,
+          isPaused: true,
+          isRunning: false,
+        }));
+      } else if (data.status === 'COMPLETED') {
+        setTimerState(prev => ({
+          ...prev,
+          remainingSeconds: 0,
+          isRunning: false,
+          isExpired: true,
+        }));
+        if (currentScreen === 'WORKSPACE' || currentScreen === 'SUBMISSION') {
+          handleTimeout();
+        }
+      }
+    };
+
+    syncClock();
+    const interval = setInterval(syncClock, 3000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [currentScreen]);
+
   // Persist session to localStorage
   const saveSession = (updates = {}) => {
     try {
@@ -102,15 +162,26 @@ export default function App() {
     }
   };
 
-  // Timer Tick & Timeout Handling
+  // Timer Tick & Timeout Handling with drift compensation
   useEffect(() => {
     if (currentScreen === 'WORKSPACE' || currentScreen === 'SUBMISSION') {
       timerIntervalRef.current = setInterval(() => {
         setTimerState(prev => {
-          if (!prev || !prev.isRunning || prev.isPaused) return prev;
+          if (!prev) return prev;
+          if (serverClock?.status === 'LIVE' && serverClock.scheduledEndAt) {
+            const synNow = Date.now() + serverOffsetRef.current;
+            const remaining = Math.max(0, Math.ceil((Date.parse(serverClock.scheduledEndAt) - synNow) / 1000));
+            if (remaining <= 0) {
+              clearInterval(timerIntervalRef.current);
+              handleTimeout();
+              return { ...prev, remainingSeconds: 0, isRunning: false, isExpired: true };
+            }
+            return { ...prev, remainingSeconds: remaining, isRunning: true, isPaused: false };
+          }
+
+          if (!prev.isRunning || prev.isPaused) return prev;
           const remaining = calculateRemainingSeconds(prev);
           if (remaining <= 0) {
-            // Timeout reached! Lock and force submission or results
             clearInterval(timerIntervalRef.current);
             handleTimeout();
             return { ...prev, remainingSeconds: 0, isRunning: false, isExpired: true };
@@ -125,7 +196,7 @@ export default function App() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [currentScreen]);
+  }, [currentScreen, serverClock]);
 
   // Keyboard shortcut for Facilitation Controls: Ctrl+Shift+H or Cmd+Shift+H
   useEffect(() => {
@@ -146,13 +217,44 @@ export default function App() {
       setScoreData(finalScore);
       setCurrentScreen('RESULTS');
       saveSession({ currentScreen: 'RESULTS', scoreData: finalScore });
+
+      // Synchronize final submission with backend
+      if (teamName) {
+        fetch(`${API_BASE}/api/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            teamName,
+            round: 'round-2',
+            score: finalScore.totalScore,
+            totalScore: finalScore.totalScore,
+            finalPrompt: promptHistory[0]?.prompt || '',
+            finalOutput: JSON.stringify(submissionData || {}),
+            status: 'COMPLETED',
+          }),
+        }).catch(console.warn);
+      }
     }
   };
 
   // Begin Investigation from Intro Screen
   const handleBeginInvestigation = (enteredTeamName) => {
     setTeamName(enteredTeamName);
-    const startedTimer = startTimer(timerState);
+
+    // Inherit synchronized remaining seconds from server clock
+    let currentRemaining = timerState.remainingSeconds;
+    if (serverClock?.status === 'LIVE' && serverClock.scheduledEndAt) {
+      const synNow = Date.now() + serverOffsetRef.current;
+      currentRemaining = Math.max(0, Math.ceil((Date.parse(serverClock.scheduledEndAt) - synNow) / 1000));
+    }
+
+    const startedTimer = {
+      ...timerState,
+      remainingSeconds: currentRemaining,
+      isRunning: true,
+      isPaused: false,
+      isExpired: currentRemaining <= 0,
+    };
     setTimerState(startedTimer);
     startTimeRef.current = Date.now();
     setCurrentScreen('WORKSPACE');

@@ -60,6 +60,7 @@ export default function App() {
 
   // Ref tracking previous server phase for transition handling (autosave, audio, matching)
   const prevServerPhaseRef = useRef('LOBBY');
+  const serverOffsetRef = useRef(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
 
@@ -89,7 +90,15 @@ export default function App() {
         if (!isMounted) return;
 
         if (clock && clock.success) {
-          setPhaseClock(clock);
+          if (clock.serverTime) {
+            serverOffsetRef.current = Date.parse(clock.serverTime) - Date.now();
+          }
+          const synNow = Date.now() + serverOffsetRef.current;
+          let calculatedRemaining = clock.remainingSeconds;
+          if (clock.phaseEndsAt) {
+            calculatedRemaining = Math.max(0, Math.ceil((new Date(clock.phaseEndsAt).getTime() - synNow) / 1000));
+          }
+          setPhaseClock({ ...clock, remainingSeconds: calculatedRemaining });
         }
         if (state) setArenaState(state);
         if (subs) setAllSubmissions(subs);
@@ -186,10 +195,16 @@ export default function App() {
     };
   }, []);
 
-  // Smooth local countdown tick between server clock polls
+  // Smooth local countdown tick with server clock drift compensation
   useEffect(() => {
     const timerTick = setInterval(() => {
+      const synNow = Date.now() + serverOffsetRef.current;
       setPhaseClock((prev) => {
+        if (!prev) return prev;
+        if (prev.phaseEndsAt) {
+          const rem = Math.max(0, Math.ceil((new Date(prev.phaseEndsAt).getTime() - synNow) / 1000));
+          return { ...prev, remainingSeconds: rem };
+        }
         if (prev.remainingSeconds > 0) {
           return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
         }

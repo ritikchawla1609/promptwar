@@ -70,6 +70,16 @@ export interface ArenaStateServer {
   isRoundStarted: boolean;
   activePhase: string;
   activeRound?: ActiveRoundId;
+  roundId?: ActiveRoundId;
+  sessionId?: string;
+  scheduleStatus?: 'SCHEDULED' | 'BRIEFING' | 'LIVE' | 'PAUSED' | 'COMPLETED' | 'LOBBY';
+  scheduledStartAt?: string | null;
+  actualStartedAt?: string | null;
+  scheduledEndAt?: string | null;
+  actualEndedAt?: string | null;
+  durationSeconds?: number;
+  pausedAt?: string | null;
+  accumulatedPausedSeconds?: number;
   startedAt: string | null;
   phaseStartedAt: string | null;
   phaseEndsAt: string | null;
@@ -82,6 +92,25 @@ export interface ArenaStateServer {
     evolve: number;
   };
   lastUpdated?: string;
+}
+
+export interface AuthoritativeClockState {
+  serverTime: string;
+  roundId: ActiveRoundId;
+  sessionId: string;
+  status: 'SCHEDULED' | 'BRIEFING' | 'LIVE' | 'PAUSED' | 'COMPLETED' | 'LOBBY';
+  scheduledStartAt: string | null;
+  actualStartedAt: string | null;
+  scheduledEndAt: string | null;
+  actualEndedAt: string | null;
+  remainingSeconds: number;
+  secondsUntilStart: number;
+  totalSeconds: number;
+  durationSeconds: number;
+  pausedAt: string | null;
+  accumulatedPausedSeconds: number;
+  activePhase?: string;
+  isRoundStarted?: boolean;
 }
 
 export interface EventSettings {

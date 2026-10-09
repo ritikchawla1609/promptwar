@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
           <div className="text-2xl font-bold font-mono text-amber-400">
             {avgR1} <span className="text-xs font-normal text-slate-400">/ {medR1} med</span>
           </div>
-          <div className="text-[11px] text-slate-400">Dalgona Shape Challenge</div>
+          <div className="text-[11px] text-slate-400">Prompt Parasite (Growth Architecture)</div>
         </div>
 
         <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">

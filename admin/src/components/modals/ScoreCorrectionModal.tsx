@@ -94,7 +94,7 @@ export const ScoreCorrectionModal: React.FC<ScoreCorrectionModalProps> = ({
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {rKey === 'round1' ? 'Round 1 (Dalgona)' : rKey === 'round2' ? 'Round 2 (Blackbox)' : 'Round 3 (Frame Zero)'}
+                  {rKey === 'round1' ? 'Round 1 (Parasite)' : rKey === 'round2' ? 'Round 2 (Blackbox)' : 'Round 3 (Frame Zero)'}
                 </button>
               ))}
             </div>
